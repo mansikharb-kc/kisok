@@ -1,0 +1,737 @@
+// KC IMS — Prisma schema (source of truth for the app DB)
+// MySQL 8.0+. Mirrors db/schema.sql.
+// NOTE: product_copies.is_master_flag (generated column + unique index that
+// enforces ONE master per (brand_product, branch)) is added by
+// prisma/patch-one-master.sql AFTER `prisma db push` — Prisma does not manage
+// generated columns. One-master is also enforced in application logic.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------
+// Identity & Access
+// ---------------------------------------------------------------------
+
+model User {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  fullName     String    @map("full_name") @db.VarChar(150)
+  email        String    @unique @db.VarChar(190)
+  phone        String?   @db.VarChar(20)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  status       String    @default("active") @db.VarChar(20)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  roles         UserRole[]
+  assignments   SellerAssignment[] @relation("ExecAssignments")
+
+  @@map("users")
+}
+
+model Role {
+  id          BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  code        String     @unique @db.VarChar(40)
+  name        String     @db.VarChar(80)
+  description String?    @db.VarChar(255)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model Branch {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String   @db.VarChar(120)
+  branchCode String   @unique @map("branch_code") @db.VarChar(40)
+  city       String?  @db.VarChar(120)
+  address    String?  @db.VarChar(255)
+  status     String   @default("active") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  userRoles      UserRole[]
+  branchPrograms BranchProgram[]
+  branchBrands   BranchBrand[]
+  locationNodes  LocationNode[]
+  sampleSizes    SampleSize[]
+  sellers        Seller[]
+  localRecords   LocalOnboardingRecord[]
+  productCopies  ProductCopy[]
+  screens        Screen[]
+
+  @@map("branches")
+}
+
+model UserRole {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt   @map("user_id") @db.UnsignedBigInt
+  roleId    BigInt   @map("role_id") @db.UnsignedBigInt
+  branchId  BigInt?  @map("branch_id") @db.UnsignedBigInt
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, branchId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------
+// Media
+// ---------------------------------------------------------------------
+
+model Media {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  type       String   @db.VarChar(20)
+  url        String   @db.VarChar(512)
+  mime       String?  @db.VarChar(120)
+  sizeBytes  BigInt?  @map("size_bytes") @db.UnsignedBigInt
+  uploadedBy BigInt?  @map("uploaded_by") @db.UnsignedBigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  brandLogos     Brand[]
+  productMedia   ProductMedia[]
+  localOverrides LocalOverride[]
+  localMedia     LocalMedia[]
+  qrCopies       ProductCopy[]
+  stickers       Sticker[]
+
+  @@map("media")
+}
+
+// ---------------------------------------------------------------------
+// HO Masters (L1)
+// ---------------------------------------------------------------------
+
+model Category {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(120)
+  code      String   @unique @db.VarChar(60)
+  parentId  BigInt?  @map("parent_id") @db.UnsignedBigInt
+  status    String   @default("active") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  categoryAttributes CategoryAttribute[]
+  stickerTemplates   StickerTemplate[]
+  locationNodes      LocationNode[]
+  brandProducts      BrandProduct[]
+  brandCategories    BrandCategory[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Attribute {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String   @db.VarChar(120)
+  code         String   @unique @db.VarChar(60)
+  dataType     String   @map("data_type") @db.VarChar(20)
+  unit         String?  @db.VarChar(20)
+  sectionGroup String?  @map("section_group") @db.VarChar(60) // ML section group (Technical, Aesthetics…)
+  isVariant    Boolean  @default(false) @map("is_variant")    // value varies per variant
+  isPriceable  Boolean  @default(false) @map("is_priceable")
+  isRequired   Boolean  @default(false) @map("is_required")   // default; per-category can override
+  status       String   @default("active") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  options            AttributeOption[]
+  categoryAttributes CategoryAttribute[]
+  programDefAttrs    ProgramDefinitionAttribute[]
+  programCommonAttrs ProgramCommonAttribute[]
+  productValues      ProductAttributeValue[]
+  localOverrides     LocalOverride[]
+
+  @@map("attributes")
+}
+
+model AttributeOption {
+  id           BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  attributeId  BigInt @map("attribute_id") @db.UnsignedBigInt
+  optionValue  String @map("option_value") @db.VarChar(190)
+  displayOrder Int    @default(0) @map("display_order")
+
+  attribute     Attribute               @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  productValues ProductAttributeValue[]
+
+  @@unique([attributeId, optionValue])
+  @@map("attribute_options")
+}
+
+model CategoryAttribute {
+  id                 BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  categoryId         BigInt   @map("category_id") @db.UnsignedBigInt
+  attributeId        BigInt   @map("attribute_id") @db.UnsignedBigInt
+  displayOrder       Int      @default(0) @map("display_order")
+  isRequiredOverride Boolean? @map("is_required_override") // per-category required (null = use attribute default)
+  isSearchable       Boolean  @default(false) @map("is_searchable")
+
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([categoryId, attributeId])
+  @@map("category_attributes")
+}
+
+model Brand {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandNo        String?  @unique @map("brand_no") @db.VarChar(20)
+  name           String   @db.VarChar(150)
+  code           String   @unique @db.VarChar(60)
+  brandType      String?  @map("brand_type") @db.VarChar(40)
+  logoMediaId    BigInt?  @map("logo_media_id") @db.UnsignedBigInt
+  // contact
+  contactPerson  String?  @map("contact_person") @db.VarChar(150)
+  phoneCc        String?  @map("phone_cc") @db.VarChar(8)
+  phone          String?  @db.VarChar(20)
+  email          String?  @db.VarChar(190)
+  website        String?  @db.VarChar(255)
+  address        String?  @db.VarChar(500)
+  pincode        String?  @db.VarChar(20)
+  city           String?  @db.VarChar(120)
+  state          String?  @db.VarChar(120)
+  // membership & contract
+  gstNumber          String?   @map("gst_number") @db.VarChar(30)
+  agreementDuration  String?   @map("agreement_duration") @db.VarChar(40)
+  contractStart      DateTime? @map("contract_start") @db.Date
+  contractEnd        DateTime? @map("contract_end") @db.Date
+  description        String?   @db.Text
+  approvalStatus String   @default("draft") @map("approval_status") @db.VarChar(20)
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  logo            Media?           @relation(fields: [logoMediaId], references: [id])
+  branchBrands    BranchBrand[]
+  sellerBrands    SellerBrand[]
+  consignments    Consignment[]
+  brandProducts   BrandProduct[]
+  brandCategories BrandCategory[]
+
+  @@map("brands")
+}
+
+model BrandCategory {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandId    BigInt   @map("brand_id") @db.UnsignedBigInt
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  brand    Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, categoryId])
+  @@map("brand_categories")
+}
+
+model Program {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(150)
+  code      String   @unique @db.VarChar(60)
+  status    String   @default("active") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  defAttrs       ProgramDefinitionAttribute[]
+  commonAttrs    ProgramCommonAttribute[]
+  branchPrograms BranchProgram[]
+  contracts      SellerContract[]
+  localRecords   LocalOnboardingRecord[]
+
+  @@map("programs")
+}
+
+model ProgramDefinitionAttribute {
+  id          BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  programId   BigInt @map("program_id") @db.UnsignedBigInt
+  attributeId BigInt @map("attribute_id") @db.UnsignedBigInt
+
+  program   Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([programId, attributeId])
+  @@map("program_definition_attributes")
+}
+
+model ProgramCommonAttribute {
+  id          BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  programId   BigInt @map("program_id") @db.UnsignedBigInt
+  attributeId BigInt @map("attribute_id") @db.UnsignedBigInt
+
+  program   Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  attribute Attribute @relation(fields: [attributeId], references: [id])
+
+  @@unique([programId, attributeId])
+  @@map("program_common_attributes")
+}
+
+model StickerTemplate {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+  name       String   @db.VarChar(120)
+  layout     Json?
+  elements   Json?
+  status     String   @default("active") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  category Category  @relation(fields: [categoryId], references: [id])
+  stickers Sticker[]
+
+  @@index([categoryId])
+  @@map("sticker_templates")
+}
+
+// ---------------------------------------------------------------------
+// Branch Configuration (L2)
+// ---------------------------------------------------------------------
+
+model BranchProgram {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId       BigInt   @map("branch_id") @db.UnsignedBigInt
+  programId      BigInt   @map("program_id") @db.UnsignedBigInt
+  approvalStatus String   @default("pending") @map("approval_status") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id])
+
+  @@unique([branchId, programId])
+  @@map("branch_programs")
+}
+
+model BranchBrand {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId  BigInt   @map("branch_id") @db.UnsignedBigInt
+  brandId   BigInt   @map("brand_id") @db.UnsignedBigInt
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  brand  Brand  @relation(fields: [brandId], references: [id])
+
+  @@unique([branchId, brandId])
+  @@map("branch_brands")
+}
+
+model LocationNode {
+  id                  BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId            BigInt   @map("branch_id") @db.UnsignedBigInt
+  parentId            BigInt?  @map("parent_id") @db.UnsignedBigInt
+  nodeType            String   @map("node_type") @db.VarChar(20)
+  name                String   @db.VarChar(120)
+  code                String?  @db.VarChar(60)
+  categoryId          BigInt?  @map("category_id") @db.UnsignedBigInt
+  path                String?  @db.VarChar(255)
+  depth               Int      @default(0)
+  isPlacementEligible Boolean  @default(false) @map("is_placement_eligible")
+  isScreenMountable   Boolean  @default(false) @map("is_screen_mountable")
+  locationId          String?  @unique @map("location_id") @db.VarChar(64)
+  status              String   @default("active") @db.VarChar(20)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  branch   Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  parent   LocationNode? @relation("LocationTree", fields: [parentId], references: [id])
+  children LocationNode[] @relation("LocationTree")
+  category Category?     @relation(fields: [categoryId], references: [id])
+
+  copies  ProductCopy[]
+  screens Screen[]
+
+  @@index([branchId])
+  @@index([parentId])
+  @@index([path])
+  @@map("location_nodes")
+}
+
+model SampleSize {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId   BigInt   @map("branch_id") @db.UnsignedBigInt
+  label      String   @db.VarChar(60)
+  dimensions String?  @db.VarChar(120)
+  status     String   @default("active") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  branch Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  copies ProductCopy[]
+
+  @@unique([branchId, label])
+  @@map("sample_sizes")
+}
+
+// ---------------------------------------------------------------------
+// Sellers & Assignment (L3)
+// ---------------------------------------------------------------------
+
+model Seller {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId     BigInt   @map("branch_id") @db.UnsignedBigInt
+  name         String   @db.VarChar(150)
+  sellerCode   String   @unique @map("seller_code") @db.VarChar(60)
+  membershipId String?  @unique @map("membership_id") @db.VarChar(60)
+  status       String   @default("active") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  branch       Branch                  @relation(fields: [branchId], references: [id])
+  sellerBrands SellerBrand[]
+  contracts    SellerContract[]
+  assignments  SellerAssignment[]
+  consignments Consignment[]
+  localRecords LocalOnboardingRecord[]
+
+  @@map("sellers")
+}
+
+model SellerBrand {
+  id       BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId BigInt @map("seller_id") @db.UnsignedBigInt
+  brandId  BigInt @map("brand_id") @db.UnsignedBigInt
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  brand  Brand  @relation(fields: [brandId], references: [id])
+
+  @@unique([sellerId, brandId])
+  @@map("seller_brands")
+}
+
+model SellerContract {
+  id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId            BigInt    @map("seller_id") @db.UnsignedBigInt
+  programId           BigInt    @map("program_id") @db.UnsignedBigInt
+  collaborationTenure String?   @map("collaboration_tenure") @db.VarChar(60)
+  fitoutPeriod        String?   @map("fitout_period") @db.VarChar(60)
+  contractStart       DateTime? @map("contract_start") @db.Date
+  contractEnd         DateTime? @map("contract_end") @db.Date
+  verified            Boolean   @default(false)
+  verifiedBy          BigInt?   @map("verified_by") @db.UnsignedBigInt
+  remarks             String?   @db.VarChar(500)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  seller  Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id])
+
+  @@index([sellerId])
+  @@map("seller_contracts")
+}
+
+model SellerAssignment {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId     BigInt   @map("seller_id") @db.UnsignedBigInt
+  obExecUserId BigInt   @map("ob_exec_user_id") @db.UnsignedBigInt
+  assignedBy   BigInt?  @map("assigned_by") @db.UnsignedBigInt
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  exec   User   @relation("ExecAssignments", fields: [obExecUserId], references: [id], onDelete: Cascade)
+
+  @@unique([sellerId, obExecUserId])
+  @@map("seller_assignments")
+}
+
+// ---------------------------------------------------------------------
+// Consignment & QC (L3)
+// ---------------------------------------------------------------------
+
+model Consignment {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId     BigInt    @map("seller_id") @db.UnsignedBigInt
+  brandId      BigInt    @map("brand_id") @db.UnsignedBigInt
+  initiatedBy  BigInt?   @map("initiated_by") @db.UnsignedBigInt
+  spocName     String?   @map("spoc_name") @db.VarChar(120)
+  spocContact  String?   @map("spoc_contact") @db.VarChar(120)
+  expectedDate DateTime? @map("expected_date") @db.Date
+  remarks      String?   @db.VarChar(500)
+  status       String    @default("initiated") @db.VarChar(20)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  seller Seller            @relation(fields: [sellerId], references: [id])
+  brand  Brand             @relation(fields: [brandId], references: [id])
+  items  ConsignmentItem[]
+
+  @@index([sellerId])
+  @@index([brandId])
+  @@map("consignments")
+}
+
+model ConsignmentItem {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  consignmentId  BigInt   @map("consignment_id") @db.UnsignedBigInt
+  description    String?  @db.VarChar(255)
+  expectedQty    Int?     @map("expected_qty")
+  receivedQty    Int?     @map("received_qty")
+  sampleType     String?  @map("sample_type") @db.VarChar(120)
+  status         String   @default("pending") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  consignment Consignment @relation(fields: [consignmentId], references: [id], onDelete: Cascade)
+  qcRecords   QcRecord[]
+
+  @@index([consignmentId])
+  @@map("consignment_items")
+}
+
+model QcRecord {
+  id                BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  consignmentItemId BigInt   @map("consignment_item_id") @db.UnsignedBigInt
+  result            String   @db.VarChar(20)
+  notes             String?  @db.VarChar(500)
+  qcBy              BigInt?  @map("qc_by") @db.UnsignedBigInt
+  qcAt              DateTime @default(now()) @map("qc_at")
+
+  item ConsignmentItem @relation(fields: [consignmentItemId], references: [id], onDelete: Cascade)
+
+  @@index([consignmentItemId])
+  @@map("qc_records")
+}
+
+// ---------------------------------------------------------------------
+// Product Master & Onboarding (L3)
+// ---------------------------------------------------------------------
+
+model BrandProduct {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandId    BigInt   @map("brand_id") @db.UnsignedBigInt
+  sku        String   @db.VarChar(120)
+  name       String   @db.VarChar(200)
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+  status     String   @default("active") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  brand        Brand                   @relation(fields: [brandId], references: [id])
+  category     Category                @relation(fields: [categoryId], references: [id])
+  attrValues   ProductAttributeValue[]
+  media        ProductMedia[]
+  localRecords LocalOnboardingRecord[]
+  copies       ProductCopy[]
+
+  @@unique([brandId, sku])
+  @@index([categoryId])
+  @@map("brand_products")
+}
+
+model ProductAttributeValue {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandProductId BigInt   @map("brand_product_id") @db.UnsignedBigInt
+  attributeId    BigInt   @map("attribute_id") @db.UnsignedBigInt
+  valueText      String?  @map("value_text") @db.Text
+  valueNumber    Decimal? @map("value_number") @db.Decimal(20, 6)
+  valueBool      Boolean? @map("value_bool")
+  valueDate      DateTime? @map("value_date") @db.Date
+  optionId       BigInt?  @map("option_id") @db.UnsignedBigInt
+
+  product   BrandProduct     @relation(fields: [brandProductId], references: [id], onDelete: Cascade)
+  attribute Attribute        @relation(fields: [attributeId], references: [id])
+  option    AttributeOption? @relation(fields: [optionId], references: [id])
+
+  @@unique([brandProductId, attributeId])
+  @@index([attributeId])
+  @@map("product_attribute_values")
+}
+
+model ProductMedia {
+  id             BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  brandProductId BigInt @map("brand_product_id") @db.UnsignedBigInt
+  mediaId        BigInt @map("media_id") @db.UnsignedBigInt
+  isPrimary      Boolean @default(false) @map("is_primary")
+  displayOrder   Int    @default(0) @map("display_order")
+
+  product BrandProduct @relation(fields: [brandProductId], references: [id], onDelete: Cascade)
+  media   Media        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([brandProductId, mediaId])
+  @@map("product_media")
+}
+
+model LocalOnboardingRecord {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  brandProductId BigInt   @map("brand_product_id") @db.UnsignedBigInt
+  sellerId       BigInt   @map("seller_id") @db.UnsignedBigInt
+  branchId       BigInt   @map("branch_id") @db.UnsignedBigInt
+  programId      BigInt   @map("program_id") @db.UnsignedBigInt
+  status         String   @default("draft") @db.VarChar(20)
+  onboardedBy    BigInt?  @map("onboarded_by") @db.UnsignedBigInt
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  product   BrandProduct    @relation(fields: [brandProductId], references: [id])
+  seller    Seller          @relation(fields: [sellerId], references: [id])
+  branch    Branch          @relation(fields: [branchId], references: [id])
+  program   Program         @relation(fields: [programId], references: [id])
+  overrides LocalOverride[]
+  media     LocalMedia[]
+  copies    ProductCopy[]
+
+  @@unique([brandProductId, sellerId, branchId, programId])
+  @@index([sellerId])
+  @@index([branchId])
+  @@map("local_onboarding_records")
+}
+
+model LocalOverride {
+  id              BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  localRecordId   BigInt  @map("local_record_id") @db.UnsignedBigInt
+  attributeId     BigInt? @map("attribute_id") @db.UnsignedBigInt
+  overrideMediaId BigInt? @map("override_media_id") @db.UnsignedBigInt
+  overrideValue   String? @map("override_value") @db.Text
+
+  record    LocalOnboardingRecord @relation(fields: [localRecordId], references: [id], onDelete: Cascade)
+  attribute Attribute?            @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  media     Media?                @relation(fields: [overrideMediaId], references: [id])
+
+  @@index([localRecordId])
+  @@map("local_overrides")
+}
+
+model LocalMedia {
+  id            BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  localRecordId BigInt  @map("local_record_id") @db.UnsignedBigInt
+  mediaId       BigInt  @map("media_id") @db.UnsignedBigInt
+  note          String? @db.VarChar(255)
+
+  record LocalOnboardingRecord @relation(fields: [localRecordId], references: [id], onDelete: Cascade)
+  media  Media                 @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([localRecordId])
+  @@map("local_media")
+}
+
+// ---------------------------------------------------------------------
+// Physical Copies / Instances
+// ---------------------------------------------------------------------
+
+model ProductCopy {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  localRecordId  BigInt   @map("local_record_id") @db.UnsignedBigInt
+  brandProductId BigInt   @map("brand_product_id") @db.UnsignedBigInt
+  branchId       BigInt   @map("branch_id") @db.UnsignedBigInt
+  sequenceNo     Int      @map("sequence_no")
+  instanceCode   String   @unique @map("instance_code") @db.VarChar(128)
+  copyRole       String   @default("SLAVE") @map("copy_role") @db.VarChar(10)
+  sampleSizeId   BigInt?  @map("sample_size_id") @db.UnsignedBigInt
+  locationNodeId BigInt?  @map("location_node_id") @db.UnsignedBigInt
+  qrMediaId      BigInt?  @map("qr_media_id") @db.UnsignedBigInt
+  availability   String   @default("IN") @db.VarChar(10)
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  record   LocalOnboardingRecord @relation(fields: [localRecordId], references: [id], onDelete: Cascade)
+  product  BrandProduct          @relation(fields: [brandProductId], references: [id])
+  branch   Branch                @relation(fields: [branchId], references: [id])
+  location LocationNode?         @relation(fields: [locationNodeId], references: [id])
+  size     SampleSize?           @relation(fields: [sampleSizeId], references: [id])
+  qr       Media?                @relation(fields: [qrMediaId], references: [id])
+  stickers Sticker[]
+
+  @@index([localRecordId])
+  @@index([locationNodeId])
+  @@index([branchId])
+  @@map("product_copies")
+}
+
+model Sticker {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  productCopyId   BigInt    @map("product_copy_id") @db.UnsignedBigInt
+  templateId      BigInt    @map("template_id") @db.UnsignedBigInt
+  renderedMediaId BigInt?   @map("rendered_media_id") @db.UnsignedBigInt
+  printedAt       DateTime? @map("printed_at")
+  status          String    @default("pending") @db.VarChar(20)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  copy     ProductCopy     @relation(fields: [productCopyId], references: [id], onDelete: Cascade)
+  template StickerTemplate @relation(fields: [templateId], references: [id])
+  media    Media?          @relation(fields: [renderedMediaId], references: [id])
+
+  @@index([productCopyId])
+  @@map("stickers")
+}
+
+// ---------------------------------------------------------------------
+// RMS readiness — screen binding (Phase 2 logic; table ready now)
+// ---------------------------------------------------------------------
+
+model Screen {
+  id               BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId         BigInt   @map("branch_id") @db.UnsignedBigInt
+  locationNodeId   BigInt   @map("location_node_id") @db.UnsignedBigInt
+  deviceIdentifier String?  @map("device_identifier") @db.VarChar(120)
+  viewDefault      String   @default("LOCAL") @map("view_default") @db.VarChar(10)
+  status           String   @default("active") @db.VarChar(20)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  branch   Branch       @relation(fields: [branchId], references: [id])
+  location LocationNode @relation(fields: [locationNodeId], references: [id])
+
+  @@index([branchId])
+  @@index([locationNodeId])
+  @@map("screens")
+}
+
+// ---------------------------------------------------------------------
+// Approvals, Audit, Notifications (Module H)
+// ---------------------------------------------------------------------
+
+model ChangeRequest {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  type        String    @db.VarChar(40)
+  payload     Json?
+  branchId    BigInt?   @map("branch_id") @db.UnsignedBigInt
+  requestedBy BigInt?   @map("requested_by") @db.UnsignedBigInt
+  status      String    @default("pending") @db.VarChar(20)
+  decidedBy   BigInt?   @map("decided_by") @db.UnsignedBigInt
+  decidedAt   DateTime? @map("decided_at")
+  reason      String?   @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([branchId])
+  @@map("change_requests")
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  actorUserId BigInt?  @map("actor_user_id") @db.UnsignedBigInt
+  action      String   @db.VarChar(80)
+  entityType  String   @map("entity_type") @db.VarChar(80)
+  entityId    BigInt?  @map("entity_id") @db.UnsignedBigInt
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_log")
+}
+
+model Notification {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt    @map("user_id") @db.UnsignedBigInt
+  type      String    @db.VarChar(80)
+  payload   Json?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("notifications")
+}

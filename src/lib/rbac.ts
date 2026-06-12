@@ -1,0 +1,72 @@
+// Role definitions, navigation, and permission helpers — derived from the
+// PRD trickle-down model (L1 HO → L2 Branch → L3 Operate).
+
+export type RoleCode =
+  | "HO_ADMIN"
+  | "BRANCH_ADMIN"
+  | "ONB_LEAD"
+  | "CONSIGNMENT_USER"
+  | "OB_EXEC";
+
+export const ROLE_LABELS: Record<RoleCode, string> = {
+  HO_ADMIN: "KC HO Admin",
+  BRANCH_ADMIN: "KC Branch Admin",
+  ONB_LEAD: "Onboarding Lead",
+  CONSIGNMENT_USER: "Consignment User",
+  OB_EXEC: "Onboarding Exec",
+};
+
+export type NavItem = {
+  href: string;
+  label: string;
+  group: string;
+  roles: RoleCode[];
+};
+
+// Sidebar navigation — each item lists which roles may see it.
+export const NAV: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC"] },
+
+  // L1 — HO masters
+  { href: "/masters/categories", label: "Categories", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/attributes", label: "Attributes", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/brands", label: "Brands", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/programs", label: "Programs", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/branches", label: "Branches", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/sticker-templates", label: "Sticker Templates", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/approvals", label: "Approvals", group: "HO Masters", roles: ["HO_ADMIN"] },
+
+  // L2 — Branch config
+  { href: "/branch/warehouse", label: "Warehouse & Locations", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
+  { href: "/branch/programs", label: "Programs (select)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
+  { href: "/branch/brands", label: "Brands", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
+
+  // L3 — Operations
+  { href: "/ops/sellers", label: "Sellers", group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/assignments", label: "Assignments", group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/sample-sizes", label: "Sample Sizes", group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/consignments", label: "Consignments / QC", group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
+  { href: "/ops/onboarding", label: "Product Onboarding", group: "Operations", roles: ["OB_EXEC"] },
+  { href: "/ops/placement", label: "Placement & QR", group: "Operations", roles: ["OB_EXEC"] },
+
+  // Everyone
+  { href: "/users", label: "Users & Roles", group: "Admin", roles: ["HO_ADMIN"] },
+];
+
+export type SessionRole = { code: RoleCode; branchId: string | null };
+
+export function hasRole(roles: SessionRole[], ...codes: RoleCode[]): boolean {
+  return roles.some((r) => codes.includes(r.code));
+}
+
+export function navForRoles(roles: SessionRole[]): NavItem[] {
+  const codes = new Set(roles.map((r) => r.code));
+  return NAV.filter((n) => n.roles.some((r) => codes.has(r)));
+}
+
+export function canSee(path: string, roles: SessionRole[]): boolean {
+  const codes = new Set(roles.map((r) => r.code));
+  const item = NAV.find((n) => path === n.href || path.startsWith(n.href + "/"));
+  if (!item) return true; // non-nav pages handled by page-level checks
+  return item.roles.some((r) => codes.has(r));
+}
