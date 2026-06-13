@@ -13,7 +13,7 @@
 1. **Trickle-down (3-layer):** HO (L1) defines masters → Branch Admin (L2) configures → Operators (L3) only *select* from controlled lists. Downstream kabhi master redefine nahi karta; naya chahiye to **change request → HO approval**.
 2. **Shared master + local overlay:** ek `(Brand, SKU)` ka product **ek hi baar** define hota hai (shared `brand_products`), aur har seller/branch usko reference karke apna **local overlay** (copies, locations, QR) rakhta hai.
 3. **Physical copy = scannable unit:** har physical sample ek `product_copy` (instance) hai — apna QR + instance code + location. Yahi cheez aage RMS screen pe dikhegi.
-4. **Location tree = single source of "kya kahan hai":** arbitrary-depth nested hierarchy. Docket/Face/Rack isi tree ke node types hain. Screen ek docket-node se bind hoga; us node ke neeche jitne copies hain wahi us screen pe dikhenge. **Yahi RMS ka core hai aur abhi se ready hai.**
+4. **Location tree = single source of "kya kahan hai":** arbitrary-depth nested hierarchy. Branch flow ko yahan simple rakhna hai: **warehouse → blocks → racks → tray → custom**. Screen layer isi tree ke kisi node se bind hoga; us node ke neeche jitne copies hain wahi us screen pe dikhenge. **Yahi RMS ka core hai aur abhi se ready hai.**
 5. **Everything auditable:** har master change, approval, QC, placement audit log mein.
 
 ---
@@ -128,6 +128,8 @@ brands
 
 programs
   id (PK), name, code (unique), status
+  -- program koi naya attribute source nahi banata; existing attributes ko
+  -- 2 buckets mein group karta hai: definition (contract terms) + common (shared fields)
 
 program_definition_attributes   -- per-SELLER contract terms (tenure, fit-out, contract period)
   id (PK), program_id (FK→programs), attribute_id (FK→attributes)
@@ -159,14 +161,14 @@ location_nodes             -- ⭐ THE WAREHOUSE TREE (arbitrary depth) — RMS k
   id (PK),
   branch_id (FK→branches),
   parent_id (FK→location_nodes, nullable — root = warehouse),
-  node_type (WAREHOUSE | AREA | DOCKET | FACE | RACK | TRAY | CUSTOM),
+  node_type (WAREHOUSE | BLOCK | RACK | TRAY | CUSTOM),
   name,
   code,
   path (materialized path, e.g. '/12/45/78/' — fast subtree queries),
   depth (int),
   is_placement_eligible (bool — kya yahan copy rakh sakte hain, e.g. RACK/TRAY),
   location_id (generated unique address — sirf placement-eligible nodes pe),
-  is_screen_mountable (bool — kya yahan screen lag sakti hai, e.g. DOCKET/FACE),
+  is_screen_mountable (bool — kya yahan screen lag sakti hai, e.g. BLOCK),
   status
 
 sample_sizes               -- controlled list; Onboarding Lead self-serve add kar sakta hai
@@ -174,7 +176,7 @@ sample_sizes               -- controlled list; Onboarding Lead self-serve add ka
   dimensions (nullable), created_by
 ```
 
-> **Yeh table hi RMS ko enable karta hai.** `node_type` flexible hai — Branch Admin chahe to `Warehouse → Docket → Face → Rack → Tray` bana de. `is_screen_mountable` se hum jaanenge kaunsa node screen ke liye hai, `is_placement_eligible` se kaunse node pe sample rakhna allowed hai. `path` column se "is docket ke neeche sab kuch" ek query mein nikal aata hai.
+> **Yeh table hi RMS ko enable karta hai.** `node_type` flexible hai — Branch Admin chahe to `Warehouse → Block → Rack → Tray → Custom` bana de. `is_screen_mountable` se hum jaanenge kaunsa node screen ke liye hai, `is_placement_eligible` se kaunse node pe sample rakhna allowed hai. `path` column se "is block ke neeche sab kuch" ek query mein nikal aata hai.
 
 ### 2.4 Sellers & Assignment (L3 — Onboarding Lead)
 

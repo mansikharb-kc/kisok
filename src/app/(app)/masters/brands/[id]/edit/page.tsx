@@ -22,7 +22,11 @@ export default async function EditBrandPage({ params }: { params: { id: string }
   ]);
   if (!b) notFound();
 
-  const flat: FlatCat[] = serialize(catRows);
+  const flat: FlatCat[] = serialize(catRows).map((c: any) => ({
+    id: String(c.id),
+    name: c.name,
+    parentId: c.parentId ? String(c.parentId) : null,
+  }));
   const s = serialize(b) as any;
 
   const brand: BrandEdit = {
