@@ -28,12 +28,12 @@ export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC"] },
 
   // L1 — HO masters
-  { href: "/masters/categories", label: "Categories", group: "HO Masters", roles: ["HO_ADMIN"] },
-  { href: "/masters/attributes", label: "Attributes", group: "HO Masters", roles: ["HO_ADMIN"] },
-  { href: "/masters/brands", label: "Brands", group: "HO Masters", roles: ["HO_ADMIN"] },
-  { href: "/masters/programs", label: "Programs", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/categories", label: "Categories", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/attributes", label: "Attributes", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/brands", label: "Brands", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/programs", label: "Programs", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/masters/branches", label: "Branches", group: "HO Masters", roles: ["HO_ADMIN"] },
-  { href: "/masters/sticker-templates", label: "Sticker Templates", group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/masters/sticker-templates", label: "Sticker Templates", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/approvals", label: "Approvals", group: "HO Masters", roles: ["HO_ADMIN"] },
 
   // L2 — Branch config
@@ -50,7 +50,7 @@ export const NAV: NavItem[] = [
   { href: "/ops/placement", label: "Placement & QR", group: "Operations", roles: ["OB_EXEC"] },
 
   // Everyone
-  { href: "/users", label: "Users & Roles", group: "Admin", roles: ["HO_ADMIN"] },
+  { href: "/users", label: "Users & Roles", group: "Admin", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export type SessionRole = { code: RoleCode; branchId: string | null };

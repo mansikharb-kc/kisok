@@ -13,8 +13,22 @@ const createSchema = z.object({
 });
 
 export const GET = handler(async () => {
-  await requireRole("HO_ADMIN");
+  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN");
+  const isHo = session.roles.some((r) => r.code === "HO_ADMIN");
+
+  const whereClause = isHo
+    ? {}
+    : {
+        id: {
+          in: session.roles
+            .filter((r) => r.code === "BRANCH_ADMIN")
+            .map((r) => (r.branchId ? BigInt(r.branchId) : null))
+            .filter(Boolean) as bigint[],
+        },
+      };
+
   const branches = await prisma.branch.findMany({
+    where: whereClause,
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {
       _count: {
