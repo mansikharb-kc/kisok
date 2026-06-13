@@ -20,11 +20,11 @@ const createUserSchema = z.object({
 });
 
 export const GET = handler(async () => {
-  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN");
+  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD");
   const isHo = session.roles.some((r) => r.code === "HO_ADMIN");
 
   const adminBranchIds = session.roles
-    .filter((r) => r.code === "BRANCH_ADMIN")
+    .filter((r) => r.code === "BRANCH_ADMIN" || r.code === "ONB_LEAD")
     .map((r) => (r.branchId ? BigInt(r.branchId) : null))
     .filter(Boolean) as bigint[];
 

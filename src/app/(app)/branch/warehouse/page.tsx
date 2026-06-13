@@ -63,8 +63,8 @@ export default async function Page() {
     }),
   ]);
 
-  const nodes: LocationNode[] = serialize(nodeRows);
-  const categories = serialize(categoryRows) as { id: string; name: string; code: string; parentId: string | null }[];
+  const nodes: LocationNode[] = serialize(nodeRows) as any;
+  const categories = serialize(categoryRows) as any;
 
   return (
     <div className="space-y-2">

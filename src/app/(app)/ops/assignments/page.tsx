@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
+import RemoveAssignmentButton from "@/components/ops/RemoveAssignmentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,12 @@ export default async function Page() {
   // Group by exec
   const byExec = new Map<
     string,
-    { exec: { id: string; fullName: string; email: string }; sellers: any[] }
+    { exec: { id: string; fullName: string; email: string }; assignments: { id: string; seller: any }[] }
   >();
   for (const a of rows) {
     const key = a.exec.id;
-    if (!byExec.has(key)) byExec.set(key, { exec: a.exec, sellers: [] });
-    byExec.get(key)!.sellers.push(a.seller);
+    if (!byExec.has(key)) byExec.set(key, { exec: a.exec, assignments: [] });
+    byExec.get(key)!.assignments.push({ id: a.id, seller: a.seller });
   }
 
   const totalAssignments = rows.length;
@@ -104,7 +105,7 @@ export default async function Page() {
         </div>
       ) : (
         <div className="space-y-4">
-          {[...byExec.values()].map(({ exec, sellers }) => (
+          {[...byExec.values()].map(({ exec, assignments }) => (
             <div
               key={exec.id}
               className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm"
@@ -119,7 +120,7 @@ export default async function Page() {
                   <div className="text-[11px] text-slate-400">
                     {exec.email} · OB Exec ·{" "}
                     <span className="font-medium text-slate-500">
-                      {sellers.length} seller{sellers.length !== 1 ? "s" : ""}
+                      {assignments.length} seller{assignments.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                 </div>
@@ -127,7 +128,7 @@ export default async function Page() {
 
               {/* Sellers list */}
               <div className="divide-y divide-slate-100">
-                {sellers.map((s: any) => (
+                {assignments.map(({ id: assignmentId, seller: s }) => (
                   <div
                     key={s.sellerCode}
                     className={`flex items-center gap-4 px-5 py-3 ${s.status !== "active" ? "opacity-50" : ""}`}
@@ -163,6 +164,7 @@ export default async function Page() {
                       />
                       {s.status}
                     </span>
+                    <RemoveAssignmentButton id={assignmentId} />
                   </div>
                 ))}
               </div>

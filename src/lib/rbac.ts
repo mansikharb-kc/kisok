@@ -40,6 +40,8 @@ export const NAV: NavItem[] = [
   { href: "/branch/warehouse", label: "Warehouse & Locations", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
 
   // L2 — Read-only visibility into ops for Branch Admin (PRD §8: view sellers/assignments)
+  { href: "/branch/programs", label: "Programs (select)", group: "Branch Setup", roles: [] },
+  { href: "/branch/brands", label: "Brands", group: "Branch Setup", roles: [] },
   { href: "/branch/sellers",     label: "Sellers (view)",     group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
   { href: "/branch/assignments", label: "Assignments (view)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
 
