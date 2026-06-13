@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
 
 const createSchema = z.object({
   branchId: z.coerce.bigint(),
@@ -12,6 +12,7 @@ const createSchema = z.object({
   nodeType: z.enum(NODE_TYPES),
   name: z.string().trim().min(1).max(120),
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/, "code: letters, numbers, - and _ only").optional().nullable(),
+  categoryId: z.coerce.bigint().optional().nullable(),
   isPlacementEligible: z.boolean().optional(),
   isScreenMountable: z.boolean().optional(),
 });
@@ -55,12 +56,14 @@ export const GET = handler(async (req: Request) => {
       nodeType: true,
       name: true,
       code: true,
+      categoryId: true,
       path: true,
       depth: true,
       isPlacementEligible: true,
       isScreenMountable: true,
       locationId: true,
       status: true,
+      category: { select: { id: true, name: true, code: true } },
       _count: { select: { children: true, copies: true } },
     },
   });
@@ -74,7 +77,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { branchId, parentId, nodeType, name, code, isPlacementEligible, isScreenMountable } = parsed.data;
+  const { branchId, parentId, nodeType, name, code, categoryId, isPlacementEligible, isScreenMountable } = parsed.data;
 
   // Confirm branch admin owns this branch
   const ownsThisBranch = session.roles.some(
@@ -101,8 +104,9 @@ export const POST = handler(async (req: Request) => {
       nodeType,
       name,
       code: code || null,
+      categoryId: categoryId ?? null,
       depth,
-      path: "", // temp — updated below
+      path: "",
       isPlacementEligible: isPlacementEligible ?? false,
       isScreenMountable: isScreenMountable ?? false,
       status: "active",

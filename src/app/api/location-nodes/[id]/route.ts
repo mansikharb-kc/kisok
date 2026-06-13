@@ -4,12 +4,13 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/).optional().nullable(),
   nodeType: z.enum(NODE_TYPES).optional(),
+  categoryId: z.coerce.bigint().optional().nullable(),
   isPlacementEligible: z.boolean().optional(),
   isScreenMountable: z.boolean().optional(),
   status: z.enum(["active", "inactive"]).optional(),
@@ -83,12 +84,20 @@ export const DELETE = handler(async (_req: Request, ctx: { params: { id: string 
   ]);
 
   if (children > 0 || copies > 0) {
+    // PRD §B5: copies must be relocated before this node can be removed
+    if (copies > 0) {
+      return fail(
+        `Cannot delete "${target.name}" — ${copies} product ${copies === 1 ? "copy" : "copies"} placed here. Relocate all copies first.`,
+        409,
+      );
+    }
+    // Has children but no copies — deactivate instead of hard delete
     const node = await prisma.locationNode.update({ where: { id }, data: { status: "inactive" } });
     await writeAudit({
       actorUserId: session.uid, action: "locationNode.deactivate",
       entityType: "LocationNode", entityId: id,
     });
-    return ok({ node, deactivated: true, reason: "in use — deactivated instead of deleted" });
+    return ok({ node, deactivated: true, reason: "has sub-nodes — deactivated instead of deleted" });
   }
 
   await prisma.locationNode.delete({ where: { id } });

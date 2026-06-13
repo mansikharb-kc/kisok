@@ -27,27 +27,31 @@ export type NavItem = {
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC"] },
 
-  // L1 — HO masters
-  { href: "/masters/categories", label: "Categories", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/masters/attributes", label: "Attributes", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/masters/brands", label: "Brands", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/masters/programs", label: "Programs", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/masters/branches", label: "Branches", group: "HO Masters", roles: ["HO_ADMIN"] },
-  { href: "/masters/sticker-templates", label: "Sticker Templates", group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/approvals", label: "Approvals", group: "HO Masters", roles: ["HO_ADMIN"] },
+  // L1 — HO masters (Branch Admin: view only, enforced in each page)
+  { href: "/masters/categories",       label: "Categories",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/attributes",       label: "Attributes",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/brands",           label: "Brands",           group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/programs",         label: "Programs",         group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/sticker-templates",label: "Sticker Templates",group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/branches",         label: "Branches",         group: "HO Masters", roles: ["HO_ADMIN"] },
+  { href: "/approvals",                label: "Approvals",        group: "HO Masters", roles: ["HO_ADMIN"] },
 
-  // L2 — Branch config
+  // L2 — Branch config (Branch Admin full CRUD)
   { href: "/branch/warehouse", label: "Warehouse & Locations", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
 
-  // L3 — Operations
-  { href: "/ops/sellers", label: "Sellers", group: "Operations", roles: ["ONB_LEAD"] },
-  { href: "/ops/assignments", label: "Assignments", group: "Operations", roles: ["ONB_LEAD"] },
-  { href: "/ops/sample-sizes", label: "Sample Sizes", group: "Operations", roles: ["ONB_LEAD"] },
-  { href: "/ops/consignments", label: "Consignments / QC", group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
-  { href: "/ops/onboarding", label: "Product Onboarding", group: "Operations", roles: ["OB_EXEC"] },
-  { href: "/ops/placement", label: "Placement & QR", group: "Operations", roles: ["OB_EXEC"] },
+  // L2 — Read-only visibility into ops for Branch Admin (PRD §8: view sellers/assignments)
+  { href: "/branch/sellers",     label: "Sellers (view)",     group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
+  { href: "/branch/assignments", label: "Assignments (view)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
 
-  // Everyone
+  // L3 — Operations
+  { href: "/ops/sellers",       label: "Sellers",          group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/assignments",   label: "Assignments",      group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/sample-sizes",  label: "Sample Sizes",     group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
+  { href: "/ops/onboarding",    label: "Product Onboarding",group: "Operations", roles: ["OB_EXEC"] },
+  { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
+
+  // Admin
   { href: "/users", label: "Users & Roles", group: "Admin", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 

@@ -9,6 +9,8 @@ export type LocationNode = {
   nodeType: string;
   name: string;
   code: string | null;
+  categoryId: string | null;
+  category: { id: string; name: string; code: string } | null;
   path: string | null;
   depth: number;
   isPlacementEligible: boolean;
@@ -18,36 +20,61 @@ export type LocationNode = {
   _count: { children: number; copies: number };
 };
 
+export type CategoryOption = {
+  id: string;
+  name: string;
+  code: string;
+  parentId: string | null;
+};
+
 type TreeNode = LocationNode & { children: TreeNode[] };
 
-const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
 type NodeType = (typeof NODE_TYPES)[number];
 
-const NODE_META: Record<NodeType, { badge: string; icon: string }> = {
-  WAREHOUSE: { badge: "bg-purple-100 text-purple-700", icon: "🏭" },
-  BLOCK:     { badge: "bg-blue-100 text-blue-700",    icon: "🗂️" },
-  RACK:      { badge: "bg-amber-100 text-amber-700",  icon: "📦" },
-  TRAY:      { badge: "bg-green-100 text-green-700",  icon: "🗃️" },
-  CUSTOM:    { badge: "bg-slate-100 text-slate-600",  icon: "📌" },
+const NODE_META: Record<NodeType, { badge: string; icon: string; desc: string }> = {
+  WAREHOUSE: { badge: "bg-purple-100 text-purple-700", icon: "🏭", desc: "Top-level warehouse / zone" },
+  AREA:      { badge: "bg-blue-100 text-blue-700",     icon: "🗺️", desc: "Area within a warehouse" },
+  DOCKET:    { badge: "bg-indigo-100 text-indigo-700", icon: "🗄️", desc: "Docket — screen-mountable unit" },
+  FACE:      { badge: "bg-cyan-100 text-cyan-700",     icon: "🪟", desc: "Face of a docket — screen-mountable" },
+  RACK:      { badge: "bg-amber-100 text-amber-700",   icon: "📦", desc: "Rack — placement eligible" },
+  TRAY:      { badge: "bg-green-100 text-green-700",   icon: "🗃️", desc: "Tray — placement eligible" },
+  CUSTOM:    { badge: "bg-slate-100 text-slate-600",   icon: "📌", desc: "Custom node type" },
 };
 
 function nodeMeta(type: string) {
   return NODE_META[type as NodeType] ?? NODE_META.CUSTOM;
 }
 
-// Which child types are allowed under each parent type
+// Allowed child types per parent — follows the PRD/Architecture hierarchy:
+// WAREHOUSE → AREA → DOCKET → FACE → RACK → TRAY → CUSTOM
+// DOCKET and FACE are screen-mountable; RACK and TRAY are placement-eligible
 const ALLOWED_CHILDREN: Record<string, NodeType[]> = {
-  WAREHOUSE: ["BLOCK", "RACK", "CUSTOM"],
-  BLOCK:     ["RACK", "CUSTOM"],
+  WAREHOUSE: ["AREA", "DOCKET", "RACK", "CUSTOM"],
+  AREA:      ["DOCKET", "RACK", "CUSTOM"],
+  DOCKET:    ["FACE", "RACK", "CUSTOM"],
+  FACE:      ["RACK", "CUSTOM"],
   RACK:      ["TRAY", "CUSTOM"],
   TRAY:      ["CUSTOM"],
   CUSTOM:    ["CUSTOM"],
 };
 
+// Default flag suggestions per node type (helps the user pre-fill sensibly)
+const DEFAULT_FLAGS: Record<string, { isPlacementEligible: boolean; isScreenMountable: boolean }> = {
+  WAREHOUSE: { isPlacementEligible: false, isScreenMountable: false },
+  AREA:      { isPlacementEligible: false, isScreenMountable: false },
+  DOCKET:    { isPlacementEligible: false, isScreenMountable: true  },
+  FACE:      { isPlacementEligible: false, isScreenMountable: true  },
+  RACK:      { isPlacementEligible: true,  isScreenMountable: false },
+  TRAY:      { isPlacementEligible: true,  isScreenMountable: false },
+  CUSTOM:    { isPlacementEligible: false, isScreenMountable: false },
+};
+
 const emptyForm = {
   name: "",
   code: "",
-  nodeType: "BLOCK" as NodeType,
+  nodeType: "AREA" as NodeType,
+  categoryId: "",
   isPlacementEligible: false,
   isScreenMountable: false,
 };
@@ -55,9 +82,11 @@ const emptyForm = {
 export default function WarehouseTree({
   branchId,
   initial,
+  categories,
 }: {
   branchId: string;
   initial: LocationNode[];
+  categories: CategoryOption[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -122,7 +151,9 @@ export default function WarehouseTree({
     setEditingNode(null);
     setParentNode(parent);
     const allowed = parent ? ALLOWED_CHILDREN[parent.nodeType] : (["WAREHOUSE"] as NodeType[]);
-    setForm({ ...emptyForm, nodeType: allowed[0] ?? "CUSTOM" });
+    const defaultType = allowed[0] ?? "CUSTOM";
+    const flags = DEFAULT_FLAGS[defaultType] ?? { isPlacementEligible: false, isScreenMountable: false };
+    setForm({ ...emptyForm, nodeType: defaultType, ...flags });
     setError("");
     setModalOpen(true);
   }
@@ -134,6 +165,7 @@ export default function WarehouseTree({
       name: node.name,
       code: node.code ?? "",
       nodeType: node.nodeType as NodeType,
+      categoryId: node.categoryId ?? "",
       isPlacementEligible: node.isPlacementEligible,
       isScreenMountable: node.isScreenMountable,
     });
@@ -155,6 +187,7 @@ export default function WarehouseTree({
             name: form.name,
             code: form.code || null,
             nodeType: form.nodeType,
+            categoryId: form.categoryId || null,
             isPlacementEligible: form.isPlacementEligible,
             isScreenMountable: form.isScreenMountable,
           }),
@@ -169,6 +202,7 @@ export default function WarehouseTree({
             name: form.name,
             code: form.code || null,
             nodeType: form.nodeType,
+            categoryId: form.categoryId || null,
             isPlacementEligible: form.isPlacementEligible,
             isScreenMountable: form.isScreenMountable,
           }),
@@ -199,7 +233,13 @@ export default function WarehouseTree({
   }
 
   async function remove(node: LocationNode) {
-    if (!confirm(`Delete "${node.name}"? If it has sub-nodes or placed products it will be deactivated instead.`)) return;
+    if (node._count.copies > 0) {
+      alert(
+        `Cannot delete "${node.name}" — it has ${node._count.copies} product copies placed here.\n\nPer policy (PRD §B5), all copies must be relocated to another location before this node can be removed.`
+      );
+      return;
+    }
+    if (!confirm(`Delete "${node.name}"? ${node._count.children > 0 ? "It has sub-nodes and will be deactivated instead." : "This cannot be undone."}`)) return;
     setBusy(true);
     await fetch(`/api/location-nodes/${node.id}`, { method: "DELETE" });
     setBusy(false);
@@ -250,6 +290,13 @@ export default function WarehouseTree({
             <span className="text-sm font-medium text-slate-800 truncate">{n.name}</span>
             {n.code && (
               <span className="font-mono text-[11px] text-slate-400 shrink-0">{n.code}</span>
+            )}
+
+            {/* Category tag */}
+            {n.category && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 shrink-0 font-medium">
+                {n.category.name}
+              </span>
             )}
 
             {/* Flags */}
@@ -367,11 +414,11 @@ export default function WarehouseTree({
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
         {Object.entries(NODE_META).map(([type, meta]) => (
-          <span key={type} className={`px-2 py-0.5 rounded font-semibold ${meta.badge}`}>
+          <span key={type} className={`px-2 py-0.5 rounded font-semibold ${meta.badge}`} title={meta.desc}>
             {meta.icon} {type}
           </span>
         ))}
-        <span className="ml-2 text-slate-400">· Click row to expand · Hover for actions</span>
+        <span className="ml-2 text-slate-400">· Hover rows for actions · DOCKET/FACE = 🖥️ screen · RACK/TRAY = 📍 placement</span>
       </div>
 
       {/* Tree */}
@@ -422,12 +469,16 @@ export default function WarehouseTree({
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, nodeType: t }))}
+                      onClick={() => {
+                        const flags = DEFAULT_FLAGS[t] ?? { isPlacementEligible: false, isScreenMountable: false };
+                        setForm((f) => ({ ...f, nodeType: t, ...flags }));
+                      }}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                         form.nodeType === t
                           ? "border-brand-500 bg-brand-50 text-brand-700"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
                       }`}
+                      title={m.desc}
                     >
                       {m.icon} {t}
                     </button>
@@ -444,7 +495,14 @@ export default function WarehouseTree({
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
                 autoFocus
-                placeholder={`e.g. ${form.nodeType === "WAREHOUSE" ? "Main Warehouse" : form.nodeType === "BLOCK" ? "Block A" : form.nodeType === "RACK" ? "Rack 1" : "Tray 1"}`}
+                placeholder={
+                  form.nodeType === "WAREHOUSE" ? "e.g. Immersive Hub" :
+                  form.nodeType === "AREA"      ? "e.g. Bathware Zone" :
+                  form.nodeType === "DOCKET"    ? "e.g. Docket D1" :
+                  form.nodeType === "FACE"      ? "e.g. Face F1" :
+                  form.nodeType === "RACK"      ? "e.g. Rack R1" :
+                  form.nodeType === "TRAY"      ? "e.g. Tray T1" : "e.g. Custom Zone"
+                }
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -459,6 +517,28 @@ export default function WarehouseTree({
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
               <p className="text-[11px] text-slate-400">Letters, numbers, - and _ only</p>
+            </div>
+
+            {/* Category */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">
+                Category <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <select
+                value={form.categoryId}
+                onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">— Not assigned —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-400">
+                Tag this node with a product category — e.g. Rack A1 holds Faucets. Used by OB Exec during placement.
+              </p>
             </div>
 
             {/* Flags */}
