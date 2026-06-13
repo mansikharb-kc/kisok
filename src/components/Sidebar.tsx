@@ -2,7 +2,92 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import type { NavItem } from "@/lib/rbac";
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+        transition: "transform 0.2s ease",
+      }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function NavGroup({
+  name,
+  items,
+  pathname,
+}: {
+  name: string;
+  items: NavItem[];
+  pathname: string;
+}) {
+  const hasActive = items.some(
+    (item) =>
+      pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div>
+      {/* Group header with toggle arrow */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-2 mb-1 group"
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-400 transition-colors">
+          {name}
+        </span>
+        <span className="text-slate-500 group-hover:text-slate-400 transition-colors">
+          <ChevronIcon open={open} />
+        </span>
+      </button>
+
+      {/* Collapsible items */}
+      <div
+        style={{
+          overflow: "hidden",
+          maxHeight: open ? "500px" : "0px",
+          transition: "max-height 0.25s ease",
+        }}
+      >
+        <div className="space-y-0.5">
+          {items.map((item) => {
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`block rounded-md px-3 py-2 text-sm transition ${
+                  active
+                    ? "bg-brand-600 text-white"
+                    : "hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Sidebar({
   nav,
@@ -33,39 +118,21 @@ export default function Sidebar({
 
   return (
     <aside className="w-64 shrink-0 bg-brand-900 text-slate-300 flex flex-col h-screen sticky top-0">
-      <div className="px-5 py-5 border-b border-white/10">
+      <Link href="/dashboard" className="px-5 py-5 border-b border-white/10 block hover:bg-white/5 transition-colors">
         <div className="text-white font-bold tracking-tight">KC IMS</div>
         <div className="text-[11px] text-slate-400 uppercase tracking-wider">
           Inventory Management
         </div>
-      </div>
+      </Link>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-5">
         {groups.map((g) => (
-          <div key={g.name}>
-            <div className="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
-              {g.name}
-            </div>
-            <div className="space-y-0.5">
-              {g.items.map((item) => {
-                const active =
-                  pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`block rounded-md px-3 py-2 text-sm transition ${
-                      active
-                        ? "bg-brand-600 text-white"
-                        : "hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <NavGroup
+            key={g.name}
+            name={g.name}
+            items={g.items}
+            pathname={pathname}
+          />
         ))}
       </nav>
 

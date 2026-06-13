@@ -645,6 +645,7 @@ model ProductCopy {
   @@index([localRecordId])
   @@index([locationNodeId])
   @@index([branchId])
+  @@index([brandProductId])
   @@map("product_copies")
 }
 
