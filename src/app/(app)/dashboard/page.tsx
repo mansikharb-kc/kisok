@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 
 async function recentActivity(branchId: bigint | null) {
-  // If branch-scoped, fetch activities initiated by users belonging to this branch,
-  // or actions matching this branch ID.
   let whereClause = {};
 
   if (branchId) {
@@ -14,10 +12,7 @@ async function recentActivity(branchId: bigint | null) {
       select: { userId: true },
     });
     const actorUserIds = userRoles.map((ur) => ur.userId);
-
-    whereClause = {
-      actorUserId: { in: actorUserIds },
-    };
+    whereClause = { actorUserId: { in: actorUserIds } };
   }
 
   const logs = await prisma.auditLog.findMany({
@@ -59,15 +54,12 @@ async function globalCounts() {
 
 async function branchCounts(branchId: bigint) {
   const [
-    // HO Global masters — branch admin needs visibility into the full catalogue
     totalCategories,
     totalAttributes,
     totalAttributeBindings,
     totalBrands,
     approvedBrands,
     totalProducts,
-
-    // Branch-scoped counts
     branchBrandsCount,
     branchProductsCount,
     sellersCount,
@@ -79,23 +71,14 @@ async function branchCounts(branchId: bigint) {
     pendingApprovalsCount,
     programsCount,
   ] = await Promise.all([
-    // Global — all categories HO has defined
     prisma.category.count({ where: { status: "active" } }),
-    // Global — all attributes
     prisma.attribute.count({ where: { status: "active" } }),
-    // Global — total category-attribute bindings (shows richness of catalogue)
     prisma.categoryAttribute.count(),
-    // Global — all approved brands in the system
     prisma.brand.count({ where: { status: "active" } }),
     prisma.brand.count({ where: { status: "active", approvalStatus: "approved" } }),
-    // Global — all product SKUs defined across all brands
     prisma.brandProduct.count({ where: { status: "active" } }),
-
-    // Branch-scoped — brands linked to this branch
     prisma.branchBrand.count({ where: { branchId } }),
-    // Branch-scoped — products onboarded at this branch
     prisma.brandProduct.count({ where: { copies: { some: { branchId } } } }),
-    // Branch-scoped
     prisma.seller.count({ where: { branchId } }),
     prisma.sellerAssignment.count({ where: { seller: { branchId } } }),
     prisma.locationNode.count({ where: { branchId, isPlacementEligible: true } }),
@@ -107,14 +90,12 @@ async function branchCounts(branchId: bigint) {
   ]);
 
   return {
-    // HO master visibility
     totalCategories,
     totalAttributes,
     totalAttributeBindings,
     totalBrands,
     approvedBrands,
     totalProducts,
-    // Branch scoped
     branchBrands: branchBrandsCount,
     branchProducts: branchProductsCount,
     sellers: sellersCount,
@@ -129,6 +110,110 @@ async function branchCounts(branchId: bigint) {
   };
 }
 
+async function onbLeadCounts(branchId: bigint) {
+  const [
+    sellersCount,
+    unassignedCount,
+    openConsignments,
+    sampleSizes,
+    programs,
+  ] = await Promise.all([
+    prisma.seller.count({ where: { branchId } }),
+    prisma.seller.count({ where: { branchId, assignments: { none: {} } } }),
+    prisma.consignment.count({ where: { seller: { branchId }, status: { not: "closed" } } }),
+    prisma.sampleSize.count({ where: { branchId } }),
+    prisma.branchProgram.count({ where: { branchId, approvalStatus: "approved" } }),
+  ]);
+  const assignedCount = sellersCount - unassignedCount;
+  return { sellersCount, unassignedCount, assignedCount, openConsignments, sampleSizes, programs };
+}
+
+async function obExecCounts(branchId: bigint, userId: string) {
+  const uid = BigInt(userId);
+  const assignedSellers = await prisma.sellerAssignment.findMany({
+    where: { obExecUserId: uid },
+    select: { sellerId: true },
+  });
+  const sellerIds = assignedSellers.map((a) => a.sellerId);
+  const assignedSellersCount = sellerIds.length;
+
+  const [
+    pendingConsignments,
+    productsOnboarded,
+    copiesPlaced,
+    copiesUnplaced,
+    placementLocations,
+  ] = await Promise.all([
+    sellerIds.length > 0
+      ? prisma.consignment.count({ where: { sellerId: { in: sellerIds }, status: "passed_back" } })
+      : Promise.resolve(0),
+    prisma.localOnboardingRecord.count({
+      where: {
+        branchId,
+        OR: [
+          { onboardedBy: uid },
+          { sellerId: { in: sellerIds.length > 0 ? sellerIds : [BigInt(-1)] } },
+        ],
+      },
+    }),
+    prisma.productCopy.count({
+      where: {
+        branchId,
+        locationNodeId: { not: null },
+        record: { sellerId: { in: sellerIds.length > 0 ? sellerIds : [BigInt(-1)] } },
+      },
+    }),
+    prisma.productCopy.count({
+      where: {
+        branchId,
+        locationNodeId: null,
+        record: { sellerId: { in: sellerIds.length > 0 ? sellerIds : [BigInt(-1)] } },
+      },
+    }),
+    prisma.locationNode.count({ where: { branchId, isPlacementEligible: true } }),
+  ]);
+
+  return {
+    assignedSellersCount,
+    pendingConsignments,
+    productsOnboarded,
+    copiesPlaced,
+    copiesUnplaced,
+    placementLocations,
+  };
+}
+
+async function consignmentUserCounts(branchId: bigint) {
+  const statuses = ["initiated", "received", "in_buffer", "fabricating", "qc", "passed_back"];
+  const counts = await Promise.all(
+    statuses.map((status) =>
+      prisma.consignment.count({ where: { seller: { branchId }, status } })
+    )
+  );
+  const statusBreakdown = Object.fromEntries(statuses.map((s, i) => [s, counts[i]]));
+
+  // Items pending QC = consignment items for consignments in "qc" status
+  const pendingQcItems = await prisma.consignmentItem.count({
+    where: {
+      consignment: { seller: { branchId }, status: "qc" },
+      status: "pending",
+    },
+  });
+
+  // Passed QC today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const passedToday = await prisma.qcRecord.count({
+    where: {
+      result: "pass",
+      qcAt: { gte: todayStart },
+      item: { consignment: { seller: { branchId } } },
+    },
+  });
+
+  return { statusBreakdown, pendingQcItems, passedToday };
+}
+
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
@@ -137,156 +222,290 @@ export default async function DashboardPage() {
   const branchRole = session.roles.find((r) => r.code === "BRANCH_ADMIN");
   const branchId = branchRole?.branchId ? BigInt(branchRole.branchId) : null;
 
-  let countsData: any;
-  let branchName = "";
+  const isOnbLead = hasRole(session.roles, "ONB_LEAD");
+  const isOBExec = hasRole(session.roles, "OB_EXEC");
+  const isConsignment = hasRole(session.roles, "CONSIGNMENT_USER");
 
-  if (isHo || !branchId) {
+  // Get branchId for ops roles
+  const opsRole = session.roles.find(
+    (r) => ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER"].includes(r.code) && r.branchId
+  );
+  const opsBranchId = opsRole?.branchId ? BigInt(opsRole.branchId) : null;
+
+  let countsData: Record<string, unknown> = {};
+  let branchName = "";
+  let opsBranchName = "";
+
+  if (isHo || (!branchId && !opsBranchId)) {
     countsData = await globalCounts();
-  } else {
+  } else if (branchId) {
     countsData = await branchCounts(branchId);
     const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } });
     branchName = branch?.name || "Managed Branch";
   }
 
-  const activity = await recentActivity(isHo ? null : branchId);
+  let onbLeadData: Awaited<ReturnType<typeof onbLeadCounts>> | null = null;
+  let obExecData: Awaited<ReturnType<typeof obExecCounts>> | null = null;
+  let consignmentData: Awaited<ReturnType<typeof consignmentUserCounts>> | null = null;
+
+  if (opsBranchId) {
+    const branch = await prisma.branch.findUnique({ where: { id: opsBranchId }, select: { name: true } });
+    opsBranchName = branch?.name || "Branch";
+
+    if (isOnbLead) onbLeadData = await onbLeadCounts(opsBranchId);
+    if (isOBExec) obExecData = await obExecCounts(opsBranchId, session.uid);
+    if (isConsignment) consignmentData = await consignmentUserCounts(opsBranchId);
+  }
+
+  const activity = await recentActivity(isHo ? null : (branchId ?? opsBranchId));
   const roleLabels = session.roles.map((r) => ROLE_LABELS[r.code as RoleCode] ?? r.code);
+
+  const displayBranchName = branchName || opsBranchName;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Signed in as {roleLabels.join(", ")} {branchName && `· ${branchName}`}
+          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
         </p>
       </div>
 
-      {isHo || !branchId ? (
+      {isHo || (!branchId && !opsBranchId) ? (
         // HO Admin Global Dashboard
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.categories}</div>
+            <div className="text-2xl font-bold">{countsData.categories as number}</div>
             <div className="text-xs text-slate-500 mt-1">Categories</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.attributes}</div>
+            <div className="text-2xl font-bold">{countsData.attributes as number}</div>
             <div className="text-xs text-slate-500 mt-1">Attributes</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.brands}</div>
+            <div className="text-2xl font-bold">{countsData.brands as number}</div>
             <div className="text-xs text-slate-500 mt-1">Brands</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.programs}</div>
+            <div className="text-2xl font-bold">{countsData.programs as number}</div>
             <div className="text-xs text-slate-500 mt-1">Programs</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.sellers}</div>
+            <div className="text-2xl font-bold">{countsData.sellers as number}</div>
             <div className="text-xs text-slate-500 mt-1">Sellers</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{(countsData as any).products}</div>
+            <div className="text-2xl font-bold">{countsData.products as number}</div>
             <div className="text-xs text-slate-500 mt-1">Products (SKUs)</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.copies}</div>
+            <div className="text-2xl font-bold">{countsData.copies as number}</div>
             <div className="text-xs text-slate-500 mt-1">Physical Copies</div>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.pendingApprovals}</div>
+            <div className="text-2xl font-bold">{countsData.pendingApprovals as number}</div>
             <div className="text-xs text-slate-500 mt-1">Pending Approvals</div>
           </div>
         </div>
-      ) : (
-        // Branch Admin Dashboard — HO masters visibility + branch-scoped ops
+      ) : branchId ? (
+        // Branch Admin Dashboard
         <div className="space-y-5">
-
-          {/* HO Masters — read-only visibility for branch admin */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">HO Masters</span>
               <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue · view only</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
               <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Categories</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalCategories}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.totalAttributeBindings} attribute bindings</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalCategories as number}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.totalAttributeBindings as number} attribute bindings</div>
               </a>
-
               <a href="/masters/attributes" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Attributes</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalAttributes}</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalAttributes as number}</div>
                 <div className="text-xs text-slate-500 mt-1">global attribute library</div>
               </a>
-
               <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Brands</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands} approved · {countsData.branchBrands} at this branch</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands as number}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved · {countsData.branchBrands as number} at this branch</div>
               </a>
-
               <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Programs</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalProducts}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.programs} programs active at branch</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalProducts as number}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.programs as number} programs active at branch</div>
               </a>
-
             </div>
           </div>
 
-          {/* Branch Operations */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Operations</span>
               <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{branchName}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-
               <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Sellers</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers} assigned to execs</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers as number}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers as number} assigned to execs</div>
               </div>
-
               <a href="/branch/warehouse" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Location IDs</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations}</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations as number}</div>
                 <div className="text-xs text-slate-500 mt-1">placement-eligible nodes</div>
               </a>
-
               <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies}</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies as number}</div>
                 <div className="text-xs text-slate-500 mt-1">
-                  {countsData.labeledCopies} labeled · {countsData.pendingCopies} pending
+                  {countsData.labeledCopies as number} labeled · {countsData.pendingCopies as number} pending
                 </div>
               </div>
-
               <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Products onboarded</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.branchProducts}</div>
-                <div className="text-xs text-slate-500 mt-1">of {countsData.totalProducts} total SKUs</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.branchProducts as number}</div>
+                <div className="text-xs text-slate-500 mt-1">of {countsData.totalProducts as number} total SKUs</div>
               </div>
-
               <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Open consignments</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments}</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments as number}</div>
                 <div className="text-xs text-slate-500 mt-1">in progress</div>
               </div>
-
-              <div className={`rounded-lg border p-5 shadow-sm ${countsData.pendingApprovals > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
-                <div className={`text-xs font-medium ${countsData.pendingApprovals > 0 ? "text-amber-600" : "text-slate-400"}`}>HO Approvals pending</div>
-                <div className={`text-3xl font-bold mt-1 ${countsData.pendingApprovals > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals}</div>
+              <div className={`rounded-lg border p-5 shadow-sm ${(countsData.pendingApprovals as number) > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+                <div className={`text-xs font-medium ${(countsData.pendingApprovals as number) > 0 ? "text-amber-600" : "text-slate-400"}`}>HO Approvals pending</div>
+                <div className={`text-3xl font-bold mt-1 ${(countsData.pendingApprovals as number) > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals as number}</div>
                 <div className="text-xs text-slate-500 mt-1">change requests awaiting HO</div>
               </div>
-
             </div>
           </div>
         </div>
+      ) : (
+        // Ops Roles Dashboard
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{opsBranchName}</span>
+          </div>
+
+          {/* ONB_LEAD dashboard */}
+          {isOnbLead && onbLeadData && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <a href="/ops/sellers" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Sellers</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
+                  </div>
+                </a>
+                <a href="/ops/assignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assignments</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.assignedCount}</div>
+                  <div className={`text-xs mt-1 ${onbLeadData.unassignedCount > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
+                    {onbLeadData.unassignedCount} sellers unassigned
+                  </div>
+                </a>
+                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Open Consignments</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
+                  <div className="text-xs text-slate-500 mt-1">not yet closed</div>
+                </a>
+                <a href="/ops/sample-sizes" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Sample Sizes</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sampleSizes}</div>
+                  <div className="text-xs text-slate-500 mt-1">defined at branch</div>
+                </a>
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Active Programs</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.programs}</div>
+                  <div className="text-xs text-slate-500 mt-1">approved at branch</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* OB_EXEC dashboard */}
+          {isOBExec && obExecData && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assigned Sellers</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.assignedSellersCount}</div>
+                  <div className={`text-xs mt-1 ${obExecData.pendingConsignments > 0 ? "text-emerald-600 font-medium" : "text-slate-500"}`}>
+                    {obExecData.pendingConsignments} consignments ready for you
+                  </div>
+                </a>
+                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Products Onboarded</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.productsOnboarded}</div>
+                  <div className="text-xs text-slate-500 mt-1">local records</div>
+                </a>
+                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Copies Placed</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.copiesPlaced}</div>
+                  <div className={`text-xs mt-1 ${obExecData.copiesUnplaced > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
+                    {obExecData.copiesUnplaced} unplaced
+                  </div>
+                </a>
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Placement Locations</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.placementLocations}</div>
+                  <div className="text-xs text-slate-500 mt-1">eligible nodes at branch</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CONSIGNMENT_USER dashboard */}
+          {isConsignment && consignmentData && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Consignment Overview</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {(
+                  [
+                    { key: "initiated", label: "Initiated", color: "bg-blue-50 text-blue-700 border-blue-200" },
+                    { key: "received", label: "Received", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+                    { key: "in_buffer", label: "In Buffer", color: "bg-amber-50 text-amber-700 border-amber-200" },
+                    { key: "fabricating", label: "Fabricating", color: "bg-orange-50 text-orange-700 border-orange-200" },
+                    { key: "qc", label: "In QC", color: "bg-purple-50 text-purple-700 border-purple-200" },
+                    { key: "passed_back", label: "Passed Back", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                  ] as { key: string; label: string; color: string }[]
+                ).map(({ key, label, color }) => (
+                  <div key={key} className={`rounded-xl border p-5 shadow-sm ${color}`}>
+                    <div className="text-xs font-medium opacity-80">{label}</div>
+                    <div className="text-3xl font-bold mt-1">{(consignmentData!.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
+                  </div>
+                ))}
+                <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm">
+                  <div className="text-xs font-medium text-purple-700 opacity-80">Pending QC Items</div>
+                  <div className="text-3xl font-bold mt-1 text-purple-700">{consignmentData.pendingQcItems}</div>
+                  <div className="text-xs mt-1 text-purple-500">awaiting inspection</div>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                  <div className="text-xs font-medium text-emerald-700 opacity-80">Passed QC Today</div>
+                  <div className="text-3xl font-bold mt-1 text-emerald-700">{consignmentData.passedToday}</div>
+                  <div className="text-xs mt-1 text-emerald-500">items cleared</div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <a href="/ops/consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
+                  View all consignments →
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {isHo && countsData.categories === 0 && (
+      {isHo && (countsData.categories as number) === 0 && (
         <div className="rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
           <strong>Getting started:</strong> Start by creating your{" "}
           <a className="underline" href="/masters/categories">
@@ -302,7 +521,14 @@ export default async function DashboardPage() {
         <div className="rounded-lg border border-slate-200 bg-white divide-y divide-slate-100">
           {activity.length === 0 ? (
             <div className="px-4 py-10 text-center text-sm text-slate-400">
-              No activity yet. Actions you take (create, edit, retire…) will appear here.
+              No activity yet.{" "}
+              {isOnbLead
+                ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
+                : isOBExec
+                ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
+                : isConsignment
+                ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
+                : "Actions you take (create, edit, retire…) will appear here."}
             </div>
           ) : (
             activity.map((a) => (
