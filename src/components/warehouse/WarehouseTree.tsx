@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 
 export type LocationNode = {
   id: string;
@@ -99,6 +100,13 @@ export default function WarehouseTree({
   const [editingNode, setEditingNode] = useState<LocationNode | null>(null);
   const [parentNode, setParentNode] = useState<TreeNode | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
+
+  // Filter and sort L1 (Domain) categories only
+  const l1Categories = useMemo(() => {
+    return categories
+      .filter((c) => !c.parentId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories]);
 
   // Build tree from flat list
   const roots = useMemo<TreeNode[]>(() => {
@@ -440,13 +448,23 @@ export default function WarehouseTree({
             onSubmit={saveNode}
             className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
           >
-            <h3 className="text-lg font-bold">
-              {editingNode
-                ? `Edit — ${editingNode.name}`
-                : parentNode
-                ? `Add sub-node under "${parentNode.name}"`
-                : "Add Warehouse"}
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">
+                {editingNode
+                  ? `Edit — ${editingNode.name}`
+                  : parentNode
+                  ? `Add sub-node under "${parentNode.name}"`
+                  : "Add Warehouse"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {error && (
               <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
@@ -509,10 +527,11 @@ export default function WarehouseTree({
 
             {/* Code */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Code <span className="text-slate-400 font-normal">(optional)</span></label>
+              <label className="text-sm font-medium">Code <span className="text-red-500">*</span></label>
               <input
                 value={form.code}
                 onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                required
                 placeholder="e.g. WH-01, BLK-A, RCK-1"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
@@ -522,15 +541,16 @@ export default function WarehouseTree({
             {/* Category */}
             <div className="space-y-1">
               <label className="text-sm font-medium">
-                Category <span className="text-slate-400 font-normal">(optional)</span>
+                Category <span className="text-red-500">*</span>
               </label>
               <select
                 value={form.categoryId}
                 onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+                required
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="">— Not assigned —</option>
-                {categories.map((c) => (
+                <option value="" disabled>— Select Category —</option>
+                {l1Categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
                   </option>

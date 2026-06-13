@@ -64,56 +64,56 @@ export default function UsersPage() {
     setLoading(true);
     setError("");
     try {
-      // 1. Fetch current user session to determine role scope
-      const authMeRes = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ getSession: true }) }).catch(() => null);
-      // Wait, there's no auth/me API, but layout.tsx checks the session. Let's make a request or derive session info from api/branches and roles checks.
-      // Actually, we can get the logged-in user profile details using a quick endpoint or fetch users/roles and parse permissions.
-      // Let's call /api/branches. If it returns branches, we check how many.
-      const branchesRes = await fetch("/api/branches");
-      const branchesData = await branchesRes.json();
-      
-      const rolesRes = await fetch("/api/roles");
-      const rolesData = await rolesRes.json();
+      // Get current session first — drives all filtering
+      const meRes = await fetch("/api/auth/me");
+      const meData = await meRes.json();
+      const sessionRoles: { code: string; branchId: string | null }[] = meData.session?.roles ?? [];
+      const isHo = sessionRoles.some((r) => r.code === "HO_ADMIN");
+      const branchAdminBranchIds = sessionRoles
+        .filter((r) => r.code === "BRANCH_ADMIN" && r.branchId)
+        .map((r) => r.branchId as string);
 
-      const usersRes = await fetch("/api/users");
-      const usersData = await usersRes.json();
-
-      if (usersRes.ok) {
-        setUsers(usersData.users || []);
-      }
-      if (rolesRes.ok) {
-        setRoles(rolesData.roles || []);
-      }
-      if (branchesRes.ok) {
-        setBranches(branchesData.branches || []);
-      }
-
-      // Infer if the user is HO Admin based on whether they can select branch-less roles
-      // or if they have global branch settings. We can also fetch the list.
-      // Let's inspect roles. If HO_ADMIN is available, they might be HO. But we can query it.
-      // Wait, let's assume we can fetch all branches. If branches has 0 or 1, or is filtered:
-      // Let's fetch from the current page session.
-      // Next.js client side can't use server getSession easily, but we can query api/users or just parse branches to infer isHo.
-      // If we see more than 1 branch or if branchId is null for some records, user is HO Admin.
-      // Let's check from the users list of current logged-in user if we can.
-      // Actually, a simpler way is: if we have branches, the user's role controls which branches are returned.
-      // If the user can see multiple branches, they are likely HO_ADMIN.
-      // But let's build the form to render branch options. If branches list has 1 item, we auto-lock to it.
-      // Let's calculate if HO Admin:
-      const canBeGlobal = rolesData.roles?.some((r: Role) => r.code === "HO_ADMIN") ?? false;
-      // Let's set session state:
       setSessionUser({
-        name: "Administrator",
-        email: "",
-        isHo: canBeGlobal, // HO Admins can assign HO_ADMIN
-        adminBranchIds: branchesData.branches?.map((b: Branch) => b.id) || [],
+        name: meData.session?.name ?? "",
+        email: meData.session?.email ?? "",
+        isHo,
+        adminBranchIds: branchAdminBranchIds,
       });
 
-    } catch (err) {
+      const [branchesRes, rolesRes, usersRes] = await Promise.all([
+        fetch("/api/branches"),
+        fetch("/api/roles"),
+        fetch("/api/users"),
+      ]);
+
+      const [branchesData, rolesData, usersData] = await Promise.all([
+        branchesRes.json(),
+        rolesRes.json(),
+        usersRes.json(),
+      ]);
+
+      if (usersRes.ok)   setUsers(usersData.users ?? []);
+      if (rolesRes.ok)   setRoles(rolesData.roles ?? []);
+      if (branchesRes.ok) setBranches(branchesData.branches ?? []);
+
+    } catch {
       setError("Failed to load users and configuration.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Roles available for assignment based on the current user's own role
+  function getAvailableRoles(): Role[] {
+    if (sessionUser?.isHo) return roles; // HO Admin can assign any role
+    // Branch Admin cannot assign HO_ADMIN — filter it out
+    return roles.filter((r) => r.code !== "HO_ADMIN");
+  }
+
+  // Branches available — Branch Admin locked to their own branch(es)
+  function getAvailableBranches(): Branch[] {
+    if (sessionUser?.isHo) return branches;
+    return branches.filter((b) => sessionUser?.adminBranchIds.includes(b.id));
   }
 
   const filteredUsers = users.filter((u) => {
@@ -128,16 +128,15 @@ export default function UsersPage() {
 
   function openCreateModal() {
     setEditId(null);
-    setFormData({
-      fullName: "",
-      email: "",
-      phone: "",
-      password: "",
-      status: "active",
-    });
-    // Default to one empty assignment
-    const defaultBranchId = branches.length > 0 ? branches[0].id : null;
-    const defaultRoleId = roles.length > 0 ? roles[0].id : "";
+    setFormData({ fullName: "", email: "", phone: "", password: "", status: "active" });
+
+    // For Branch Admin: lock branch to their own branch and exclude HO_ADMIN role
+    const availableRoles = getAvailableRoles();
+    const defaultBranchId = sessionUser?.isHo
+      ? (branches.length > 0 ? branches[0].id : null)
+      : (sessionUser?.adminBranchIds[0] ?? null);
+    const defaultRoleId = availableRoles.length > 0 ? availableRoles[0].id : "";
+
     setFormAssignments([{ roleId: defaultRoleId, branchId: defaultBranchId }]);
     setError("");
     setSuccess("");
@@ -150,23 +149,28 @@ export default function UsersPage() {
       fullName: user.fullName,
       email: user.email,
       phone: user.phone || "",
-      password: "", // password blank when editing unless changed
+      password: "",
       status: user.status,
     });
-    setFormAssignments(
-      user.roles.map((r) => ({
-        roleId: r.roleId,
-        branchId: r.branchId,
-      })),
-    );
+    // For Branch Admin: ensure existing assignments are locked to their branch
+    const assignments = user.roles.map((r) => ({
+      roleId: r.roleId,
+      branchId: sessionUser?.isHo
+        ? r.branchId
+        : (sessionUser?.adminBranchIds[0] ?? r.branchId),
+    }));
+    setFormAssignments(assignments);
     setError("");
     setSuccess("");
     setIsModalOpen(true);
   }
 
   function addAssignmentRow() {
-    const defaultBranchId = branches.length > 0 ? branches[0].id : null;
-    const defaultRoleId = roles.length > 0 ? roles[0].id : "";
+    const availableRoles = getAvailableRoles();
+    const defaultBranchId = sessionUser?.isHo
+      ? (branches.length > 0 ? branches[0].id : null)
+      : (sessionUser?.adminBranchIds[0] ?? null);
+    const defaultRoleId = availableRoles.length > 0 ? availableRoles[0].id : "";
     setFormAssignments([...formAssignments, { roleId: defaultRoleId, branchId: defaultBranchId }]);
   }
 
@@ -399,10 +403,10 @@ export default function UsersPage() {
 
       {/* Modal Form Dialog */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
-          <div className="bg-white rounded-lg border border-slate-200 w-full max-w-xl overflow-hidden shadow-xl animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg border border-slate-200 w-full max-w-xl shadow-xl flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
               <h2 className="font-bold text-slate-800 text-base">
                 {editId ? "Edit User Account & Scope" : "Create New User Account"}
               </h2>
@@ -411,8 +415,9 @@ export default function UsersPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Modal Body — scrollable */}
+            <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+              <div className="overflow-y-auto p-6 space-y-4 max-h-[55vh]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-600 uppercase">Full Name</label>
@@ -491,9 +496,6 @@ export default function UsersPage() {
 
                 <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
                   {formAssignments.map((a, idx) => {
-                    const selectedRole = roles.find((r) => r.id === a.roleId);
-                    const isGlobalRole = selectedRole?.code === "HO_ADMIN";
-
                     return (
                       <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
                         {/* Role Select */}
@@ -504,7 +506,7 @@ export default function UsersPage() {
                             onChange={(e) => updateAssignmentRow(idx, "roleId", e.target.value)}
                             className="w-full text-xs rounded border border-slate-300 px-2 py-1 outline-none bg-white"
                           >
-                            {roles.map((r) => (
+                            {getAvailableRoles().map((r) => (
                               <option key={r.id} value={r.id}>
                                 {r.name}
                               </option>
@@ -515,24 +517,34 @@ export default function UsersPage() {
                         {/* Branch Select */}
                         <div className="flex-1 min-w-0">
                           <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Branch</label>
-                          {isGlobalRole ? (
+                          {roles.find((r) => r.id === a.roleId)?.code === "HO_ADMIN" ? (
                             <select
                               disabled
                               className="w-full text-xs rounded border border-slate-200 px-2 py-1 outline-none bg-slate-100 text-slate-500"
                             >
-                              <option value="">Global (HO Admin)</option>
+                              <option>Global (HO Admin)</option>
+                            </select>
+                          ) : !sessionUser?.isHo ? (
+                            // Branch Admin: single locked branch, no dropdown needed
+                            <select
+                              value={a.branchId || ""}
+                              disabled
+                              className="w-full text-xs rounded border border-slate-200 px-2 py-1 outline-none bg-slate-100 text-slate-600 cursor-not-allowed"
+                            >
+                              {getAvailableBranches().map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                              ))}
                             </select>
                           ) : (
+                            // HO Admin: full branch picker
                             <select
                               value={a.branchId || ""}
                               onChange={(e) => updateAssignmentRow(idx, "branchId", e.target.value || null)}
                               className="w-full text-xs rounded border border-slate-300 px-2 py-1 outline-none bg-white"
                             >
-                              {sessionUser?.isHo && <option value="">Global / Select Branch</option>}
-                              {branches.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {b.name}
-                                </option>
+                              <option value="">— Select Branch —</option>
+                              {getAvailableBranches().map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
                               ))}
                             </select>
                           )}
@@ -552,9 +564,10 @@ export default function UsersPage() {
                   })}
                 </div>
               </div>
+            </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-slate-100 pt-4 flex items-center justify-end gap-3 bg-white">
+              <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-end gap-3 bg-slate-50 shrink-0 rounded-b-lg">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
