@@ -54,11 +54,11 @@ export const NAV: NavItem[] = [
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
 
   // Admin
-  { href: "/users/role/ho-admin", label: "HO Admins", group: "Admin", roles: ["HO_ADMIN"] },
-  { href: "/users/role/branch-admin", label: "Branch Admins", group: "Admin", roles: ["HO_ADMIN"] },
-  { href: "/users/role/onb-lead", label: "Onboarding Leads", group: "Admin", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/users/role/consignment-user", label: "Consignment Users", group: "Admin", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/users/role/ob-exec", label: "Onboarding Execs", group: "Admin", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/ho-admin", label: "HO Admins", group: "Users", roles: ["HO_ADMIN"] },
+  { href: "/users/role/branch-admin", label: "Branch Admins", group: "Users", roles: ["HO_ADMIN"] },
+  { href: "/users/role/onb-lead", label: "Onboarding Leads", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/consignment-user", label: "Consignment Users", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/ob-exec", label: "Onboarding Execs", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export type SessionRole = { code: RoleCode; branchId: string | null };
