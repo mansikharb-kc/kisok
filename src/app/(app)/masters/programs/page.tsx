@@ -1,9 +1,13 @@
 import { prisma, serialize } from "@/lib/prisma";
 import ProgramsClient, { AttributeRow, ProgramRow } from "@/components/programs/ProgramsClient";
+import { getSession } from "@/lib/auth";
+import { hasRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  const session = await getSession();
+  const readOnly = session ? !hasRole(session.roles, "HO_ADMIN") : true;
   const [programRows, attributeRows] = await Promise.all([
     prisma.program.findMany({
       orderBy: [{ status: "asc" }, { name: "asc" }],
@@ -75,7 +79,7 @@ export default async function Page() {
         </p>
       </div>
 
-      <ProgramsClient initialPrograms={programs} attributes={attributes} />
+      <ProgramsClient initialPrograms={programs} attributes={attributes} readOnly={readOnly} />
     </div>
   );
 }

@@ -1,9 +1,13 @@
 import { prisma, serialize } from "@/lib/prisma";
 import BrandsClient, { BrandRow } from "@/components/brands/BrandsClient";
+import { getSession } from "@/lib/auth";
+import { hasRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function BrandsPage() {
+  const session = await getSession();
+  const readOnly = session ? !hasRole(session.roles, "HO_ADMIN") : true;
   const rows = await prisma.brand.findMany({
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {
@@ -36,7 +40,7 @@ export default async function BrandsPage() {
           HO master. Each brand owns a SKU-keyed product catalog shared across sellers & branches. New brands need HO approval.
         </p>
       </div>
-      <BrandsClient initial={brands} />
+      <BrandsClient initial={brands} readOnly={readOnly} />
     </div>
   );
 }

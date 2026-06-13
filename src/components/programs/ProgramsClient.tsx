@@ -58,9 +58,11 @@ function attributeLabel(attribute: AttributeRow) {
 export default function ProgramsClient({
   initialPrograms,
   attributes,
+  readOnly = false,
 }: {
   initialPrograms: ProgramRow[];
   attributes: AttributeRow[];
+  readOnly?: boolean;
 }) {
   const [query, setQuery] = useState("");
 
@@ -158,15 +160,17 @@ export default function ProgramsClient({
           <div className="h-2 w-2 rounded-full bg-brand-500"></div>
           {rows.length} {rows.length === 1 ? "program" : "programs"} shown
         </div>
-        <Link
-          href="/masters/programs/new"
-          className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Program
-        </Link>
+        {!readOnly && (
+          <Link
+            href="/masters/programs/new"
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Program
+          </Link>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -228,12 +232,16 @@ export default function ProgramsClient({
                         <Link href={`/masters/programs/${program.id}`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50">
                           View
                         </Link>
-                        <Link href={`/masters/programs/${program.id}/attributes`} className="rounded-full border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                          Bindings
-                        </Link>
-                        <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                          Edit
-                        </Link>
+                        {!readOnly && (
+                          <>
+                            <Link href={`/masters/programs/${program.id}/attributes`} className="rounded-full border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
+                              Bindings
+                            </Link>
+                            <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
+                              Edit
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

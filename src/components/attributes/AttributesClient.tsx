@@ -31,7 +31,7 @@ const emptyForm = {
   optionsText: "",
 };
 
-export default function AttributesClient({ initial }: { initial: AttrRow[] }) {
+export default function AttributesClient({ initial, readOnly = false }: { initial: AttrRow[]; readOnly?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -146,12 +146,14 @@ export default function AttributesClient({ initial }: { initial: AttrRow[] }) {
           className="flex-1 max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <span className="text-sm text-slate-500">{initial.length} total</span>
-        <button
-          onClick={startCreate}
-          className="ml-auto rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
-        >
-          + New Attribute
-        </button>
+        {!readOnly && (
+          <button
+            onClick={startCreate}
+            className="ml-auto rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
+          >
+            + New Attribute
+          </button>
+        )}
       </div>
 
       {initial.length === 0 ? (
@@ -188,11 +190,17 @@ export default function AttributesClient({ initial }: { initial: AttrRow[] }) {
                     </td>
                     <td className="px-4 py-2.5 text-xs text-slate-400">{a.mappedCount} categories</td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap space-x-3">
-                      <button onClick={() => startEdit(a)} className="text-brand-600 hover:underline text-xs">Edit</button>
-                      <button onClick={() => toggleStatus(a)} disabled={busy} className="text-slate-500 hover:underline text-xs">
-                        {a.status === "active" ? "Retire" : "Activate"}
-                      </button>
-                      <button onClick={() => remove(a)} disabled={busy} className="text-red-600 hover:underline text-xs">Delete</button>
+                      {readOnly ? (
+                        <span className="text-xs text-slate-400 italic">View only</span>
+                      ) : (
+                        <>
+                          <button onClick={() => startEdit(a)} className="text-brand-600 hover:underline text-xs">Edit</button>
+                          <button onClick={() => toggleStatus(a)} disabled={busy} className="text-slate-500 hover:underline text-xs">
+                            {a.status === "active" ? "Retire" : "Activate"}
+                          </button>
+                          <button onClick={() => remove(a)} disabled={busy} className="text-red-600 hover:underline text-xs">Delete</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

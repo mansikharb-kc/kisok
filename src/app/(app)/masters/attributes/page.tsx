@@ -1,9 +1,13 @@
 import { prisma, serialize } from "@/lib/prisma";
 import AttributesClient, { AttrRow } from "@/components/attributes/AttributesClient";
+import { getSession } from "@/lib/auth";
+import { hasRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function AttributesPage() {
+  const session = await getSession();
+  const readOnly = session ? !hasRole(session.roles, "HO_ADMIN") : true;
   const rows = await prisma.attribute.findMany({
     orderBy: [{ status: "asc" }, { sectionGroup: "asc" }, { name: "asc" }],
     include: {
@@ -46,7 +50,7 @@ export default async function AttributesPage() {
         </div>
       </div>
 
-      <AttributesClient initial={attributes} />
+      <AttributesClient initial={attributes} readOnly={readOnly} />
     </div>
   );
 }

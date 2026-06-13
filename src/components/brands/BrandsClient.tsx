@@ -36,7 +36,7 @@ function BrandLogo({ url, name }: { url: string | null; name: string }) {
   return <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white">{initials}</div>;
 }
 
-export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
+export default function BrandsClient({ initial, readOnly = false }: { initial: BrandRow[]; readOnly?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -97,9 +97,11 @@ export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
               Card
             </button>
           </div>
-          <button type="button" onClick={() => router.push("/masters/brands/new")} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            + New Brand
-          </button>
+          {!readOnly && (
+            <button type="button" onClick={() => router.push("/masters/brands/new")} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+              + New Brand
+            </button>
+          )}
         </div>
       </div>
 
@@ -158,12 +160,12 @@ export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {b.approvalStatus !== "approved" ? (
+                {!readOnly && b.approvalStatus !== "approved" ? (
                   <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
                     Approve
                   </button>
                 ) : null}
-                {b.approvalStatus !== "rejected" ? (
+                {!readOnly && b.approvalStatus !== "rejected" ? (
                   <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50">
                     Reject
                   </button>
@@ -171,15 +173,19 @@ export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
-                  Edit
-                </button>
-                <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-                  {b.status === "active" ? "Deactivate" : "Activate"}
-                </button>
-                <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-                  Delete
-                </button>
+                {!readOnly && (
+                  <>
+                    <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
+                      Edit
+                    </button>
+                    <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                      {b.status === "active" ? "Deactivate" : "Activate"}
+                    </button>
+                    <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
+                      Delete
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -232,18 +238,20 @@ export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
                   <td className="px-4 py-3 align-middle">
                     <div className="space-y-2">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${APPROVAL_BADGE[b.approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>{b.approvalStatus}</span>
-                      <div className="flex flex-wrap gap-2 text-[11px]">
-                        {b.approvalStatus !== "approved" ? (
-                          <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="text-emerald-600 hover:underline">
-                            Approve
-                          </button>
-                        ) : null}
-                        {b.approvalStatus !== "rejected" ? (
-                          <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="text-rose-600 hover:underline">
-                            Reject
-                          </button>
-                        ) : null}
-                      </div>
+                      {!readOnly && (
+                        <div className="flex flex-wrap gap-2 text-[11px]">
+                          {b.approvalStatus !== "approved" ? (
+                            <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="text-emerald-600 hover:underline">
+                              Approve
+                            </button>
+                          ) : null}
+                          {b.approvalStatus !== "rejected" ? (
+                            <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="text-rose-600 hover:underline">
+                              Reject
+                            </button>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 align-middle">
@@ -259,15 +267,21 @@ export default function BrandsClient({ initial }: { initial: BrandRow[] }) {
                   </td>
                   <td className="px-4 py-3 align-middle text-right whitespace-nowrap">
                     <div className="inline-flex flex-wrap justify-end gap-2">
-                      <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
-                        Edit
-                      </button>
-                      <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-                        {b.status === "active" ? "Deactivate" : "Activate"}
-                      </button>
-                      <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-                        Delete
-                      </button>
+                      {readOnly ? (
+                        <span className="text-xs text-slate-400 italic">View only</span>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                            {b.status === "active" ? "Deactivate" : "Activate"}
+                          </button>
+                          <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

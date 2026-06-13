@@ -38,8 +38,6 @@ export const NAV: NavItem[] = [
 
   // L2 — Branch config
   { href: "/branch/warehouse", label: "Warehouse & Locations", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
-  { href: "/branch/programs", label: "Programs (select)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
-  { href: "/branch/brands", label: "Brands", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
 
   // L3 — Operations
   { href: "/ops/sellers", label: "Sellers", group: "Operations", roles: ["ONB_LEAD"] },

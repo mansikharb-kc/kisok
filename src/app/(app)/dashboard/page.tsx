@@ -58,25 +58,18 @@ async function globalCounts() {
 }
 
 async function branchCounts(branchId: bigint) {
-  // Find all category IDs associated with brands that are active in this branch
-  const activeCategoryMappings = await prisma.brandCategory.findMany({
-    where: {
-      brand: {
-        branchBrands: {
-          some: { branchId }
-        }
-      }
-    },
-    select: { categoryId: true }
-  });
-
-  const categoryIds = [...new Set(activeCategoryMappings.map((ac) => ac.categoryId))];
-  const categoriesCount = categoryIds.length;
-
   const [
-    attributesCount,
-    brandsCount,
-    productsCount,
+    // HO Global masters — branch admin needs visibility into the full catalogue
+    totalCategories,
+    totalAttributes,
+    totalAttributeBindings,
+    totalBrands,
+    approvedBrands,
+    totalProducts,
+
+    // Branch-scoped counts
+    branchBrandsCount,
+    branchProductsCount,
     sellersCount,
     assignedSellersCount,
     locationsCount,
@@ -84,14 +77,25 @@ async function branchCounts(branchId: bigint) {
     labeledCopiesCount,
     openConsignmentsCount,
     pendingApprovalsCount,
+    programsCount,
   ] = await Promise.all([
-    prisma.categoryAttribute.count({
-      where: {
-        categoryId: { in: categoryIds }
-      }
-    }),
+    // Global — all categories HO has defined
+    prisma.category.count({ where: { status: "active" } }),
+    // Global — all attributes
+    prisma.attribute.count({ where: { status: "active" } }),
+    // Global — total category-attribute bindings (shows richness of catalogue)
+    prisma.categoryAttribute.count(),
+    // Global — all approved brands in the system
+    prisma.brand.count({ where: { status: "active" } }),
+    prisma.brand.count({ where: { status: "active", approvalStatus: "approved" } }),
+    // Global — all product SKUs defined across all brands
+    prisma.brandProduct.count({ where: { status: "active" } }),
+
+    // Branch-scoped — brands linked to this branch
     prisma.branchBrand.count({ where: { branchId } }),
+    // Branch-scoped — products onboarded at this branch
     prisma.brandProduct.count({ where: { copies: { some: { branchId } } } }),
+    // Branch-scoped
     prisma.seller.count({ where: { branchId } }),
     prisma.sellerAssignment.count({ where: { seller: { branchId } } }),
     prisma.locationNode.count({ where: { branchId, isPlacementEligible: true } }),
@@ -99,13 +103,20 @@ async function branchCounts(branchId: bigint) {
     prisma.sticker.count({ where: { copy: { branchId }, status: "printed" } }),
     prisma.consignment.count({ where: { seller: { branchId }, status: { not: "closed" } } }),
     prisma.changeRequest.count({ where: { branchId, status: "pending" } }),
+    prisma.branchProgram.count({ where: { branchId, approvalStatus: "approved" } }),
   ]);
 
   return {
-    categories: categoriesCount,
-    attributes: attributesCount,
-    brands: brandsCount,
-    products: productsCount,
+    // HO master visibility
+    totalCategories,
+    totalAttributes,
+    totalAttributeBindings,
+    totalBrands,
+    approvedBrands,
+    totalProducts,
+    // Branch scoped
+    branchBrands: branchBrandsCount,
+    branchProducts: branchProductsCount,
     sellers: sellersCount,
     assignedSellers: assignedSellersCount,
     locations: locationsCount,
@@ -114,6 +125,7 @@ async function branchCounts(branchId: bigint) {
     pendingCopies: copiesCount - labeledCopiesCount,
     openConsignments: openConsignmentsCount,
     pendingApprovals: pendingApprovalsCount,
+    programs: programsCount,
   };
 }
 
@@ -185,45 +197,90 @@ export default async function DashboardPage() {
           </div>
         </div>
       ) : (
-        // Branch Admin Custom Scoped Dashboard (Matches Reference Image 5)
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Categories</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.categories}</div>
-            <div className="text-xs text-slate-500 mt-1">{countsData.attributes} attributes bound</div>
-          </div>
-          
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Brands</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.brands}</div>
-            <div className="text-xs text-slate-500 mt-1">{countsData.products} product masters</div>
-          </div>
+        // Branch Admin Dashboard — HO masters visibility + branch-scoped ops
+        <div className="space-y-5">
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Sellers</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers}</div>
-            <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers} assigned to execs</div>
-          </div>
+          {/* HO Masters — read-only visibility for branch admin */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">HO Masters</span>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue · view only</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Location IDs</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations}</div>
-            <div className="text-xs text-slate-500 mt-1">branch {branchName}</div>
-          </div>
+              <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Categories</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalCategories}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.totalAttributeBindings} attribute bindings</div>
+              </a>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies}</div>
-            <div className="text-xs text-slate-500 mt-1">
-              {countsData.labeledCopies} labeled · {countsData.pendingCopies} pending
+              <a href="/masters/attributes" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Attributes</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalAttributes}</div>
+                <div className="text-xs text-slate-500 mt-1">global attribute library</div>
+              </a>
+
+              <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Brands</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands} approved · {countsData.branchBrands} at this branch</div>
+              </a>
+
+              <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Programs</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalProducts}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.programs} programs active at branch</div>
+              </a>
+
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="text-xs font-medium text-slate-400">Open consignments</div>
-            <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments}</div>
-            <div className="text-xs text-slate-500 mt-1">
-              {countsData.pendingApprovals} HO approvals pending
+          {/* Branch Operations */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Operations</span>
+              <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{branchName}</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium text-slate-400">Sellers</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers}</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers} assigned to execs</div>
+              </div>
+
+              <a href="/branch/warehouse" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Location IDs</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations}</div>
+                <div className="text-xs text-slate-500 mt-1">placement-eligible nodes</div>
+              </a>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies}</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {countsData.labeledCopies} labeled · {countsData.pendingCopies} pending
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium text-slate-400">Products onboarded</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.branchProducts}</div>
+                <div className="text-xs text-slate-500 mt-1">of {countsData.totalProducts} total SKUs</div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-xs font-medium text-slate-400">Open consignments</div>
+                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments}</div>
+                <div className="text-xs text-slate-500 mt-1">in progress</div>
+              </div>
+
+              <div className={`rounded-lg border p-5 shadow-sm ${countsData.pendingApprovals > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+                <div className={`text-xs font-medium ${countsData.pendingApprovals > 0 ? "text-amber-600" : "text-slate-400"}`}>HO Approvals pending</div>
+                <div className={`text-3xl font-bold mt-1 ${countsData.pendingApprovals > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals}</div>
+                <div className="text-xs text-slate-500 mt-1">change requests awaiting HO</div>
+              </div>
+
             </div>
           </div>
         </div>
