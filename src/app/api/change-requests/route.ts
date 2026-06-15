@@ -28,6 +28,9 @@ export const GET = handler(async () => {
 
   let requests;
 
+  // Pending first, then most recent. MySQL sorts "pending" after "approved"/
+  // "rejected" alphabetically, so we approximate pending-first by ordering on a
+  // computed flag in JS after fetching (status set is tiny and bounded).
   if (isHo) {
     // HO Admin sees all requests
     requests = await prisma.changeRequest.findMany({
@@ -42,6 +45,13 @@ export const GET = handler(async () => {
       orderBy: { createdAt: "desc" },
     });
   }
+
+  // Stable pending-first ordering (createdAt desc preserved within each group).
+  requests = [...requests].sort((a, b) => {
+    const ap = a.status === "pending" ? 0 : 1;
+    const bp = b.status === "pending" ? 0 : 1;
+    return ap - bp;
+  });
 
   // Manually fetch requestor names to join since relation is not defined in schema
   const userIds = [...new Set(requests.map((r) => r.requestedBy).filter(Boolean) as bigint[])];

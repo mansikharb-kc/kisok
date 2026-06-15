@@ -15,12 +15,22 @@ export default async function Page() {
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
-  // Fetch active sellers and active OB Exec users for the branch
+  // Fetch active sellers (with their contracted programs) and active OB Exec users for the branch
   const [sellers, execs] = await Promise.all([
     prisma.seller.findMany({
       where: { branchId, status: "active" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, sellerCode: true },
+      select: {
+        id: true,
+        name: true,
+        sellerCode: true,
+        contracts: {
+          select: {
+            programId: true,
+            program: { select: { name: true, code: true } },
+          },
+        },
+      },
     }),
     prisma.user.findMany({
       where: {
@@ -37,7 +47,20 @@ export default async function Page() {
     }),
   ]);
 
-  const serializedSellers = serialize(sellers);
+  // Reduce each seller's contracts to a de-duplicated list of contracted programs.
+  const sellerOptions = sellers.map((s) => {
+    const seen = new Set<string>();
+    const programs: { id: string; name: string; code: string }[] = [];
+    for (const c of s.contracts) {
+      const pid = c.programId.toString();
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      programs.push({ id: pid, name: c.program.name, code: c.program.code });
+    }
+    return { id: s.id, name: s.name, sellerCode: s.sellerCode, programs };
+  });
+
+  const serializedSellers = serialize(sellerOptions);
   const serializedExecs = serialize(execs);
 
   return (

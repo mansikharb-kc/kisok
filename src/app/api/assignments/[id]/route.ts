@@ -24,6 +24,7 @@ export const DELETE = handler(async (_req: Request, ctx: { params: { id: string 
     where: { id },
     include: {
       seller: { select: { branchId: true, name: true } },
+      program: { select: { name: true } },
       exec: { select: { fullName: true } },
     },
   });
@@ -40,6 +41,7 @@ export const DELETE = handler(async (_req: Request, ctx: { params: { id: string 
     entityId: id,
     before: {
       sellerName: target.seller.name,
+      programName: target.program?.name ?? null,
       execName: target.exec.fullName,
     },
   });

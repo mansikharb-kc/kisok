@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { prisma, serialize } from "@/lib/prisma";
+import { requirePageRole } from "@/lib/guard";
 import BranchesClient, { BranchRow } from "@/components/branches/BranchesClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
+  await requirePageRole("HO_ADMIN");
   const rows = await prisma.branch.findMany({
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {

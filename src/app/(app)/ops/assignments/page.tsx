@@ -30,6 +30,7 @@ export default async function Page() {
             sellerBrands: { include: { brand: { select: { name: true, code: true } } } },
           },
         },
+        program: { select: { name: true, code: true } },
         exec: { select: { id: true, fullName: true, email: true } },
       },
     }),
@@ -42,12 +43,12 @@ export default async function Page() {
   // Group by exec
   const byExec = new Map<
     string,
-    { exec: { id: string; fullName: string; email: string }; assignments: { id: string; seller: any }[] }
+    { exec: { id: string; fullName: string; email: string }; assignments: { id: string; seller: any; program: any }[] }
   >();
   for (const a of rows) {
     const key = a.exec.id;
     if (!byExec.has(key)) byExec.set(key, { exec: a.exec, assignments: [] });
-    byExec.get(key)!.assignments.push({ id: a.id, seller: a.seller });
+    byExec.get(key)!.assignments.push({ id: a.id, seller: a.seller, program: a.program });
   }
 
   const totalAssignments = rows.length;
@@ -128,13 +129,18 @@ export default async function Page() {
 
               {/* Sellers list */}
               <div className="divide-y divide-slate-100">
-                {assignments.map(({ id: assignmentId, seller: s }) => (
+                {assignments.map(({ id: assignmentId, seller: s, program: p }) => (
                   <div
-                    key={s.sellerCode}
+                    key={assignmentId}
                     className={`flex items-center gap-4 px-5 py-3 ${s.status !== "active" ? "opacity-50" : ""}`}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-slate-800 text-sm">{s.name}</div>
+                      <div className="font-medium text-slate-800 text-sm">
+                        {s.name}
+                        {p?.name ? (
+                          <span className="text-slate-400 font-normal"> — {p.name}</span>
+                        ) : null}
+                      </div>
                       <div className="font-mono text-[11px] text-slate-400">
                         {s.sellerCode}
                         {s.membershipId ? ` · ${s.membershipId}` : ""}

@@ -6,6 +6,7 @@ import { writeAudit } from "@/lib/audit";
 
 const createSchema = z.object({
   sellerId: z.coerce.bigint(),
+  programId: z.coerce.bigint(),
   obExecUserId: z.coerce.bigint(),
 });
 
@@ -19,7 +20,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { sellerId, obExecUserId } = parsed.data;
+  const { sellerId, programId, obExecUserId } = parsed.data;
 
   // Verify seller belongs to the user's branch
   const seller = await prisma.seller.findUnique({
@@ -40,6 +41,13 @@ export const POST = handler(async (req: Request) => {
   });
   if (!execRole) return fail("Onboarding executive not found or not in your branch", 400);
 
+  // Verify the program is one the seller is contracted under
+  const contract = await prisma.sellerContract.findFirst({
+    where: { sellerId, programId },
+    select: { program: { select: { name: true } } },
+  });
+  if (!contract) return fail("Program is not one the seller is contracted under.", 422);
+
   // Check if assignment already exists
   const existing = await prisma.sellerAssignment.findUnique({
     where: {
@@ -52,6 +60,7 @@ export const POST = handler(async (req: Request) => {
   const assignment = await prisma.sellerAssignment.create({
     data: {
       sellerId,
+      programId,
       obExecUserId,
       assignedBy: BigInt(session.uid),
     },
@@ -64,6 +73,7 @@ export const POST = handler(async (req: Request) => {
     entityId: assignment.id,
     after: {
       sellerName: seller.name,
+      programName: contract.program.name,
       execName: execRole.user.fullName,
     },
   });

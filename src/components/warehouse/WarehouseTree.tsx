@@ -30,14 +30,12 @@ export type CategoryOption = {
 
 type TreeNode = LocationNode & { children: TreeNode[] };
 
-const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
 type NodeType = (typeof NODE_TYPES)[number];
 
 const NODE_META: Record<NodeType, { badge: string; icon: string; desc: string }> = {
   WAREHOUSE: { badge: "bg-purple-100 text-purple-700", icon: "🏭", desc: "Top-level warehouse / zone" },
-  AREA:      { badge: "bg-blue-100 text-blue-700",     icon: "🗺️", desc: "Area within a warehouse" },
-  DOCKET:    { badge: "bg-indigo-100 text-indigo-700", icon: "🗄️", desc: "Docket — screen-mountable unit" },
-  FACE:      { badge: "bg-cyan-100 text-cyan-700",     icon: "🪟", desc: "Face of a docket — screen-mountable" },
+  BLOCK:     { badge: "bg-indigo-100 text-indigo-700", icon: "🗄️", desc: "Block (docket) — carries the RMS screen" },
   RACK:      { badge: "bg-amber-100 text-amber-700",   icon: "📦", desc: "Rack — placement eligible" },
   TRAY:      { badge: "bg-green-100 text-green-700",   icon: "🗃️", desc: "Tray — placement eligible" },
   CUSTOM:    { badge: "bg-slate-100 text-slate-600",   icon: "📌", desc: "Custom node type" },
@@ -47,25 +45,21 @@ function nodeMeta(type: string) {
   return NODE_META[type as NodeType] ?? NODE_META.CUSTOM;
 }
 
-// Allowed child types per parent — follows the PRD/Architecture hierarchy:
-// WAREHOUSE → AREA → DOCKET → FACE → RACK → TRAY → CUSTOM
-// DOCKET and FACE are screen-mountable; RACK and TRAY are placement-eligible
+// Allowed child types per parent — warehouse hierarchy:
+// WAREHOUSE → BLOCK → RACK → TRAY → CUSTOM
+// A BLOCK (docket) is screen-mountable; RACK and TRAY are placement-eligible.
 const ALLOWED_CHILDREN: Record<string, NodeType[]> = {
-  WAREHOUSE: ["AREA", "DOCKET", "RACK", "CUSTOM"],
-  AREA:      ["DOCKET", "RACK", "CUSTOM"],
-  DOCKET:    ["FACE", "RACK", "CUSTOM"],
-  FACE:      ["RACK", "CUSTOM"],
+  WAREHOUSE: ["BLOCK", "RACK", "CUSTOM"],
+  BLOCK:     ["RACK", "CUSTOM"],
   RACK:      ["TRAY", "CUSTOM"],
   TRAY:      ["CUSTOM"],
-  CUSTOM:    ["CUSTOM"],
+  CUSTOM:    ["CUSTOM", "RACK", "TRAY"],
 };
 
 // Default flag suggestions per node type (helps the user pre-fill sensibly)
 const DEFAULT_FLAGS: Record<string, { isPlacementEligible: boolean; isScreenMountable: boolean }> = {
   WAREHOUSE: { isPlacementEligible: false, isScreenMountable: false },
-  AREA:      { isPlacementEligible: false, isScreenMountable: false },
-  DOCKET:    { isPlacementEligible: false, isScreenMountable: true  },
-  FACE:      { isPlacementEligible: false, isScreenMountable: true  },
+  BLOCK:     { isPlacementEligible: false, isScreenMountable: true  },
   RACK:      { isPlacementEligible: true,  isScreenMountable: false },
   TRAY:      { isPlacementEligible: true,  isScreenMountable: false },
   CUSTOM:    { isPlacementEligible: false, isScreenMountable: false },
@@ -74,7 +68,7 @@ const DEFAULT_FLAGS: Record<string, { isPlacementEligible: boolean; isScreenMoun
 const emptyForm = {
   name: "",
   code: "",
-  nodeType: "AREA" as NodeType,
+  nodeType: "BLOCK" as NodeType,
   categoryId: "",
   isPlacementEligible: false,
   isScreenMountable: false,
@@ -82,10 +76,14 @@ const emptyForm = {
 
 export default function WarehouseTree({
   branchId,
+  programId,
+  programName,
   initial,
   categories,
 }: {
   branchId: string;
+  programId: string;
+  programName: string;
   initial: LocationNode[];
   categories: CategoryOption[];
 }) {
@@ -206,6 +204,7 @@ export default function WarehouseTree({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             branchId,
+            programId,
             parentId: parentNode?.id ?? null,
             name: form.name,
             code: form.code || null,
@@ -380,7 +379,9 @@ export default function WarehouseTree({
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Warehouse & Locations</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Build your branch's physical location tree. Each node can be flagged for product placement and/or screen mounting.
+          Building the location tree for program{" "}
+          <span className="font-semibold text-slate-700">{programName}</span>. Hierarchy:
+          Warehouse → Block → Rack → Tray. Each node can be flagged for product placement and/or screen mounting.
         </p>
       </div>
 
@@ -426,7 +427,7 @@ export default function WarehouseTree({
             {meta.icon} {type}
           </span>
         ))}
-        <span className="ml-2 text-slate-400">· Hover rows for actions · DOCKET/FACE = 🖥️ screen · RACK/TRAY = 📍 placement</span>
+        <span className="ml-2 text-slate-400">· Hover rows for actions · BLOCK = 🖥️ screen · RACK/TRAY = 📍 placement</span>
       </div>
 
       {/* Tree */}
@@ -515,9 +516,7 @@ export default function WarehouseTree({
                 autoFocus
                 placeholder={
                   form.nodeType === "WAREHOUSE" ? "e.g. Immersive Hub" :
-                  form.nodeType === "AREA"      ? "e.g. Bathware Zone" :
-                  form.nodeType === "DOCKET"    ? "e.g. Docket D1" :
-                  form.nodeType === "FACE"      ? "e.g. Face F1" :
+                  form.nodeType === "BLOCK"     ? "e.g. Block / Docket D1" :
                   form.nodeType === "RACK"      ? "e.g. Rack R1" :
                   form.nodeType === "TRAY"      ? "e.g. Tray T1" : "e.g. Custom Zone"
                 }
@@ -532,7 +531,7 @@ export default function WarehouseTree({
                 value={form.code}
                 onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
                 required
-                placeholder="e.g. WH-01, BLK-A, RCK-1"
+                placeholder="e.g. WH-01, BLK-A, RCK-1, TRY-1"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
               <p className="text-[11px] text-slate-400">Letters, numbers, - and _ only</p>

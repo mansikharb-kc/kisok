@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),

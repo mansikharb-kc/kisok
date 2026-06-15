@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma, serialize } from "@/lib/prisma";
+import { requirePageRole } from "@/lib/guard";
 import BranchFormClient from "@/components/branches/BranchFormClient";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ function parseId(id: string): bigint | null {
 }
 
 export default async function Page({ params }: { params: { id: string } }) {
+  await requirePageRole("HO_ADMIN");
   const id = parseId(params.id);
   if (id === null) notFound();
 

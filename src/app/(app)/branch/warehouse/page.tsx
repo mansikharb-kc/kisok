@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
@@ -6,7 +7,11 @@ import WarehouseTree, { LocationNode } from "@/components/warehouse/WarehouseTre
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: { program?: string };
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -31,11 +36,87 @@ export default async function Page() {
     );
   }
 
-  const [branch, nodeRows, categoryRows] = await Promise.all([
-    prisma.branch.findUnique({ where: { id: branchId } }),
+  const branch = await prisma.branch.findUnique({ where: { id: branchId } });
 
+  // The warehouse tree is built FOR a specific approved program of this branch.
+  const branchPrograms = await prisma.branchProgram.findMany({
+    where: { branchId, approvalStatus: "approved" },
+    orderBy: { program: { name: "asc" } },
+    select: {
+      programId: true,
+      program: { select: { id: true, name: true, code: true } },
+    },
+  });
+
+  const programs = branchPrograms
+    .map((bp) => bp.program)
+    .filter((p): p is { id: bigint; name: string; code: string } => p !== null);
+
+  const branchTag = branch ? (
+    <p className="text-xs text-slate-400 font-mono">
+      Branch: <span className="font-semibold text-slate-600">{branch.name}</span> · {branch.branchCode}
+    </p>
+  ) : null;
+
+  if (programs.length === 0) {
+    return (
+      <div className="space-y-2">
+        {branchTag}
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-16 text-center text-slate-500 text-sm">
+          <div className="text-4xl mb-3">📋</div>
+          This branch has no approved programs yet. A program must be approved before
+          you can build its warehouse tree.
+        </div>
+      </div>
+    );
+  }
+
+  // Resolve the selected program from the query param; require an explicit pick.
+  const selectedProgramId = searchParams.program;
+  const selectedProgram = selectedProgramId
+    ? programs.find((p) => String(p.id) === selectedProgramId)
+    : null;
+
+  const programSelector = (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-1">
+        Program
+      </span>
+      {programs.map((p) => {
+        const active = selectedProgram && String(selectedProgram.id) === String(p.id);
+        return (
+          <Link
+            key={String(p.id)}
+            href={`?program=${String(p.id)}`}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              active
+                ? "border-brand-500 bg-brand-50 text-brand-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {p.name} <span className="font-mono text-[10px] opacity-70">({p.code})</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
+  if (!selectedProgram) {
+    return (
+      <div className="space-y-2">
+        {branchTag}
+        {programSelector}
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-16 text-center text-slate-500 text-sm">
+          <div className="text-4xl mb-3">🏭</div>
+          Select a program above to build or view its warehouse location tree.
+        </div>
+      </div>
+    );
+  }
+
+  const [nodeRows, categoryRows] = await Promise.all([
     prisma.locationNode.findMany({
-      where: { branchId },
+      where: { branchId, programId: selectedProgram.id },
       orderBy: [{ path: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -68,12 +149,15 @@ export default async function Page() {
 
   return (
     <div className="space-y-2">
-      {branch && (
-        <p className="text-xs text-slate-400 font-mono">
-          Branch: <span className="font-semibold text-slate-600">{branch.name}</span> · {branch.branchCode}
-        </p>
-      )}
-      <WarehouseTree branchId={String(branchId)} initial={nodes} categories={categories} />
+      {branchTag}
+      {programSelector}
+      <WarehouseTree
+        branchId={String(branchId)}
+        programId={String(selectedProgram.id)}
+        programName={selectedProgram.name}
+        initial={nodes}
+        categories={categories}
+      />
     </div>
   );
 }

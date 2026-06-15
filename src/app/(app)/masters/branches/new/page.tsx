@@ -1,8 +1,10 @@
 import BranchFormClient from "@/components/branches/BranchFormClient";
+import { requirePageRole } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default async function Page() {
+  await requirePageRole("HO_ADMIN");
   return (
     <BranchFormClient
       mode="create"

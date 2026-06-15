@@ -18,10 +18,11 @@ async function ancestorChain(id: bigint) {
   let cur: bigint | null = id;
   let guard = 0;
   while (cur && guard++ < 20) {
-    const c = await prisma.category.findUnique({
-      where: { id: cur },
-      select: { id: true, name: true, parentId: true },
-    });
+    const c: { id: bigint; name: string; parentId: bigint | null } | null =
+      await prisma.category.findUnique({
+        where: { id: cur },
+        select: { id: true, name: true, parentId: true },
+      });
     if (!c) break;
     chain.push({ id: c.id, name: c.name });
     cur = c.parentId;

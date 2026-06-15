@@ -65,6 +65,7 @@ model Branch {
   localRecords   LocalOnboardingRecord[]
   productCopies  ProductCopy[]
   screens        Screen[]
+  tickets        Ticket[]
 
   @@map("branches")
 }
@@ -220,6 +221,7 @@ model Brand {
   consignments    Consignment[]
   brandProducts   BrandProduct[]
   brandCategories BrandCategory[]
+  tickets         Ticket[]
 
   @@map("brands")
 }
@@ -245,11 +247,13 @@ model Program {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  defAttrs       ProgramDefinitionAttribute[]
-  commonAttrs    ProgramCommonAttribute[]
-  branchPrograms BranchProgram[]
-  contracts      SellerContract[]
-  localRecords   LocalOnboardingRecord[]
+  defAttrs          ProgramDefinitionAttribute[]
+  commonAttrs       ProgramCommonAttribute[]
+  branchPrograms    BranchProgram[]
+  contracts         SellerContract[]
+  localRecords      LocalOnboardingRecord[]
+  sellerAssignments SellerAssignment[]
+  locationNodes     LocationNode[]
 
   @@map("programs")
 }
@@ -330,6 +334,7 @@ model BranchBrand {
 model LocationNode {
   id                  BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   branchId            BigInt   @map("branch_id") @db.UnsignedBigInt
+  programId           BigInt?  @map("program_id") @db.UnsignedBigInt
   parentId            BigInt?  @map("parent_id") @db.UnsignedBigInt
   nodeType            String   @map("node_type") @db.VarChar(20)
   name                String   @db.VarChar(120)
@@ -345,6 +350,7 @@ model LocationNode {
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   branch   Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program  Program?      @relation(fields: [programId], references: [id])
   parent   LocationNode? @relation("LocationTree", fields: [parentId], references: [id])
   children LocationNode[] @relation("LocationTree")
   category Category?     @relation(fields: [categoryId], references: [id])
@@ -353,6 +359,7 @@ model LocationNode {
   screens Screen[]
 
   @@index([branchId])
+  @@index([programId])
   @@index([parentId])
   @@index([path])
   @@map("location_nodes")
@@ -393,6 +400,7 @@ model Seller {
   assignments  SellerAssignment[]
   consignments Consignment[]
   localRecords LocalOnboardingRecord[]
+  tickets      Ticket[]
 
   @@map("sellers")
 }
@@ -433,14 +441,17 @@ model SellerContract {
 model SellerAssignment {
   id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   sellerId     BigInt   @map("seller_id") @db.UnsignedBigInt
+  programId    BigInt?  @map("program_id") @db.UnsignedBigInt
   obExecUserId BigInt   @map("ob_exec_user_id") @db.UnsignedBigInt
   assignedBy   BigInt?  @map("assigned_by") @db.UnsignedBigInt
   assignedAt   DateTime @default(now()) @map("assigned_at")
 
-  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  exec   User   @relation("ExecAssignments", fields: [obExecUserId], references: [id], onDelete: Cascade)
+  seller  Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  program Program? @relation(fields: [programId], references: [id])
+  exec    User     @relation("ExecAssignments", fields: [obExecUserId], references: [id], onDelete: Cascade)
 
   @@unique([sellerId, obExecUserId])
+  @@index([programId])
   @@map("seller_assignments")
 }
 
@@ -579,6 +590,7 @@ model LocalOnboardingRecord {
   overrides LocalOverride[]
   media     LocalMedia[]
   copies    ProductCopy[]
+  tickets   Ticket[]
 
   @@unique([brandProductId, sellerId, branchId, programId])
   @@index([sellerId])
@@ -664,6 +676,58 @@ model Sticker {
 
   @@index([productCopyId])
   @@map("stickers")
+}
+
+// ---------------------------------------------------------------------
+// Tickets — sample / fabrication / damage to-and-fro between OB Exec and
+// Consignment User (BRD Module D, ticket-channel model)
+// ---------------------------------------------------------------------
+
+model Ticket {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  ticketNo      String?   @unique @map("ticket_no") @db.VarChar(20)
+  type          String    @db.VarChar(20) // SAMPLE_REQUEST | FABRICATION | DAMAGE
+  branchId      BigInt    @map("branch_id") @db.UnsignedBigInt
+  sellerId      BigInt?   @map("seller_id") @db.UnsignedBigInt
+  brandId       BigInt?   @map("brand_id") @db.UnsignedBigInt
+  localRecordId BigInt?   @map("local_record_id") @db.UnsignedBigInt
+  productCopyId BigInt?   @map("product_copy_id") @db.UnsignedBigInt
+  title         String    @db.VarChar(200)
+  description   String?   @db.Text
+  status        String    @default("WITH_CONSIGNMENT") @db.VarChar(20) // WITH_CONSIGNMENT | WITH_EXEC | RESOLVED | CLOSED
+  currentRole   String    @default("CONSIGNMENT_USER") @map("current_role") @db.VarChar(20) // OB_EXEC | CONSIGNMENT_USER
+  raisedBy      BigInt?   @map("raised_by") @db.UnsignedBigInt
+  resolution    String?   @db.VarChar(500)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  resolvedAt    DateTime? @map("resolved_at")
+
+  branch  Branch                 @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  seller  Seller?                @relation(fields: [sellerId], references: [id])
+  brand   Brand?                 @relation(fields: [brandId], references: [id])
+  record  LocalOnboardingRecord? @relation(fields: [localRecordId], references: [id])
+  events  TicketEvent[]
+
+  @@index([branchId])
+  @@index([sellerId])
+  @@index([status])
+  @@map("tickets")
+}
+
+model TicketEvent {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  ticketId  BigInt   @map("ticket_id") @db.UnsignedBigInt
+  byUserId  BigInt?  @map("by_user_id") @db.UnsignedBigInt
+  action    String   @db.VarChar(40)
+  fromRole  String?  @map("from_role") @db.VarChar(20)
+  toRole    String?  @map("to_role") @db.VarChar(20)
+  note      String?  @db.VarChar(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_events")
 }
 
 // ---------------------------------------------------------------------

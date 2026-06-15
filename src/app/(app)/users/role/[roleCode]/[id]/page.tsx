@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import RoleUserForm, { UserFormData, UserRoleAssignment } from "@/components/users/RoleUserForm";
 
 interface PageProps {
-  params: Promise<{ roleCode: string; id: string }>;
+  params: { roleCode: string; id: string };
 }
 
 type UserDetail = {

@@ -4,10 +4,11 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "AREA", "DOCKET", "FACE", "RACK", "TRAY", "CUSTOM"] as const;
+const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
 
 const createSchema = z.object({
   branchId: z.coerce.bigint(),
+  programId: z.coerce.bigint(),
   parentId: z.coerce.bigint().optional().nullable(),
   nodeType: z.enum(NODE_TYPES),
   name: z.string().trim().min(1).max(120),
@@ -34,9 +35,14 @@ export const GET = handler(async (req: Request) => {
   const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER");
   const { searchParams } = new URL(req.url);
   const branchIdParam = searchParams.get("branchId");
+  const programIdParam = searchParams.get("programId");
 
   if (!branchIdParam) return fail("branchId is required", 400);
   const branchId = BigInt(branchIdParam);
+
+  // The warehouse tree is scoped per-program — a program must be selected.
+  if (!programIdParam) return fail("programId is required", 400);
+  const programId = BigInt(programIdParam);
 
   // Branch admins can only see their own branch's nodes
   const isBranchAdmin = session.roles.some((r) => r.code === "BRANCH_ADMIN");
@@ -48,7 +54,7 @@ export const GET = handler(async (req: Request) => {
   }
 
   const nodes = await prisma.locationNode.findMany({
-    where: { branchId },
+    where: { branchId, programId },
     orderBy: [{ path: "asc" }, { name: "asc" }],
     select: {
       id: true,
@@ -77,7 +83,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { branchId, parentId, nodeType, name, code, categoryId, isPlacementEligible, isScreenMountable } = parsed.data;
+  const { branchId, programId, parentId, nodeType, name, code, categoryId, isPlacementEligible, isScreenMountable } = parsed.data;
 
   // Confirm branch admin owns this branch
   const ownsThisBranch = session.roles.some(
@@ -85,12 +91,21 @@ export const POST = handler(async (req: Request) => {
   );
   if (!ownsThisBranch) return fail("Forbidden — not your branch", 403);
 
-  // Validate parent belongs to same branch
+  // The selected program must be APPROVED for this branch — the tree is scoped to it.
+  const branchProgram = await prisma.branchProgram.findUnique({
+    where: { branchId_programId: { branchId, programId } },
+  });
+  if (!branchProgram || branchProgram.approvalStatus !== "approved") {
+    return fail("Program is not an approved program for this branch", 422);
+  }
+
+  // Validate parent belongs to same branch + program; child nodes inherit the parent's program.
   let parentPath: string | null = null;
   if (parentId) {
     const parent = await prisma.locationNode.findUnique({ where: { id: parentId } });
     if (!parent) return fail("Parent node not found", 422);
     if (String(parent.branchId) !== String(branchId)) return fail("Parent belongs to a different branch", 422);
+    if (String(parent.programId) !== String(programId)) return fail("Parent belongs to a different program", 422);
     parentPath = parent.path;
   }
 
@@ -100,6 +115,7 @@ export const POST = handler(async (req: Request) => {
   const node = await prisma.locationNode.create({
     data: {
       branchId,
+      programId,
       parentId: parentId ?? null,
       nodeType,
       name,
@@ -128,7 +144,7 @@ export const POST = handler(async (req: Request) => {
     action: "locationNode.create",
     entityType: "LocationNode",
     entityId: node.id,
-    after: { name, nodeType, branchId: String(branchId) },
+    after: { name, nodeType, branchId: String(branchId), programId: String(programId) },
   });
 
   return ok({ node: updated }, { status: 201 });

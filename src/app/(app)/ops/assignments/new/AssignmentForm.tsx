@@ -3,26 +3,47 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Option = {
+type ProgramOption = {
   id: string;
-  name?: string;
-  fullName?: string;
-  sellerCode?: string;
-  email?: string;
+  name: string;
+  code: string;
+};
+
+type SellerOption = {
+  id: string;
+  name: string;
+  sellerCode: string;
+  programs: ProgramOption[];
+};
+
+type ExecOption = {
+  id: string;
+  fullName: string;
+  email: string;
 };
 
 export default function AssignmentForm({
   sellers,
   execs,
 }: {
-  sellers: Option[];
-  execs: Option[];
+  sellers: SellerOption[];
+  execs: ExecOption[];
 }) {
   const router = useRouter();
   const [sellerId, setSellerId] = useState("");
+  const [programId, setProgramId] = useState("");
   const [execId, setExecId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const selectedSeller = sellers.find((s) => s.id === sellerId);
+  const programs = selectedSeller?.programs ?? [];
+
+  function handleSellerChange(value: string) {
+    setSellerId(value);
+    // Reset the program whenever the seller changes — the program list is seller-specific.
+    setProgramId("");
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +51,10 @@ export default function AssignmentForm({
 
     if (!sellerId) {
       setError("Please select a seller.");
+      return;
+    }
+    if (!programId) {
+      setError("Please select a program.");
       return;
     }
     if (!execId) {
@@ -42,7 +67,7 @@ export default function AssignmentForm({
       const res = await fetch("/api/assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sellerId, obExecUserId: execId }),
+        body: JSON.stringify({ sellerId, programId, obExecUserId: execId }),
       });
 
       const data = await res.json();
@@ -90,7 +115,7 @@ export default function AssignmentForm({
           <label className={L}>Select Seller *</label>
           <select
             value={sellerId}
-            onChange={(e) => setSellerId(e.target.value)}
+            onChange={(e) => handleSellerChange(e.target.value)}
             required
             className={I}
           >
@@ -101,6 +126,35 @@ export default function AssignmentForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className={L}>Select Program *</label>
+          <select
+            value={programId}
+            onChange={(e) => setProgramId(e.target.value)}
+            required
+            disabled={!sellerId}
+            className={`${I} disabled:bg-slate-50 disabled:text-slate-400`}
+          >
+            <option value="">
+              {!sellerId
+                ? "— Choose a seller first —"
+                : programs.length === 0
+                  ? "— No contracted programs —"
+                  : "— Choose Program —"}
+            </option>
+            {programs.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.code})
+              </option>
+            ))}
+          </select>
+          {sellerId && programs.length === 0 && (
+            <p className="text-[11px] text-amber-600 mt-1">
+              This seller has no contracted programs. Add a contract before assigning.
+            </p>
+          )}
         </div>
 
         <div>
@@ -131,7 +185,7 @@ export default function AssignmentForm({
         </button>
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || !sellerId || !programId || !execId}
           className="rounded-lg bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 transition-colors"
         >
           {busy ? "Assigning…" : "Assign Seller"}

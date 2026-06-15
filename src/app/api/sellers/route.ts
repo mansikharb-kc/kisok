@@ -6,6 +6,20 @@ import { writeAudit } from "@/lib/audit";
 
 const dateish = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
 
+// Auto-generate the next Membership ID (MEM-0001, MEM-0002…) — global sequential.
+async function nextMembershipId(): Promise<string> {
+  const existing = await prisma.seller.findMany({
+    where: { membershipId: { startsWith: "MEM-" } },
+    select: { membershipId: true },
+  });
+  let max = 0;
+  for (const e of existing) {
+    const n = parseInt((e.membershipId ?? "").split("-")[1] ?? "0", 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return `MEM-${String(max + 1).padStart(4, "0")}`;
+}
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(150),
   sellerCode: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - and _ only"),
@@ -60,12 +74,14 @@ export const POST = handler(async (req: Request) => {
   });
   if (existingCode) return fail("Seller code must be unique.", 409);
 
-  // Verify unique membershipId globally if provided
+  // Membership ID: use provided (verify unique) or auto-generate MEM-####.
   if (rest.membershipId) {
     const existingMember = await prisma.seller.findUnique({
       where: { membershipId: rest.membershipId },
     });
     if (existingMember) return fail("Membership ID must be unique.", 409);
+  } else {
+    rest.membershipId = await nextMembershipId();
   }
 
   // Create seller, brand mappings, and contracts in a transaction

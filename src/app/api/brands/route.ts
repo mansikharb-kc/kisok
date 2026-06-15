@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
-import { GSTIN_REGEX, brandPrefix } from "@/lib/brandMeta";
+import { GSTIN_REGEX, brandPrefix, brandCodeBase } from "@/lib/brandMeta";
 
 // Generate the next readable Brand ID for a type prefix, e.g. NAT-0001.
 async function nextBrandNo(brandType?: string | null): Promise<string> {
@@ -20,11 +20,27 @@ async function nextBrandNo(brandType?: string | null): Promise<string> {
   return `${prefix}-${String(max + 1).padStart(4, "0")}`;
 }
 
+// Generate the next Brand Code from the name, e.g. Century -> CNRY-10 (number starts at 10, per base).
+async function nextBrandCode(name: string): Promise<string> {
+  const base = brandCodeBase(name);
+  const existing = await prisma.brand.findMany({
+    where: { code: { startsWith: `${base}-` } },
+    select: { code: true },
+  });
+  let max = 9; // first one becomes 10
+  for (const e of existing) {
+    const n = parseInt(e.code.split("-")[1] ?? "0", 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return `${base}-${max + 1}`;
+}
+
 const dateish = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(150),
-  code: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - and _ only"),
+  // code is auto-generated from the name (CNRY-10 style); any client value is ignored.
+  code: z.string().optional().nullable(),
   brandType: z.string().trim().max(40).optional().nullable(),
   logoMediaId: z.coerce.bigint().optional().nullable(),
   contactPerson: z.string().trim().max(150).optional().nullable(),
@@ -63,16 +79,17 @@ export const POST = handler(async (req: Request) => {
   const session = await requireRole("HO_ADMIN");
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
-  const { categoryIds, contractStart, contractEnd, ...d } = parsed.data;
+  const { categoryIds, contractStart, contractEnd, code: _ignored, ...d } = parsed.data;
 
   const brandNo = await nextBrandNo(d.brandType);
+  const code = await nextBrandCode(d.name);
 
   const brand = await prisma.brand.create({
     data: {
       ...d,
       brandNo,
       name: d.name,
-      code: d.code,
+      code,
       contractStart: contractStart ? new Date(contractStart) : null,
       contractEnd: contractEnd ? new Date(contractEnd) : null,
       approvalStatus: "draft",

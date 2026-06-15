@@ -22,6 +22,20 @@ export function brandPrefix(type?: string | null): string {
   return (type && BRAND_TYPE_PREFIX[type]) || "BRD";
 }
 
+/**
+ * 4-letter base for the brand code, derived from the name:
+ *  - strip non-letters, uppercase
+ *  - if it has >= 4 consonants: first 2 + last 2 consonants  (Century -> CNTRY -> CNRY)
+ *  - else: use the raw letters                                (EX -> EX)
+ *  - pad to 4 with Z                                          (EX -> EXZZ)
+ */
+export function brandCodeBase(name: string): string {
+  const letters = (name || "").toUpperCase().replace(/[^A-Z]/g, "");
+  const cons = letters.replace(/[AEIOU]/g, "");
+  const base = cons.length >= 4 ? cons.slice(0, 2) + cons.slice(-2) : letters;
+  return (base + "ZZZZ").slice(0, 4);
+}
+
 export const AGREEMENT_DURATIONS = [
   { label: "6 Months", months: 6 },
   { label: "1 Year", months: 12 },

@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { slugFromName } from "@/lib/attributeMeta";
-import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY, isValidGstin } from "@/lib/brandMeta";
+import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY, isValidGstin, brandCodeBase } from "@/lib/brandMeta";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 
@@ -129,8 +128,8 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!name.trim() || !code.trim()) {
-      setError("Brand Name and Brand Code are required");
+    if (!name.trim()) {
+      setError("Brand Name is required");
       return;
     }
     if (!logoMediaId) {
@@ -212,11 +211,17 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={L}>Brand Name *</label>
-            <input value={name} onChange={(e) => { setName(e.target.value); if (!codeTouched) setCode(slugFromName(e.target.value)); }} required className={I} placeholder="e.g. Asian Paints" />
+            <input value={name} onChange={(e) => setName(e.target.value)} required className={I} placeholder="e.g. Asian Paints" />
           </div>
           <div>
-            <label className={L}>Brand Code *</label>
-            <input value={code} onChange={(e) => { setCode(e.target.value); setCodeTouched(true); }} required className={`${I} font-mono`} placeholder="e.g. asian-paints" />
+            <label className={L}>Brand Code <span className="font-normal text-slate-400 normal-case">(auto)</span></label>
+            <input
+              value={editing ? code : name ? `${brandCodeBase(name)}-…` : ""}
+              readOnly
+              className={`${I} font-mono bg-slate-50 text-slate-500`}
+              placeholder="auto from name"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">Auto-generated, e.g. Century → CNRY-10. Number assigned on save.</p>
           </div>
           <div>
             <label className={L}>Brand Type</label>

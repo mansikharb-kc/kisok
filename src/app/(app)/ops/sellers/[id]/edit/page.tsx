@@ -17,8 +17,8 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   const sellerId = BigInt(params.id);
 
-  // Fetch seller details and branch configuration in parallel
-  const [seller, branchBrands, branchPrograms] = await Promise.all([
+  // Brands = all HO-approved active brands. Programs = branch's approved programs.
+  const [seller, brandRows, branchPrograms] = await Promise.all([
     prisma.seller.findUnique({
       where: { id: sellerId },
       include: {
@@ -26,12 +26,13 @@ export default async function Page({ params }: { params: { id: string } }) {
         contracts: true,
       },
     }),
-    prisma.branchBrand.findMany({
-      where: { branchId, brand: { status: "active" } },
-      include: { brand: { select: { id: true, name: true, code: true } } },
+    prisma.brand.findMany({
+      where: { status: "active", approvalStatus: "approved" },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: "asc" },
     }),
     prisma.branchProgram.findMany({
-      where: { branchId, program: { status: "active" } },
+      where: { branchId, approvalStatus: "approved", program: { status: "active" } },
       include: { program: { select: { id: true, name: true, code: true } } },
     }),
   ]);
@@ -39,7 +40,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   if (!seller) notFound();
   if (seller.branchId !== branchId) redirect("/dashboard");
 
-  const brands = serialize(branchBrands.map((bb) => bb.brand));
+  const brands = serialize(brandRows);
   const programs = serialize(branchPrograms.map((bp) => bp.program));
   const sellerData = serialize(seller);
 

@@ -15,19 +15,21 @@ export default async function Page() {
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
-  // Fetch active branch brands and programs
-  const [branchBrands, branchPrograms] = await Promise.all([
-    prisma.branchBrand.findMany({
-      where: { branchId, brand: { status: "active" } },
-      include: { brand: { select: { id: true, name: true, code: true } } },
+  // Brands = all HO-approved active brands (availability flows through sellers,
+  // not through any Branch-Admin step). Programs = branch's HO-approved programs.
+  const [brandRows, branchPrograms] = await Promise.all([
+    prisma.brand.findMany({
+      where: { status: "active", approvalStatus: "approved" },
+      select: { id: true, name: true, code: true },
+      orderBy: { name: "asc" },
     }),
     prisma.branchProgram.findMany({
-      where: { branchId, program: { status: "active" } },
+      where: { branchId, approvalStatus: "approved", program: { status: "active" } },
       include: { program: { select: { id: true, name: true, code: true } } },
     }),
   ]);
 
-  const brands = serialize(branchBrands.map((bb) => bb.brand));
+  const brands = serialize(brandRows);
   const programs = serialize(branchPrograms.map((bp) => bp.program));
 
   return (
