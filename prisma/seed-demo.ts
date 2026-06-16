@@ -63,6 +63,7 @@ async function attachRole(userId: bigint, roleCode: string, branchId: bigint | n
 
 async function createNode(
   branchId: bigint,
+  programId: bigint | null,
   parentId: bigint | null,
   parentPath: string | null,
   nodeType: string,
@@ -72,9 +73,21 @@ async function createNode(
   isPlacementEligible: boolean,
   isScreenMountable: boolean,
 ) {
+  // Idempotent: if a node with this branch + code exists, update it (so re-runs
+  // don't duplicate and a missing programId gets backfilled).
+  const existing = code ? await prisma.locationNode.findFirst({ where: { branchId, code } }) : null;
+  if (existing) {
+    const path = buildPath(parentPath, existing.id);
+    const locationId = isPlacementEligible ? `LOC-${branchId}-${existing.id}` : null;
+    return prisma.locationNode.update({
+      where: { id: existing.id },
+      data: { programId, parentId, nodeType, name, depth, path, isPlacementEligible, isScreenMountable, locationId, status: "active" },
+    });
+  }
   const node = await prisma.locationNode.create({
     data: {
       branchId,
+      programId,
       parentId,
       nodeType,
       name,
@@ -359,19 +372,19 @@ async function main() {
    */
 
   // -- Immersive Hub warehouse --
-  const wh1 = await createNode(branch.id, null, null, "WAREHOUSE", "Immersive Hub", "WH-IH", 0, false, false);
+  const wh1 = await createNode(branch.id, progImmersive.id, null, null, "WAREHOUSE", "Immersive Hub", "WH-IH", 0, false, false);
 
-  const blkA = await createNode(branch.id, wh1.id, wh1.path, "BLOCK", "Block A – Bathware Zone", "BLK-A", 1, false, true);
-  const rackA1 = await createNode(branch.id, blkA.id, blkA.path, "RACK",  "Rack A1 – Kohler Display", "RCK-A1", 2, true, false);
-  const rackA2 = await createNode(branch.id, blkA.id, blkA.path, "RACK",  "Rack A2 – Jaquar Display",  "RCK-A2", 2, true, false);
+  const blkA = await createNode(branch.id, progImmersive.id, wh1.id, wh1.path, "BLOCK", "Block A – Bathware Zone", "BLK-A", 1, false, true);
+  const rackA1 = await createNode(branch.id, progImmersive.id, blkA.id, blkA.path, "RACK",  "Rack A1 – Kohler Display", "RCK-A1", 2, true, false);
+  const rackA2 = await createNode(branch.id, progImmersive.id, blkA.id, blkA.path, "RACK",  "Rack A2 – Jaquar Display",  "RCK-A2", 2, true, false);
 
-  const blkB = await createNode(branch.id, wh1.id, wh1.path, "BLOCK", "Block B – Paints Zone", "BLK-B", 1, false, true);
-  const rackB1 = await createNode(branch.id, blkB.id, blkB.path, "RACK",  "Rack B1 – Asian Paints",    "RCK-B1", 2, true, false);
+  const blkB = await createNode(branch.id, progImmersive.id, wh1.id, wh1.path, "BLOCK", "Block B – Paints Zone", "BLK-B", 1, false, true);
+  const rackB1 = await createNode(branch.id, progImmersive.id, blkB.id, blkB.path, "RACK",  "Rack B1 – Asian Paints",    "RCK-B1", 2, true, false);
 
   // -- Catalogue Library warehouse --
-  const wh2 = await createNode(branch.id, null, null, "WAREHOUSE", "Catalogue Library", "WH-CL", 0, false, false);
-  const trayCL1 = await createNode(branch.id, wh2.id, wh2.path, "TRAY", "Tray CL-1 – Kohler eCat",      "TRY-CL1", 1, true, false);
-  const trayCL2 = await createNode(branch.id, wh2.id, wh2.path, "TRAY", "Tray CL-2 – Paints Swatches",  "TRY-CL2", 1, true, false);
+  const wh2 = await createNode(branch.id, progCatalogue.id, null, null, "WAREHOUSE", "Catalogue Library", "WH-CL", 0, false, false);
+  const trayCL1 = await createNode(branch.id, progCatalogue.id, wh2.id, wh2.path, "TRAY", "Tray CL-1 – Kohler eCat",      "TRY-CL1", 1, true, false);
+  const trayCL2 = await createNode(branch.id, progCatalogue.id, wh2.id, wh2.path, "TRAY", "Tray CL-2 – Paints Swatches",  "TRY-CL2", 1, true, false);
 
   console.log(`✓ Location tree:`);
   console.log(`    🏭 Immersive Hub`);
