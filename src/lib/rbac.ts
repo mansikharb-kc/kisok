@@ -26,6 +26,7 @@ export type NavItem = {
 // Sidebar navigation — each item lists which roles may see it.
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC"] },
+  { href: "/archived", label: "Archived", group: "Overview", roles: ["HO_ADMIN"] },
 
   // L1 — HO masters (Branch Admin: view only, enforced in each page)
   { href: "/masters/categories",       label: "Categories",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },

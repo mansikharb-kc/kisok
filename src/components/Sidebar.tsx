@@ -34,6 +34,7 @@ function NavIcon({ href }: { href: string }) {
     onboarding: "M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12",
     placement: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
     users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+    archived: "M21 8v13H3V8M23 3H1v5h22zM10 12h4",
   };
   let key = "dashboard";
   if (href.includes("categories")) key = "categories";
@@ -51,10 +52,38 @@ function NavIcon({ href }: { href: string }) {
   else if (href.includes("onboarding")) key = "onboarding";
   else if (href.includes("placement")) key = "placement";
   else if (href.includes("users")) key = "users";
+  else if (href.includes("archived")) key = "archived";
   else if (href.includes("dashboard")) key = "dashboard";
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       {p[key].split(/(?=M)/).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
+// Pick a representative icon for a whole group (used in the collapsed rail).
+function groupIconHref(group: string): string {
+  switch (group) {
+    case "Overview": return "/dashboard";
+    case "HO Masters": return "/masters/categories";
+    case "Branch Setup": return "/branch/warehouse";
+    case "Operations": return "/ops/onboarding";
+    case "Users": return "/users";
+    default: return "/dashboard";
+  }
+}
+
+function ThemeIcon({ dark }: { dark: boolean }) {
+  return dark ? (
+    // moon
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  ) : (
+    // sun
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
     </svg>
   );
 }
@@ -64,10 +93,10 @@ function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; p
   return (
     <div>
       <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2 mb-1 group">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-300 transition-colors">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/75 group-hover:text-white transition-colors">
           {name}
         </span>
-        <span className="text-slate-500 group-hover:text-slate-300 transition-colors">
+        <span className="text-white/75 group-hover:text-white transition-colors">
           <Chevron dir={open ? "up" : "left"} />
         </span>
       </button>
@@ -80,7 +109,7 @@ function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; p
                 key={item.href}
                 href={item.href}
                 className={`block rounded px-3 py-2 text-sm transition ${
-                  active ? "bg-white/15 text-white font-medium" : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  active ? "bg-white/15 text-white font-medium" : "text-white hover:bg-white/5"
                 }`}
               >
                 {item.label}
@@ -97,14 +126,24 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem("kc_sidebar_collapsed") === "1");
+    setDark(document.documentElement.classList.contains("dark"));
   }, []);
   function toggle() {
     setCollapsed((c) => {
       const next = !c;
       localStorage.setItem("kc_sidebar_collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
+  function toggleTheme() {
+    setDark((d) => {
+      const next = !d;
+      localStorage.setItem("kc_theme", next ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", next);
       return next;
     });
   }
@@ -129,18 +168,17 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
       }`}
     >
       {/* Header with collapse toggle */}
-      <div className="flex items-center justify-between px-3 py-5 border-b border-white/10">
+      <div className={`flex items-center px-3 py-5 border-b border-white/10 ${collapsed ? "justify-center" : "justify-between"}`}>
         {!collapsed && (
           <Link href="/dashboard" className="min-w-0">
             <div className="text-white font-bold tracking-tight">KC IMS</div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider">Inventory Management</div>
+            <div className="text-[11px] text-white/60 uppercase tracking-wider">Inventory Management</div>
           </Link>
         )}
-        {collapsed && <span className="text-white font-bold text-sm mx-auto">KC</span>}
         <button
           onClick={toggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="text-slate-400 hover:text-white shrink-0 p-1 rounded hover:bg-white/10"
+          className="text-white/80 hover:text-white shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 focus:outline-none"
         >
           <Chevron dir={collapsed ? "right" : "left"} />
         </button>
@@ -155,19 +193,21 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
         </nav>
       ) : (
         <nav className="flex-1 overflow-y-auto scrollbar-hide py-4 flex flex-col items-center gap-1">
-          {nav.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          {groups.map((g) => {
+            const active = g.items.some(
+              (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+            );
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
+              <button
+                key={g.name}
+                onClick={() => toggle()}
+                title={g.name}
                 className={`w-10 h-10 flex items-center justify-center rounded transition ${
-                  active ? "bg-white/15 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  active ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <NavIcon href={item.href} />
-              </Link>
+                <NavIcon href={groupIconHref(g.name)} />
+              </button>
             );
           })}
         </nav>
@@ -178,19 +218,35 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
         {!collapsed ? (
           <>
             <div className="text-sm text-white font-medium truncate">{user.name}</div>
-            <div className="text-[11px] text-slate-400 truncate">{user.roleLabels.join(", ")}</div>
-            <button onClick={logout} className="mt-3 w-full rounded border border-white/15 text-slate-300 text-xs py-1.5 hover:bg-white/5">
+            <div className="text-[11px] text-white/70 truncate">{user.roleLabels.join(", ")}</div>
+            <button
+              onClick={toggleTheme}
+              className="mt-3 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5 flex items-center justify-center gap-2"
+            >
+              <ThemeIcon dark={dark} />
+              {dark ? "Light mode" : "Dark mode"}
+            </button>
+            <button onClick={logout} className="mt-2 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5">
               Sign out
             </button>
           </>
         ) : (
-          <button onClick={logout} aria-label="Sign out" className="w-full flex justify-center text-slate-400 hover:text-white py-1.5 rounded hover:bg-white/10">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              title={dark ? "Light mode" : "Dark mode"}
+              className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none"
+            >
+              <ThemeIcon dark={dark} />
+            </button>
+            <button onClick={logout} aria-label="Sign out" className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
     </aside>

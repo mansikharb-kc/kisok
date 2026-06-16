@@ -83,16 +83,11 @@ export default function ProgramsClient({
     });
   }, [initialPrograms, query]);
 
-  const totalBindings = initialPrograms.reduce(
-    (sum, program) => sum + program.definitionAttributes.length + program.commonAttributes.length,
-    0,
-  );
-
   const activeCount = initialPrograms.filter((program) => program.status === "active").length;
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
           <div className="flex items-baseline justify-between">
             <div>
@@ -130,16 +125,6 @@ export default function ProgramsClient({
           <div className="mt-3 text-xs text-slate-500">Available for mapping</div>
         </div>
 
-        <div className="group rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm transition-all hover:shadow-md hover:border-indigo-300">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Bindings</div>
-              <div className="mt-2 text-4xl font-bold text-indigo-700">{totalBindings}</div>
-            </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">Across all programs</div>
-        </div>
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -176,7 +161,7 @@ export default function ProgramsClient({
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Program Master List</h3>
-          <p className="mt-1 text-xs text-slate-500">Open details, edit, or attribute bindings on separate pages.</p>
+          <p className="mt-1 text-xs text-slate-500">Open details or edit on separate pages.</p>
         </div>
 
         {rows.length === 0 ? (
@@ -197,7 +182,6 @@ export default function ProgramsClient({
                   <th className="px-4 py-3 text-left font-medium">Program</th>
                   <th className="px-4 py-3 text-left font-medium">Code</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Attributes</th>
                   <th className="px-4 py-3 text-left font-medium">Usage</th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
@@ -219,10 +203,6 @@ export default function ProgramsClient({
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle text-xs text-slate-500">
-                      <div>{program.definitionAttributes.length} definition</div>
-                      <div>{program.commonAttributes.length} common</div>
-                    </td>
-                    <td className="px-4 py-3 align-middle text-xs text-slate-500">
                       <div>{program.branchCount} branches</div>
                       <div>{program.contractCount} contracts</div>
                       <div>{program.localCount} local records</div>
@@ -233,14 +213,9 @@ export default function ProgramsClient({
                           View
                         </Link>
                         {!readOnly && (
-                          <>
-                            <Link href={`/masters/programs/${program.id}/attributes`} className="rounded-full border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                              Bindings
-                            </Link>
-                            <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                              Edit
-                            </Link>
-                          </>
+                          <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
+                            Edit
+                          </Link>
                         )}
                       </div>
                     </td>
