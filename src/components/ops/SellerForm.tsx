@@ -722,10 +722,10 @@ export default function SellerForm({
                       key={b.id}
                       type="button"
                       onClick={() => toggleBrand(b.id)}
-                      className={`flex items-center justify-between p-3.5 rounded-xl border text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] ${
+                      className={`flex items-center justify-between py-3.5 px-5 rounded-xl text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] ${
                         checked
-                          ? "border-brand-600 bg-brand-50/50 text-brand-900 shadow-sm"
-                          : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
+                          ? "border-2 border-black bg-brand-50/80 text-brand-950 shadow-sm font-semibold"
+                          : "border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-slate-700"
                       }`}
                     >
                       <div className="min-w-0 pr-2">
@@ -735,7 +735,7 @@ export default function SellerForm({
                       <span
                         className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                           checked
-                            ? "border-brand-600 bg-brand-600 text-white text-[10px]"
+                            ? "border-black bg-black text-white text-[10px]"
                             : "border-slate-300 bg-white/60 backdrop-blur-md group-hover:border-slate-400"
                         }`}
                       >
