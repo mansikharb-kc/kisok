@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AttributesPage() {
   const session = await getSession();
-  const readOnly = session ? !hasRole(session.roles, "HO_ADMIN") : true;
+  const isHo = session ? hasRole(session.roles, "HO_ADMIN") : false;
+  const isBranchAdmin = session ? hasRole(session.roles, "BRANCH_ADMIN") : false;
+  const readOnly = !isHo; // Branch Admin can't edit/delete…
+  const canRequest = isBranchAdmin; // …but can request new (HO approval)
   const rows = await prisma.attribute.findMany({
     orderBy: [{ status: "asc" }, { sectionGroup: "asc" }, { name: "asc" }],
     include: {
@@ -50,7 +53,7 @@ export default async function AttributesPage() {
         </div>
       </div>
 
-      <AttributesClient initial={attributes} readOnly={readOnly} />
+      <AttributesClient initial={attributes} readOnly={readOnly} canRequest={canRequest} />
     </div>
   );
 }

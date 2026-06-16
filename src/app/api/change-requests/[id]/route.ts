@@ -39,8 +39,7 @@ async function decide(req: Request, ctx: { params: { id: string } }): Promise<Ne
   if (request.status !== "pending") return fail("This request is already decided.", 400);
 
   const updated = await prisma.$transaction(async (tx) => {
-    // Apply the type-specific side effect. Only BRANCH_PROGRAM is wired up now;
-    // other types simply record the decision (generic handling).
+    // Apply the type-specific side effect.
     if (request.type === "BRANCH_PROGRAM") {
       const payload = request.payload as { branchId?: string; programId?: string } | null;
       if (payload?.branchId && payload?.programId) {
@@ -52,6 +51,50 @@ async function decide(req: Request, ctx: { params: { id: string } }): Promise<Ne
             },
           },
           data: { approvalStatus: decision },
+        });
+      }
+    }
+
+    // On approval, materialize the requested master record.
+    if (decision === "approved" && request.type === "NEW_CATEGORY") {
+      const p = request.payload as { name?: string; code?: string; parentId?: string | null } | null;
+      if (p?.name && p?.code) {
+        // ensure unique code
+        let code = p.code;
+        let k = 2;
+        while (await tx.category.findUnique({ where: { code } })) code = `${p.code}-${k++}`;
+        await tx.category.create({
+          data: { name: p.name, code, parentId: p.parentId ? BigInt(p.parentId) : null, status: "active" },
+        });
+      }
+    }
+
+    if (decision === "approved" && request.type === "NEW_ATTRIBUTE") {
+      const p = request.payload as {
+        name?: string; code?: string; dataType?: string; unit?: string | null;
+        sectionGroup?: string | null; isVariant?: boolean; isPriceable?: boolean;
+        isRequired?: boolean; options?: string[];
+      } | null;
+      if (p?.name && p?.code && p?.dataType) {
+        let code = p.code;
+        let k = 2;
+        while (await tx.attribute.findUnique({ where: { code } })) code = `${p.code}-${k++}`;
+        await tx.attribute.create({
+          data: {
+            name: p.name,
+            code,
+            dataType: p.dataType,
+            unit: p.unit || null,
+            sectionGroup: p.sectionGroup || null,
+            isVariant: p.isVariant ?? false,
+            isPriceable: p.isPriceable ?? false,
+            isRequired: p.isRequired ?? false,
+            status: "active",
+            options:
+              p.dataType === "enum" && p.options?.length
+                ? { create: p.options.map((v, i) => ({ optionValue: v, displayOrder: i })) }
+                : undefined,
+          },
         });
       }
     }

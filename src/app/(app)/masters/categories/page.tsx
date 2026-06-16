@@ -7,7 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
   const session = await getSession();
-  const readOnly = session ? !hasRole(session.roles, "HO_ADMIN") : true;
+  const isHo = session ? hasRole(session.roles, "HO_ADMIN") : false;
+  const isBranchAdmin = session ? hasRole(session.roles, "BRANCH_ADMIN") : false;
+  // Branch Admin: cannot edit/delete (readOnly) but CAN request new (canCreate).
+  const readOnly = !isHo;
+  const canCreate = isHo || isBranchAdmin;
 
   const rows = await prisma.category.findMany({
     orderBy: [{ name: "asc" }],
@@ -16,5 +20,5 @@ export default async function CategoriesPage() {
 
   const categories: FlatCategory[] = serialize(rows);
 
-  return <CategoriesTree initial={categories} readOnly={readOnly} />;
+  return <CategoriesTree initial={categories} readOnly={readOnly} canCreate={canCreate} />;
 }

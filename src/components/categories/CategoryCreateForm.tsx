@@ -10,11 +10,13 @@ export default function CategoryCreateForm({
   initialLevel = 1,
   initialParentId = null,
   lockContext = false,
+  isRequest = false,
 }: {
   flat: FlatCat[];
   initialLevel?: number;
   initialParentId?: string | null;
   lockContext?: boolean;
+  isRequest?: boolean;
 }) {
   const router = useRouter();
   const parents = useMemo(() => buildParentOptions(flat), [flat]);
@@ -101,6 +103,9 @@ export default function CategoryCreateForm({
         setError(data.error || "Create failed");
         return;
       }
+      if (data.pending) {
+        alert(`Submitted ${data.requested ?? names.length} categor${(data.requested ?? names.length) > 1 ? "ies" : "y"} for HO approval. They'll appear once approved.`);
+      }
       goBack();
     } catch {
       setError("Network error");
@@ -115,8 +120,10 @@ export default function CategoryCreateForm({
       <div className="flex items-center gap-4 mb-6">
         <div className="w-12 h-12 rounded-xl bg-brand-600 text-white flex items-center justify-center text-xl">▤</div>
         <div>
-          <h1 className="text-2xl font-bold">Create New Category</h1>
-          <p className="text-sm text-slate-500">Add a new category to the hierarchy</p>
+          <h1 className="text-2xl font-bold">{isRequest ? "Request New Category" : "Create New Category"}</h1>
+          <p className="text-sm text-slate-500">
+            {isRequest ? "Submitted to HO Admin — added only after approval" : "Add a new category to the hierarchy"}
+          </p>
         </div>
       </div>
 
@@ -255,7 +262,7 @@ export default function CategoryCreateForm({
             disabled={busy || !canSubmit}
             className="rounded-lg bg-brand-500 text-white py-3 text-sm font-semibold hover:bg-brand-600 disabled:opacity-50"
           >
-            {busy ? "Creating…" : `Create ${meta.label}${names.length > 1 ? "s" : ""}`}
+            {busy ? "Submitting…" : `${isRequest ? "Request" : "Create"} ${meta.label}${names.length > 1 ? "s" : ""}`}
           </button>
           <button
             type="button"

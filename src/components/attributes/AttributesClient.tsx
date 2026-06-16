@@ -31,8 +31,9 @@ const emptyForm = {
   optionsText: "",
 };
 
-export default function AttributesClient({ initial, readOnly = false }: { initial: AttrRow[]; readOnly?: boolean }) {
+export default function AttributesClient({ initial, readOnly = false, canRequest = false }: { initial: AttrRow[]; readOnly?: boolean; canRequest?: boolean }) {
   const router = useRouter();
+  const requestMode = readOnly && canRequest; // Branch Admin: create = request (HO approval)
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AttrRow | null>(null);
@@ -108,6 +109,9 @@ export default function AttributesClient({ initial, readOnly = false }: { initia
         setError(data.error || "Save failed");
         return;
       }
+      if (data.pending) {
+        alert("Attribute submitted for HO approval. It'll appear once approved.");
+      }
       setOpen(false);
       router.refresh();
     } catch {
@@ -146,12 +150,12 @@ export default function AttributesClient({ initial, readOnly = false }: { initia
           className="flex-1 max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <span className="text-sm text-slate-500">{initial.length} total</span>
-        {!readOnly && (
+        {(!readOnly || canRequest) && (
           <button
             onClick={startCreate}
             className="ml-auto rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
           >
-            + New Attribute
+            {requestMode ? "+ Request Attribute" : "+ New Attribute"}
           </button>
         )}
       </div>
@@ -213,7 +217,10 @@ export default function AttributesClient({ initial, readOnly = false }: { initia
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-8 overflow-y-auto">
           <form onSubmit={save} className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
-            <h3 className="text-lg font-bold">{editing ? "Edit attribute" : "New attribute"}</h3>
+            <h3 className="text-lg font-bold">{editing ? "Edit attribute" : requestMode ? "Request attribute" : "New attribute"}</h3>
+            {requestMode && !editing && (
+              <p className="text-xs text-slate-500">Submitted to HO Admin — added only after approval.</p>
+            )}
             {error && (
               <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{error}</div>
             )}
@@ -312,7 +319,7 @@ export default function AttributesClient({ initial, readOnly = false }: { initia
                 Cancel
               </button>
               <button type="submit" disabled={busy} className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-60">
-                {busy ? "Saving…" : "Save"}
+                {busy ? "Submitting…" : requestMode ? "Submit Request" : "Save"}
               </button>
             </div>
           </form>

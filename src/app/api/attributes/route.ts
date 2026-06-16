@@ -32,10 +32,38 @@ export const GET = handler(async () => {
 });
 
 export const POST = handler(async (req: Request) => {
-  const session = await requireRole("HO_ADMIN");
+  // HO Admin creates directly; Branch Admin submits for HO approval.
+  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN");
+  const isHo = session.roles.some((r) => r.code === "HO_ADMIN");
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   const d = parsed.data;
+
+  // Branch Admin → pending change request (attribute created only on HO approval).
+  if (!isHo) {
+    const branchId = session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId)?.branchId;
+    await prisma.changeRequest.create({
+      data: {
+        type: "NEW_ATTRIBUTE",
+        payload: {
+          name: d.name, code: d.code, dataType: d.dataType, unit: d.unit ?? null,
+          sectionGroup: d.sectionGroup ?? null, isVariant: d.isVariant ?? false,
+          isPriceable: d.isPriceable ?? false, isRequired: d.isRequired ?? false,
+          options: d.dataType === "enum" ? d.options ?? [] : [],
+        },
+        branchId: branchId ? BigInt(branchId) : null,
+        requestedBy: BigInt(session.uid),
+        status: "pending",
+      },
+    });
+    await writeAudit({
+      actorUserId: session.uid,
+      action: "attribute.request",
+      entityType: "ChangeRequest",
+      after: { type: "NEW_ATTRIBUTE", name: d.name },
+    });
+    return ok({ requested: true, pending: true }, { status: 202 });
+  }
 
   const attribute = await prisma.attribute.create({
     data: {

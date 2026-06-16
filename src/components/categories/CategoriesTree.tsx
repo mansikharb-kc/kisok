@@ -19,7 +19,8 @@ type TreeNode = FlatCategory & {
   number: string; // "1.2.3"
 };
 
-export default function CategoriesTree({ initial, readOnly = false }: { initial: FlatCategory[]; readOnly?: boolean }) {
+export default function CategoriesTree({ initial, readOnly = false, canCreate = false }: { initial: FlatCategory[]; readOnly?: boolean; canCreate?: boolean }) {
+  const requestMode = readOnly && canCreate; // Branch Admin: create = request (HO approval)
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -194,23 +195,27 @@ export default function CategoriesTree({ initial, readOnly = false }: { initial:
             )}
 
             <div className="ml-auto flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
-              {/* hover actions — hidden for read-only (BRANCH_ADMIN) */}
-              {!readOnly && (
+              {(canCreate || !readOnly) && (
                 <div className="hidden group-hover:flex items-center gap-3">
-                  {n.level < MAX_LEVEL && (
+                  {canCreate && n.level < MAX_LEVEL && (
                     <button onClick={() => openCreateChild(n)} className="text-xs text-brand-600 hover:underline">
-                      + Sub
+                      {requestMode ? "+ Request Sub" : "+ Sub"}
                     </button>
                   )}
-                  <button onClick={() => startEdit(n)} className="text-xs text-slate-600 hover:underline">
-                    Edit
-                  </button>
-                  <button onClick={() => patchStatus(n)} className="text-xs text-slate-500 hover:underline">
-                    {n.status === "active" ? "Retire" : "Activate"}
-                  </button>
-                  <button onClick={() => remove(n)} className="text-xs text-red-600 hover:underline">
-                    Delete
-                  </button>
+                  {/* edit/retire/delete only for HO Admin */}
+                  {!readOnly && (
+                    <>
+                      <button onClick={() => startEdit(n)} className="text-xs text-slate-600 hover:underline">
+                        Edit
+                      </button>
+                      <button onClick={() => patchStatus(n)} className="text-xs text-slate-500 hover:underline">
+                        {n.status === "active" ? "Retire" : "Activate"}
+                      </button>
+                      <button onClick={() => remove(n)} className="text-xs text-red-600 hover:underline">
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
               {hasChildren && (
@@ -245,12 +250,12 @@ export default function CategoriesTree({ initial, readOnly = false }: { initial:
             className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
-        {!readOnly && (
+        {canCreate && (
           <button
             onClick={openCreateRoot}
             className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
           >
-            + New Category
+            {requestMode ? "+ Request Category" : "+ New Category"}
           </button>
         )}
       </div>
