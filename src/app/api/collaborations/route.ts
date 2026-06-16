@@ -99,7 +99,7 @@ export const POST = handler(async (req: Request) => {
         spocName: d.spocName ?? null,
         spocPhone: d.spocPhone ?? null,
         spocEmail: d.spocEmail ?? null,
-        categories: {
+        sellerCategories: {
           create: d.categoryIds.map((categoryId) => ({ categoryId })),
         },
         contracts: {
