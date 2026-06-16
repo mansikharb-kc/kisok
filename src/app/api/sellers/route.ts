@@ -26,6 +26,7 @@ const createSchema = z.object({
   membershipId: z.string().trim().max(60).optional().nullable(),
   status: z.enum(["active", "retired"]).optional().default("active"),
   brandIds: z.array(z.coerce.bigint()).optional().default([]),
+  categoryIds: z.array(z.coerce.bigint()).optional().default([]),
   contracts: z.array(z.object({
     programId: z.coerce.bigint(),
     collaborationTenure: z.string().trim().max(60).optional().nullable(),
@@ -68,7 +69,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandIds, contracts, ...rest } = parsed.data;
+  const { brandIds, categoryIds, contracts, ...rest } = parsed.data;
 
   // Verify unique sellerCode globally
   const existingCode = await prisma.seller.findUnique({
@@ -94,6 +95,9 @@ export const POST = handler(async (req: Request) => {
         branchId,
         sellerBrands: {
           create: brandIds.map((bid) => ({ brandId: bid })),
+        },
+        sellerCategories: {
+          create: categoryIds.map((cid) => ({ categoryId: cid })),
         },
         contracts: {
           create: contracts.map((c) => ({

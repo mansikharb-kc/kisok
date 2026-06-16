@@ -19,20 +19,22 @@ export function buildParentOptions(flat: FlatCat[]): ParentOption[] {
     else roots.push(n);
   }
   const cmp = (a: N, b: N) => a.name.localeCompare(b.name);
+  const orderedList: ParentOption[] = [];
   const assign = (nodes: N[], level: number, prefix: string) => {
     nodes.sort(cmp);
     nodes.forEach((n, i) => {
       n.level = level;
       n.number = prefix ? `${prefix}.${i + 1}` : `${i + 1}`;
+      orderedList.push({
+        id: n.id,
+        name: n.name,
+        level: n.level,
+        number: n.number,
+        parentId: n.parentId,
+      });
       assign(n.children, level + 1, n.number);
     });
   };
   assign(roots, 1, "");
-  return [...map.values()].map((n) => ({
-    id: n.id,
-    name: n.name,
-    level: n.level,
-    number: n.number,
-    parentId: n.parentId,
-  }));
+  return orderedList;
 }

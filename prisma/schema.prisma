@@ -132,6 +132,7 @@ model Category {
   locationNodes      LocationNode[]
   brandProducts      BrandProduct[]
   brandCategories    BrandCategory[]
+  sellerCategories   SellerCategory[]
 
   @@index([parentId])
   @@map("categories")
@@ -398,6 +399,7 @@ model Seller {
 
   branch       Branch                  @relation(fields: [branchId], references: [id])
   sellerBrands SellerBrand[]
+  sellerCategories SellerCategory[]
   contracts    SellerContract[]
   assignments  SellerAssignment[]
   consignments Consignment[]
@@ -417,6 +419,19 @@ model SellerBrand {
 
   @@unique([sellerId, brandId])
   @@map("seller_brands")
+}
+
+model SellerCategory {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId   BigInt   @map("seller_id") @db.UnsignedBigInt
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  seller   Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([sellerId, categoryId])
+  @@map("seller_categories")
 }
 
 model SellerContract {

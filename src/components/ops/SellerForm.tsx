@@ -67,6 +67,7 @@ type SellerEdit = {
   membershipId: string | null;
   status: string;
   sellerBrands: { brandId: string }[];
+  sellerCategories?: { categoryId: string }[];
   contracts: {
     programId: string;
     collaborationTenure: string | null;
@@ -110,6 +111,14 @@ export default function SellerForm({
   // Brands Mapped
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(
     seller?.sellerBrands.map((sb) => sb.brandId) ?? []
+  );
+
+  const parents = useMemo(() => buildParentOptions(flatCategories), [flatCategories]);
+  const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
+
+  const [sel, setSel] = useState<Record<number, string>>({});
+  const [pickedCategoryIds, setPickedCategoryIds] = useState<string[]>(
+    seller?.sellerCategories?.map((sc) => String(sc.categoryId)) ?? []
   );
 
   // Contracts/Programs
@@ -198,6 +207,36 @@ export default function SellerForm({
     setSelectedBrandIds((prev) =>
       prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
     );
+  }
+
+  // ---- category cascade ----
+  function optionsForLevel(k: number) {
+    if (k === 1) return parents.filter((p) => p.level === 1);
+    const parentSel = sel[k - 1];
+    if (!parentSel) return [];
+    return parents.filter((p) => p.level === k && p.parentId === parentSel);
+  }
+  function selectAt(k: number, id: string) {
+    setSel((prev) => {
+      const next: Record<number, string> = {};
+      for (let i = 1; i < k; i++) if (prev[i]) next[i] = prev[i];
+      next[k] = id;
+      return next;
+    });
+  }
+  const deepest = useMemo(() => {
+    let id: string | null = null;
+    for (let k = 1; k <= LEVELS.length; k++) if (sel[k]) id = sel[k];
+    return id;
+  }, [sel]);
+
+  function addAssociation() {
+    if (!deepest || pickedCategoryIds.includes(deepest)) return;
+    setPickedCategoryIds((p) => [...p, deepest]);
+    setSel({});
+  }
+  function removeAssociation(id: string) {
+    setPickedCategoryIds((p) => p.filter((x) => x !== id));
   }
 
   // Toggle program contract selection
@@ -319,6 +358,7 @@ export default function SellerForm({
         membershipId: membershipId.trim() || null,
         status,
         brandIds: selectedBrandIds,
+        categoryIds: pickedCategoryIds,
         contracts: contractPayload,
       };
 
@@ -569,10 +609,61 @@ export default function SellerForm({
         )}
       </div>
 
-      {/* 3. Contracts */}
+      {/* 3. Categories Operated In */}
+      <div className={card}>
+        <StepHeader n={3} title="Categories Operated In" sub="Link the seller to categories in your taxonomy" />
+        <div className="space-y-3">
+          {LEVELS.map((lvl, idx) => {
+            const k = idx + 1;
+            if (k > 1 && !sel[k - 1]) return null;
+            const opts = optionsForLevel(k);
+            return (
+              <div key={k} className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center ${lvl.badge}`}>{lvl.label}</span>
+                <select
+                  value={sel[k] ?? ""}
+                  onChange={(e) => e.target.value ? selectAt(k, e.target.value) : null}
+                  className={`${I} flex-1`}
+                >
+                  <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
+                  {opts.map((o) => <option key={o.id} value={o.id}>{o.number} · {o.name}</option>)}
+                </select>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={addAssociation}
+              disabled={!deepest}
+              className="rounded-md bg-slate-800 text-white px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+            >
+              + Add this category
+            </button>
+            <span className="text-xs text-slate-400">Pick a Domain, drill down as deep as you want, then add. Repeat for multiple.</span>
+          </div>
+
+          {pickedCategoryIds.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {pickedCategoryIds.map((id) => {
+                const node = byId.get(id);
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">
+                    <span className="text-[9px] px-1 rounded bg-white">{node ? levelMeta(node.level).label : ""}</span>
+                    {node?.name ?? id}
+                    <button type="button" onClick={() => removeAssociation(id)} className="text-brand-500 hover:text-brand-800">✕</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Contracts */}
       <div className={card}>
         <StepHeader
-          n={3}
+          n={4}
           title="Program Contracts"
           sub="Assign programs and define the tenure & start/end collaboration metrics"
         />
@@ -625,14 +716,14 @@ export default function SellerForm({
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className={L}>Collaboration Tenure</label>
+                          <label className={L}>Collaboration Tenure (in days)</label>
                           <input
                             value={details.collaborationTenure}
                             onChange={(e) =>
                               updateContract(p.id, "collaborationTenure", e.target.value)
                             }
                             className={I}
-                            placeholder="e.g. 12 months"
+                            placeholder="e.g. 365 days"
                           />
                         </div>
                         <div>
@@ -756,11 +847,11 @@ export default function SellerForm({
         )}
       </div>
 
-      {/* 4. Executive Assignments */}
+      {/* 5. Executive Assignments */}
       {Object.keys(activeContracts).length > 0 && (
         <div className={card}>
           <StepHeader
-            n={4}
+            n={5}
             title="Onboarding Executive Assignments"
             sub="Assign an onboarding executive for each active program contract"
           />

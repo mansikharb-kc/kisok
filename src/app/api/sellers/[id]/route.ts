@@ -12,6 +12,7 @@ const updateSchema = z.object({
   membershipId: z.string().trim().max(60).optional().nullable(),
   status: z.enum(["active", "retired"]).optional(),
   brandIds: z.array(z.coerce.bigint()).optional(),
+  categoryIds: z.array(z.coerce.bigint()).optional(),
   contracts: z.array(z.object({
     programId: z.coerce.bigint(),
     collaborationTenure: z.string().trim().max(60).optional().nullable(),
@@ -42,6 +43,7 @@ export const GET = handler(async (_req: Request, ctx: { params: { id: string } }
     where: { id },
     include: {
       sellerBrands: { select: { brandId: true } },
+      sellerCategories: { select: { categoryId: true } },
       contracts: { include: { contractMedia: { select: { url: true } } } },
       assignments: { include: { exec: { select: { fullName: true } } } },
     },
@@ -60,7 +62,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandIds, contracts, ...data } = parsed.data;
+  const { brandIds, categoryIds, contracts, ...data } = parsed.data;
 
   // Check unique code
   if (data.sellerCode) {
@@ -92,6 +94,16 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       if (uniq.length) {
         await tx.sellerBrand.createMany({
           data: uniq.map((bid) => ({ sellerId: id, brandId: BigInt(bid) })),
+        });
+      }
+    }
+
+    if (categoryIds) {
+      await tx.sellerCategory.deleteMany({ where: { sellerId: id } });
+      const uniq = [...new Set(categoryIds.map(String))];
+      if (uniq.length) {
+        await tx.sellerCategory.createMany({
+          data: uniq.map((cid) => ({ sellerId: id, categoryId: BigInt(cid) })),
         });
       }
     }

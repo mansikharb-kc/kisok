@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
+import { buildParentOptions } from "@/lib/categoryTree";
+import { levelMeta } from "@/lib/categoryLevels";
 
 export const dynamic = "force-dynamic";
 
@@ -17,27 +19,54 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   const sellerId = BigInt(params.id);
 
-  const seller = await prisma.seller.findUnique({
-    where: { id: sellerId },
-    include: {
-      sellerBrands: { include: { brand: { select: { name: true, code: true } } } },
-      contracts: { include: { program: { select: { name: true } } } },
-      assignments: { include: { exec: { select: { fullName: true, email: true } } } },
-      branch: { select: { name: true } },
-    },
-  });
+  const [seller, categoryRows] = await Promise.all([
+    prisma.seller.findUnique({
+      where: { id: sellerId },
+      include: {
+        sellerBrands: { include: { brand: { select: { name: true, code: true } } } },
+        sellerCategories: { select: { categoryId: true } },
+        contracts: { include: { program: { select: { name: true } } } },
+        assignments: { include: { exec: { select: { fullName: true, email: true } } } },
+        branch: { select: { name: true } },
+        localRecords: {
+          include: {
+            product: {
+              include: {
+                brand: { select: { name: true, code: true } },
+                category: { select: { name: true } },
+              },
+            },
+            program: { select: { name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    }),
+    prisma.category.findMany({
+      where: { status: "active" },
+      select: { id: true, name: true, parentId: true },
+    }),
+  ]);
 
   if (!seller) notFound();
   if (seller.branchId !== branchId) redirect("/dashboard");
 
   const s = serialize(seller) as any;
+  const flatCats = serialize(categoryRows);
+
+  const parents = buildParentOptions(flatCats);
+  const byId = new Map(parents.map((p) => [p.id, p]));
+
+  const sellerCategoriesList = s.sellerCategories?.map((sc: any) => {
+    return byId.get(String(sc.categoryId));
+  }).filter(Boolean) ?? [];
 
   const card = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm";
   const labelStyle = "text-xs font-semibold uppercase tracking-wider text-slate-400";
   const valStyle = "text-sm font-medium text-slate-800 mt-1";
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -69,8 +98,9 @@ export default async function Page({ params }: { params: { id: string } }) {
 
       {/* Grid of Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column: Basic Profile */}
+        {/* Left Column: Basic Profile & Associations */}
         <div className="md:col-span-1 space-y-6">
+          {/* Profile Card */}
           <div className={card}>
             <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
               Profile
@@ -112,6 +142,28 @@ export default async function Page({ params }: { params: { id: string } }) {
                 <div className={valStyle}>{s.branch.name}</div>
               </div>
             </div>
+          </div>
+
+          {/* Categories Operated In */}
+          <div className={card}>
+            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
+              Categories Operated In
+            </h3>
+            {sellerCategoriesList.length === 0 ? (
+              <p className="text-sm text-slate-400">No categories associated with this seller.</p>
+            ) : (
+              <div className="space-y-2">
+                {sellerCategoriesList.map((cat: any) => (
+                  <div key={cat.id} className="flex items-center gap-2 text-xs">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${levelMeta(cat.level).badge}`}>
+                      {levelMeta(cat.level).label}
+                    </span>
+                    <span className="font-mono text-slate-400 shrink-0">{cat.number}</span>
+                    <span className="font-medium text-slate-800 truncate">{cat.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Brands Associated */}
@@ -238,6 +290,74 @@ export default async function Page({ params }: { params: { id: string } }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Onboarded Products Section */}
+      <div className={card}>
+        <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
+          Onboarded Products ({s.localRecords.length})
+        </h3>
+        {s.localRecords.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-400">
+            No products have been onboarded for this seller yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Product / SKU</th>
+                  <th className="px-4 py-3 text-left font-medium">Brand</th>
+                  <th className="px-4 py-3 text-left font-medium">Category</th>
+                  <th className="px-4 py-3 text-left font-medium">Program</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Onboarded At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {s.localRecords.map((r: any) => (
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 align-middle font-medium">
+                      <div className="font-semibold text-slate-800">{r.product.name}</div>
+                      <div className="font-mono text-[11px] text-slate-400 mt-0.5">{r.product.sku}</div>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-50 border border-brand-200 text-brand-700 font-semibold">
+                        {r.product.brand.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-middle text-xs text-slate-600 font-medium">
+                      {r.product.category.name}
+                    </td>
+                    <td className="px-4 py-3 align-middle text-xs text-slate-650 font-semibold">
+                      {r.program.name}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider ${
+                          r.status === "completed" || r.status === "active" || r.status === "submitted"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                            : r.status === "draft"
+                            ? "bg-slate-100 text-slate-600 border border-slate-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-middle text-xs text-slate-500 font-medium">
+                      {new Date(r.createdAt).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

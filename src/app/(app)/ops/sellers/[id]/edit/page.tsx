@@ -23,6 +23,7 @@ export default async function Page({ params }: { params: { id: string } }) {
       where: { id: sellerId },
       include: {
         sellerBrands: { select: { brandId: true } },
+        sellerCategories: { select: { categoryId: true } },
         contracts: true,
         assignments: true,
       },
