@@ -13,6 +13,10 @@ async function main() {
     await prisma.productCopy.deleteMany();
     console.log("✓ Deleted product copies");
 
+    await prisma.ticketEvent.deleteMany();
+    await prisma.ticket.deleteMany();
+    console.log("✓ Deleted tickets and ticket events");
+
     await prisma.localMedia.deleteMany();
     await prisma.localOverride.deleteMany();
     await prisma.localOnboardingRecord.deleteMany();

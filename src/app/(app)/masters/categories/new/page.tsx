@@ -1,6 +1,8 @@
 import { prisma, serialize } from "@/lib/prisma";
 import { MAX_LEVEL } from "@/lib/categoryLevels";
 import { FlatCat } from "@/lib/categoryTree";
+import { requirePageRole } from "@/lib/guard";
+import { hasRole } from "@/lib/rbac";
 import CategoryCreateForm from "@/components/categories/CategoryCreateForm";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,9 @@ export default async function NewCategoryPage({
 }: {
   searchParams: { level?: string; parent?: string };
 }) {
+  const session = await requirePageRole("HO_ADMIN", "BRANCH_ADMIN");
+  const isRequest = !hasRole(session.roles, "HO_ADMIN"); // Branch Admin → submit for approval
+
   const rows = await prisma.category.findMany({
     select: { id: true, name: true, parentId: true },
   });
@@ -27,6 +32,7 @@ export default async function NewCategoryPage({
       initialLevel={level}
       initialParentId={parentId}
       lockContext={lockContext}
+      isRequest={isRequest}
     />
   );
 }

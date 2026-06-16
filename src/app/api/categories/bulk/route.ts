@@ -11,7 +11,9 @@ const schema = z.object({
 });
 
 export const POST = handler(async (req: Request) => {
-  const session = await requireRole("HO_ADMIN");
+  // HO Admin creates directly; Branch Admin submits for HO approval.
+  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN");
+  const isHo = session.roles.some((r) => r.code === "HO_ADMIN");
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
@@ -30,6 +32,31 @@ export const POST = handler(async (req: Request) => {
   if (parentId) {
     const parent = await prisma.category.findUnique({ where: { id: parentId } });
     if (!parent) return fail("Parent category not found", 422);
+  }
+
+  // Branch Admin → one pending change request per name (created only on HO approval).
+  if (!isHo) {
+    const branchId = session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId)?.branchId;
+    await prisma.$transaction(
+      names.map((name) =>
+        prisma.changeRequest.create({
+          data: {
+            type: "NEW_CATEGORY",
+            payload: { name, code: slugify(name) || "category", parentId: parentId ? parentId.toString() : null },
+            branchId: branchId ? BigInt(branchId) : null,
+            requestedBy: BigInt(session.uid),
+            status: "pending",
+          },
+        }),
+      ),
+    );
+    await writeAudit({
+      actorUserId: session.uid,
+      action: "category.request",
+      entityType: "ChangeRequest",
+      after: { type: "NEW_CATEGORY", names: names.slice(0, 10) },
+    });
+    return ok({ requested: names.length, pending: true }, { status: 202 });
   }
 
   // Build unique codes (slug, with -2/-3 suffixes on collision).
