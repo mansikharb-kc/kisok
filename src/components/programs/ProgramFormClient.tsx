@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isNonEmptyString } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ProgramRow } from "./ProgramsClient";
@@ -62,8 +63,17 @@ export default function ProgramFormClient({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError("");
+    // Validate required fields
+    if (!isNonEmptyString(form.name)) {
+      setError("Program Name is required");
+      return;
+    }
+    if (!isNonEmptyString(form.code)) {
+      setError("Program Code is required");
+      return;
+    }
+    setBusy(true);
     try {
       const res = await fetch(mode === "edit" && programId ? `/api/programs/${programId}` : "/api/programs", {
         method: mode === "edit" ? "PATCH" : "POST",

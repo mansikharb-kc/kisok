@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY, isValidGstin, brandCodeBase } from "@/lib/brandMeta";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
+import { isValidPhone, isValidEmail, isValidPincode, isAlphabetic, isNonEmptyString } from "@/lib/validation";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 
 const PHONE_CCS = ["+91", "+1", "+44", "+971", "+65", "+61"];
@@ -33,6 +34,9 @@ export type BrandEdit = {
 
 export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: BrandEdit }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const origin = searchParams.get("origin");
+  const [success, setSuccess] = useState(false);
   const editing = !!brand;
   const parents = useMemo(() => buildParentOptions(flat), [flat]);
   const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
@@ -70,6 +74,20 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
 
   const months = durationMonths(agreementDuration);
   const contractEnd = contractStart && months ? addMonths(contractStart, months) : "";
+
+  // Auto close tab on success
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        try {
+          window.close();
+        } catch (e) {
+          console.error(e);
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   // ---- category cascade ----
   function optionsForLevel(k: number) {
@@ -128,7 +146,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!name.trim()) {
+    if (!isNonEmptyString(name)) {
       setError("Brand Name is required");
       return;
     }
@@ -138,6 +156,26 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
     }
     if (gstNumber && !isValidGstin(gstNumber)) {
       setError("Please enter a valid GSTIN or leave it blank");
+      return;
+    }
+    if (email && !isValidEmail(email)) {
+      setError("Please enter a valid email address containing '@'");
+      return;
+    }
+    if (phone && !isValidPhone(phone)) {
+      setError("Phone number must be exactly 10 digits");
+      return;
+    }
+    if (pincode && !isValidPincode(pincode)) {
+      setError("Pincode must be exactly 6 digits");
+      return;
+    }
+    if (city && !isAlphabetic(city)) {
+      setError("City must contain only letters");
+      return;
+    }
+    if (stateName && !isAlphabetic(stateName)) {
+      setError("State must contain only letters");
       return;
     }
     setBusy(true);
@@ -159,8 +197,25 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Save failed"); return; }
-      router.push("/masters/brands");
-      router.refresh();
+
+      // Broadcast creation event; HO admin UI can filter pending approvals
+      try {
+        const channel = new BroadcastChannel("brand_creation");
+        channel.postMessage({
+          type: "BRAND_CREATED",
+          brand: { id: String(data.brand.id), name: data.brand.name, code: data.brand.code, status: data.brand.status }
+        });
+        channel.close();
+      } catch (err) {
+        console.error("Broadcast failed:", err);
+      }
+
+      if (origin === "seller-onboarding") {
+        setSuccess(true);
+      } else {
+        router.push("/masters/brands");
+        router.refresh();
+      }
     } catch {
       setError("Network error");
     } finally {
@@ -184,8 +239,51 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
     );
   }
 
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-200 max-w-lg mx-auto mt-16 shadow-lg space-y-6">
+        <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center animate-bounce">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-800">Brand Created Successfully!</h2>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
+            The brand <span className="font-semibold text-slate-900">{name}</span> has been created and synced with your seller onboarding form.
+          </p>
+        </div>
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 w-full">
+          🔄 This window will close automatically in 3 seconds...
+        </div>
+        <button
+          type="button"
+          onClick={() => window.close()}
+          className="w-full rounded-xl bg-slate-900 text-white py-3 text-sm font-semibold hover:bg-slate-800 transition active:scale-[0.98]"
+        >
+          Close Tab Now
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="space-y-5 max-w-4xl">
+      {origin === "seller-onboarding" && (
+        <div className="rounded-2xl bg-brand-50/70 border border-brand-200/60 text-brand-900 text-sm p-4 flex items-start gap-3 shadow-sm">
+          <div className="p-1.5 bg-brand-100 rounded-lg text-brand-700">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <div className="font-semibold text-brand-950">Adding Brand to Seller Onboarding</div>
+            <div className="text-xs text-brand-800 mt-0.5">
+              Once you submit this brand, it will automatically populate and select itself in your active seller onboarding page. You can then close this tab.
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top bar */}
       <div className="flex items-start justify-between">
         <div>
@@ -319,8 +417,11 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
                 {PHONE_CCS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <input
+                type="tel"
+                maxLength={10}
+                pattern="\d{10}"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                 className="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 placeholder="9876543210"
               />

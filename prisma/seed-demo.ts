@@ -41,12 +41,13 @@ async function upsertUser(
   fullName: string,
   email: string,
   password: string,
+  username: string,
 ) {
   const hash = await bcrypt.hash(password, 10);
   return prisma.user.upsert({
     where: { email },
-    update: {},
-    create: { fullName, email, passwordHash: hash, status: "active" },
+    update: { username },
+    create: { fullName, email, passwordHash: hash, status: "active", username },
   });
 }
 
@@ -110,11 +111,11 @@ async function main() {
   console.log(`✓ Branch: ${branch.name} (${branch.branchCode})`);
 
   // ── 2. Users ───────────────────────────────────────────────────────────────
-  const branchAdmin = await upsertUser("Aman Sharma", "aman@kc.local", "Admin@123");
-  const onbLead     = await upsertUser("Priya Nair", "priya@kc.local", "Onb@1234");
-  const obExec1     = await upsertUser("Rahul Verma", "rahul@kc.local", "Exec@1234");
-  const obExec2     = await upsertUser("Sneha Rao", "sneha@kc.local", "Exec@1234");
-  const csgnUser    = await upsertUser("Dev Patel", "dev@kc.local", "Csgn@1234");
+  const branchAdmin = await upsertUser("Aman Sharma", "aman@gmail.com", "1234", "aman");
+  const onbLead     = await upsertUser("Pihu Nair", "pihu@gmail.com", "1234", "pihu");
+  const obExec1     = await upsertUser("Arihant Verma", "arihant@gmail.com", "1234", "arihant");
+  const obExec2     = await upsertUser("Sneha Rao", "sneha@kc.local", "Exec@1234", "sneha");
+  const csgnUser    = await upsertUser("Navri Patel", "navri@gmail.com", "1234", "navri");
 
   await attachRole(branchAdmin.id, "BRANCH_ADMIN", branch.id);
   await attachRole(onbLead.id,     "ONB_LEAD",     branch.id);

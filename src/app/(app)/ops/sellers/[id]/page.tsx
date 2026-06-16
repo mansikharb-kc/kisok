@@ -50,12 +50,21 @@ export default async function Page({ params }: { params: { id: string } }) {
           <h1 className="text-2xl font-bold mt-1 text-slate-900">{s.name}</h1>
           <p className="text-sm text-slate-500">Seller detail and governance records</p>
         </div>
-        <Link
-          href={`/ops/sellers/${s.id}/edit`}
-          className="rounded-lg bg-brand-600 text-white px-5 py-2 text-sm font-semibold hover:bg-brand-700 transition-colors"
-        >
-          Edit Seller
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href={`/print/sellers/${s.id}`}
+            target="_blank"
+            className="rounded-lg border border-slate-350 bg-white text-slate-750 px-5 py-2 text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+          >
+            Print Contract / Profile
+          </Link>
+          <Link
+            href={`/ops/sellers/${s.id}/edit`}
+            className="rounded-lg bg-brand-600 text-white px-5 py-2 text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm"
+          >
+            Edit Seller
+          </Link>
+        </div>
       </div>
 
       {/* Grid of Info */}

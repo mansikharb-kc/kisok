@@ -131,8 +131,28 @@ export default async function Page({
         isScreenMountable: true,
         locationId: true,
         status: true,
-        category: { select: { id: true, name: true, code: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            categoryAttributes: {
+              select: {
+                attribute: {
+                  select: {
+                    name: true,
+                    code: true,
+                  }
+                }
+              }
+            }
+          }
+        },
         _count: { select: { children: true, copies: true } },
+        copies: {
+          where: { status: "active" },
+          select: { copyRole: true },
+        },
       },
     }),
 
@@ -140,7 +160,23 @@ export default async function Page({
     prisma.category.findMany({
       where: { status: "active" },
       orderBy: [{ name: "asc" }],
-      select: { id: true, name: true, code: true, parentId: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        parentId: true,
+        categoryAttributes: {
+          select: {
+            attribute: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              }
+            }
+          }
+        }
+      },
     }),
   ]);
 

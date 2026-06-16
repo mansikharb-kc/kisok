@@ -13,6 +13,7 @@ const EXT: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
   "image/svg+xml": "svg",
+  "application/pdf": "pdf",
 };
 
 // POST multipart/form-data { file } → saves to /public/uploads, creates a media row.
@@ -22,7 +23,7 @@ export const POST = handler(async (req: Request) => {
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return fail("No file provided", 422);
-  if (!EXT[file.type]) return fail("Only PNG, JPG, WEBP, GIF, SVG images allowed", 422);
+  if (!EXT[file.type]) return fail("Only PNG, JPG, WEBP, GIF, SVG images, and PDF documents are allowed", 422);
   if (file.size > MAX_BYTES) return fail("File too large (max 5 MB)", 422);
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -34,7 +35,7 @@ export const POST = handler(async (req: Request) => {
   const url = `/uploads/${name}`;
   const media = await prisma.media.create({
     data: {
-      type: "logo",
+      type: file.type === "application/pdf" ? "pdf" : "logo",
       url,
       mime: file.type,
       sizeBytes: BigInt(bytes.length),

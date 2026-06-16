@@ -69,7 +69,23 @@ export const GET = handler(async (req: Request) => {
       isScreenMountable: true,
       locationId: true,
       status: true,
-      category: { select: { id: true, name: true, code: true } },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          categoryAttributes: {
+            select: {
+              attribute: {
+                select: {
+                  name: true,
+                  code: true,
+                }
+              }
+            }
+          }
+        }
+      },
       _count: { select: { children: true, copies: true } },
     },
   });

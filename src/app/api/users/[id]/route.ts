@@ -8,6 +8,7 @@ import { writeAudit } from "@/lib/audit";
 const updateUserSchema = z.object({
   fullName: z.string().trim().min(1).max(150),
   email: z.string().trim().email().max(190),
+  username: z.string().trim().min(1).max(60).optional().nullable(),
   phone: z.string().trim().max(20).optional().nullable(),
   password: z.string().min(4).optional(),
   status: z.enum(["active", "disabled"]),
@@ -104,6 +105,14 @@ export const PUT = handler(async (req: Request, { params }: { params: Promise<{ 
     if (existing) return fail("A user with this email address already exists.", 409);
   }
 
+  // Check unique username (if username is changing)
+  if (data.username && data.username.toLowerCase() !== (targetUser.username || "").toLowerCase()) {
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: data.username.toLowerCase() },
+    });
+    if (existingUsername) return fail("A user with this username already exists.", 409);
+  }
+
   // Verify and process roles
   const requestedRoleIds = data.roles.map((r) => BigInt(r.roleId));
   const rolesInDb = await prisma.role.findMany({
@@ -165,12 +174,14 @@ export const PUT = handler(async (req: Request, { params }: { params: Promise<{ 
   const updateData: {
     fullName: string;
     email: string;
+    username: string | null;
     phone: string | null;
     status: string;
     passwordHash?: string;
   } = {
     fullName: data.fullName,
     email: data.email.toLowerCase(),
+    username: data.username ? data.username.toLowerCase() : null,
     phone: data.phone ?? null,
     status: data.status,
   };

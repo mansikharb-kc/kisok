@@ -34,6 +34,8 @@ const createSchema = z.object({
     contractEnd: dateish,
     verified: z.boolean().optional().default(false),
     remarks: z.string().trim().max(500).optional().nullable(),
+    obExecUserId: z.coerce.bigint().optional().nullable(),
+    contractMediaId: z.coerce.bigint().optional().nullable(),
   })).optional().default([]),
 });
 
@@ -102,10 +104,27 @@ export const POST = handler(async (req: Request) => {
             contractEnd: c.contractEnd ? new Date(c.contractEnd) : null,
             verified: c.verified,
             remarks: c.remarks,
+            contractMediaId: c.contractMediaId,
           })),
         },
       },
     });
+
+    const assignmentsToCreate = contracts
+      .filter((c) => c.obExecUserId)
+      .map((c) => ({
+        sellerId: created.id,
+        programId: c.programId,
+        obExecUserId: c.obExecUserId!,
+        assignedBy: BigInt(session.uid),
+      }));
+
+    if (assignmentsToCreate.length > 0) {
+      await tx.sellerAssignment.createMany({
+        data: assignmentsToCreate,
+      });
+    }
+
     return created;
   });
 

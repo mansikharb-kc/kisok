@@ -12,6 +12,7 @@ type UserDetail = {
   id: string;
   fullName: string;
   email: string;
+  username?: string | null;
   phone: string | null;
   status: string;
   roles: UserRoleAssignment[];
@@ -43,6 +44,7 @@ export default function EditRoleUserPage({ params }: PageProps) {
           id: user.id.toString(),
           fullName: user.fullName,
           email: user.email,
+          username: user.username,
           phone: user.phone,
           status: user.status,
           roles: (user.roles ?? []).map((r: any) => ({
@@ -83,6 +85,7 @@ export default function EditRoleUserPage({ params }: PageProps) {
     const payload = {
       fullName: formData.fullName,
       email: formData.email,
+      username: formData.username || null,
       phone: formData.phone || null,
       status: formData.status,
       roles: assignments,

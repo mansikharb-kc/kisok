@@ -76,7 +76,7 @@ export const GET = handler(async () => {
 });
 
 export const POST = handler(async (req: Request) => {
-  const session = await requireRole("HO_ADMIN");
+  const session = await requireRole("HO_ADMIN", "ONB_LEAD");
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   const { categoryIds, contractStart, contractEnd, code: _ignored, ...d } = parsed.data;
@@ -92,8 +92,9 @@ export const POST = handler(async (req: Request) => {
       code,
       contractStart: contractStart ? new Date(contractStart) : null,
       contractEnd: contractEnd ? new Date(contractEnd) : null,
-      approvalStatus: "draft",
-      status: "active",
+      // If the creator is an Onboarding Lead, set status to pending approval
+      approvalStatus: session.roles.some((r) => r.code === "ONB_LEAD") ? "pending" : "approved",
+      status: session.roles.some((r) => r.code === "ONB_LEAD") ? "pending_approval" : "active",
       brandCategories: categoryIds?.length
         ? { create: [...new Set(categoryIds.map(String))].map((id) => ({ categoryId: BigInt(id) })) }
         : undefined,

@@ -11,7 +11,17 @@ export type LocationNode = {
   name: string;
   code: string | null;
   categoryId: string | null;
-  category: { id: string; name: string; code: string } | null;
+  category: {
+    id: string;
+    name: string;
+    code: string;
+    categoryAttributes?: {
+      attribute: {
+        name: string;
+        code: string;
+      };
+    }[];
+  } | null;
   path: string | null;
   depth: number;
   isPlacementEligible: boolean;
@@ -19,6 +29,7 @@ export type LocationNode = {
   locationId: string | null;
   status: string;
   _count: { children: number; copies: number };
+  copies?: { copyRole: string }[];
 };
 
 export type CategoryOption = {
@@ -26,6 +37,13 @@ export type CategoryOption = {
   name: string;
   code: string;
   parentId: string | null;
+  categoryAttributes?: {
+    attribute: {
+      id: string;
+      name: string;
+      code: string;
+    };
+  }[];
 };
 
 type TreeNode = LocationNode & { children: TreeNode[] };
@@ -43,6 +61,23 @@ const NODE_META: Record<NodeType, { badge: string; icon: string; desc: string }>
 
 function nodeMeta(type: string) {
   return NODE_META[type as NodeType] ?? NODE_META.CUSTOM;
+}
+
+function cleanCodeSegment(name: string): string {
+  return name
+    .replace(/\s+/g, "-")
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .replace(/-+/g, "-");
+}
+
+function combineCode(parentCode: string, segment: string): string {
+  const parent = parentCode.trim();
+  const child = cleanCodeSegment(segment);
+  if (!parent) return child;
+  if (parent.endsWith("-") || child.startsWith("-")) {
+    return `${parent}${child}`.replace(/-+/g, "-");
+  }
+  return `${parent}-${child}`;
 }
 
 // Allowed child types per parent — warehouse hierarchy:
@@ -92,6 +127,7 @@ export default function WarehouseTree({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [isCodeManual, setIsCodeManual] = useState(false);
 
   // Create / edit modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -156,10 +192,16 @@ export default function WarehouseTree({
   function openCreate(parent: TreeNode | null) {
     setEditingNode(null);
     setParentNode(parent);
+    setIsCodeManual(false);
     const allowed = parent ? ALLOWED_CHILDREN[parent.nodeType] : (["WAREHOUSE"] as NodeType[]);
     const defaultType = allowed[0] ?? "CUSTOM";
     const flags = DEFAULT_FLAGS[defaultType] ?? { isPlacementEligible: false, isScreenMountable: false };
-    setForm({ ...emptyForm, nodeType: defaultType, ...flags });
+    setForm({
+      ...emptyForm,
+      nodeType: defaultType,
+      code: parent?.code ? (parent.code.endsWith("-") ? parent.code : `${parent.code}-`) : "",
+      ...flags,
+    });
     setError("");
     setModalOpen(true);
   }
@@ -167,6 +209,7 @@ export default function WarehouseTree({
   function openEdit(node: LocationNode) {
     setEditingNode(node);
     setParentNode(null);
+    setIsCodeManual(true);
     setForm({
       name: node.name,
       code: node.code ?? "",
@@ -301,18 +344,42 @@ export default function WarehouseTree({
 
             {/* Category tag */}
             {n.category && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 shrink-0 font-medium">
-                {n.category.name}
-              </span>
+              <div className="flex flex-col items-start gap-0.5 shrink-0">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-655 font-medium">
+                  {n.category.name}
+                </span>
+                {n.category.categoryAttributes && n.category.categoryAttributes.length > 0 && (
+                  <span className="text-[9px] text-slate-400 font-mono pl-1 max-w-[200px] truncate" title={n.category.categoryAttributes.map((ca) => ca.attribute.name).join(", ")}>
+                    {n.category.categoryAttributes.map((ca) => ca.attribute.name).join(", ")}
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Flags */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               {n.isPlacementEligible && (
-                <span title="Placement eligible" className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">📍 Placement</span>
+                <>
+                  <span title="Placement eligible" className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 font-medium">📍 Placement</span>
+                  {n.copies && n.copies.length > 0 ? (
+                    n.copies.some((c) => c.copyRole === "MASTER") ? (
+                      <span title="Contains Master copy" className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-705 border border-amber-200 font-medium shadow-sm">
+                        👑 Master
+                      </span>
+                    ) : (
+                      <span title="Contains Slave copy" className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-750 border border-indigo-200 font-medium shadow-sm">
+                        👥 Slave
+                      </span>
+                    )
+                  ) : (
+                    <span title="Empty location" className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-250 font-medium">
+                      ◌ Empty
+                    </span>
+                  )}
+                </>
               )}
               {n.isScreenMountable && (
-                <span title="Screen mountable" className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">🖥️ Screen</span>
+                <span title="Screen mountable" className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">🖥️ Screen</span>
               )}
               {n.locationId && (
                 <span className="font-mono text-[10px] text-slate-400">{n.locationId}</span>
@@ -511,7 +578,19 @@ export default function WarehouseTree({
               <label className="text-sm font-medium">Name <span className="text-red-500">*</span></label>
               <input
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  setForm((f) => {
+                    const next = { ...f, name: newName };
+                    if (!editingNode && !isCodeManual) {
+                      const parentCode = parentNode?.code ?? "";
+                      next.code = newName.trim()
+                        ? combineCode(parentCode, newName)
+                        : (parentCode ? (parentCode.endsWith("-") ? parentCode : `${parentCode}-`) : "");
+                    }
+                    return next;
+                  });
+                }}
                 required
                 autoFocus
                 placeholder={
@@ -526,10 +605,20 @@ export default function WarehouseTree({
 
             {/* Code */}
             <div className="space-y-1">
-              <label className="text-sm font-medium">Code <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium">
+                Code <span className="text-red-500">*</span>
+                {parentNode?.code && (
+                  <span className="text-xs text-slate-400 font-normal ml-1">
+                    (Parent prefix: {parentNode.code})
+                  </span>
+                )}
+              </label>
               <input
                 value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                onChange={(e) => {
+                  setIsCodeManual(true);
+                  setForm((f) => ({ ...f, code: e.target.value }));
+                }}
                 required
                 placeholder="e.g. WH-01, BLK-A, RCK-1, TRY-1"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -540,15 +629,14 @@ export default function WarehouseTree({
             {/* Category */}
             <div className="space-y-1">
               <label className="text-sm font-medium">
-                Category <span className="text-red-500">*</span>
+                Category <span className="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
               </label>
               <select
                 value={form.categoryId}
                 onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-                required
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
               >
-                <option value="" disabled>— Select Category —</option>
+                <option value="">— None / Select Category —</option>
                 {l1Categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -558,6 +646,29 @@ export default function WarehouseTree({
               <p className="text-[11px] text-slate-400">
                 Tag this node with a product category — e.g. Rack A1 holds Faucets. Used by OB Exec during placement.
               </p>
+              {(() => {
+                const selectedCat = categories.find((c) => String(c.id) === String(form.categoryId));
+                const attrs = selectedCat?.categoryAttributes?.map((ca) => ca.attribute) || [];
+                if (!form.categoryId) return null;
+                return (
+                  <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">
+                      Category Attributes
+                    </span>
+                    {attrs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {attrs.map((attr) => (
+                          <span key={attr.id} className="inline-flex items-center text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 font-medium">
+                            {attr.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-450 italic">No attributes defined for this category.</p>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Flags */}

@@ -18,9 +18,10 @@ function branchOf(session: { roles: { code: string; branchId: string | null }[] 
 }
 
 const patchSchema = z.object({
-  action: z.enum(["note", "send_to_exec", "send_to_consignment", "resolve", "close"]),
+  action: z.enum(["note", "send_to_exec", "send_to_consignment", "resolve", "close", "transfer"]),
   note: z.string().trim().max(1000).optional().nullable(),
   resolution: z.string().trim().max(500).optional().nullable(),
+  targetExecId: z.string().optional().nullable(),
 });
 
 export const PATCH = handler(async (req: Request, ctx: { params: { id: string } }) => {
@@ -30,7 +31,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
-  const { action, note, resolution } = parsed.data;
+  const { action, note, resolution, targetExecId } = parsed.data;
 
   const ticket = await prisma.ticket.findUnique({ where: { id } });
   if (!ticket) return fail("Ticket not found", 404);
@@ -40,6 +41,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const isExec = session.roles.some((r) => r.code === "OB_EXEC");
   const isConsign = session.roles.some((r) => r.code === "CONSIGNMENT_USER");
+  const isLead = session.roles.some((r) => r.code === "ONB_LEAD");
 
   let data: Record<string, unknown> = {};
   let fromRole: string | null = null;
@@ -66,6 +68,19 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
     if (!isExec) return fail("Only an OB Exec can close a ticket", 403);
     data = { status: "CLOSED" };
     fromRole = "OB_EXEC";
+  } else if (action === "transfer") {
+    if (!isLead) return fail("Only the Onboarding Lead can transfer a ticket", 403);
+    if (!targetExecId) return fail("Target exec is required for transfer", 422);
+    const targetUserId = BigInt(targetExecId);
+    const hasRoleInBranch = await prisma.userRole.findFirst({
+      where: { userId: targetUserId, role: { code: "OB_EXEC" }, branchId },
+    });
+    if (!hasRoleInBranch) {
+      return fail("Target user must be an Onboarding Exec in this branch", 422);
+    }
+    data = { raisedBy: targetUserId, status: "WITH_EXEC", currentRole: "OB_EXEC" };
+    fromRole = ticket.currentRole;
+    toRole = "OB_EXEC";
   }
 
   const updated = await prisma.$transaction(async (tx) => {

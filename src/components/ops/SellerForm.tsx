@@ -1,8 +1,46 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { slugFromName } from "@/lib/attributeMeta";
+import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY, isValidGstin, brandCodeBase } from "@/lib/brandMeta";
+import { isNonEmptyString } from "@/lib/validation";
+import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
+import { LEVELS, levelMeta } from "@/lib/categoryLevels";
+
+function calculateEndDate(startDateStr: string, tenureStr: string): string {
+  if (!startDateStr || !tenureStr) return "";
+  const cleanTenure = tenureStr.trim().toLowerCase();
+  const numMatch = cleanTenure.match(/\d+/);
+  if (!numMatch) return "";
+  const num = parseInt(numMatch[0], 10);
+  if (isNaN(num)) return "";
+
+  let months = 0;
+  if (cleanTenure.includes("year") || cleanTenure.includes("yr")) {
+    months = num * 12;
+  } else if (cleanTenure.includes("month") || cleanTenure.includes("mo")) {
+    months = num;
+  } else {
+    // Just a number
+    if (num < 6) {
+      months = num * 12; // Assume years for small numbers
+    } else {
+      months = num; // Assume months for larger numbers
+    }
+  }
+
+  const date = new Date(startDateStr);
+  if (isNaN(date.getTime())) return "";
+
+  // Add months to the date
+  date.setMonth(date.getMonth() + months);
+  // Subtract one day
+  date.setDate(date.getDate() - 1);
+  
+  // Return in yyyy-mm-dd format
+  return date.toISOString().slice(0, 10);
+}
 
 type BrandOption = {
   id: string;
@@ -14,6 +52,12 @@ type ProgramOption = {
   id: string;
   name: string;
   code: string;
+};
+
+type ExecOption = {
+  id: string;
+  fullName: string;
+  email: string;
 };
 
 type SellerEdit = {
@@ -31,16 +75,26 @@ type SellerEdit = {
     contractEnd: string | null; // yyyy-mm-dd
     verified: boolean;
     remarks: string | null;
+    contractMediaId?: string | null;
+    contractMedia?: { url: string } | null;
+  }[];
+  assignments?: {
+    programId: string | null;
+    obExecUserId: string;
   }[];
 };
 
 export default function SellerForm({
   brands,
   programs,
+  execs,
+  flatCategories = [],
   seller,
 }: {
   brands: BrandOption[];
   programs: ProgramOption[];
+  execs: ExecOption[];
+  flatCategories?: FlatCat[];
   seller?: SellerEdit;
 }) {
   const router = useRouter();
@@ -70,12 +124,16 @@ export default function SellerForm({
         contractEnd: string;
         verified: boolean;
         remarks: string;
+        obExecUserId: string;
+        contractMediaId: string | null;
+        contractMediaUrl: string | null;
       }
     >
   >(() => {
     const initial: Record<string, any> = {};
     if (seller?.contracts) {
       for (const c of seller.contracts) {
+        const match = seller.assignments?.find((a) => String(a.programId) === String(c.programId));
         initial[c.programId] = {
           collaborationTenure: c.collaborationTenure ?? "",
           fitoutPeriod: c.fitoutPeriod ?? "",
@@ -83,6 +141,9 @@ export default function SellerForm({
           contractEnd: c.contractEnd ? c.contractEnd.slice(0, 10) : "",
           verified: c.verified,
           remarks: c.remarks ?? "",
+          obExecUserId: match ? String(match.obExecUserId) : "",
+          contractMediaId: c.contractMediaId ? String(c.contractMediaId) : null,
+          contractMediaUrl: c.contractMedia?.url ?? null,
         };
       }
     }
@@ -91,6 +152,46 @@ export default function SellerForm({
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const [localBrands, setLocalBrands] = useState<BrandOption[]>(brands);
+  const [brandSearch, setBrandSearch] = useState("");
+
+  const filteredBrands = useMemo(() => {
+    const query = brandSearch.trim().toLowerCase();
+    if (!query) return localBrands;
+    return localBrands.filter(
+      (b) =>
+        b.name.toLowerCase().includes(query) ||
+        b.code.toLowerCase().includes(query)
+    );
+  }, [localBrands, brandSearch]);
+
+  // Listen to brand creation events from the new tab/page
+  useEffect(() => {
+    const channel = new BroadcastChannel("brand_creation");
+    channel.onmessage = (event) => {
+      if (event.data?.type === "BRAND_CREATED") {
+        const newBrand = event.data.brand;
+        if (newBrand && newBrand.id) {
+          setLocalBrands((prev) => {
+            if (prev.some((b) => String(b.id) === String(newBrand.id))) {
+              return prev;
+            }
+            return [...prev, newBrand];
+          });
+          setSelectedBrandIds((prev) => {
+            if (prev.includes(String(newBrand.id))) {
+              return prev;
+            }
+            return [...prev, String(newBrand.id)];
+          });
+        }
+      }
+    };
+    return () => {
+      channel.close();
+    };
+  }, []);
 
   // Toggle brand selection
   function toggleBrand(brandId: string) {
@@ -113,6 +214,9 @@ export default function SellerForm({
           contractEnd: "",
           verified: false,
           remarks: "",
+          obExecUserId: "",
+          contractMediaId: null,
+          contractMediaUrl: null,
         };
       }
       return next;
@@ -121,21 +225,77 @@ export default function SellerForm({
 
   // Handle contract field changes
   function updateContract(programId: string, field: string, value: any) {
-    setActiveContracts((prev) => ({
-      ...prev,
-      [programId]: {
-        ...prev[programId],
+    setActiveContracts((prev) => {
+      const current = prev[programId] || {
+        collaborationTenure: "",
+        fitoutPeriod: "",
+        contractStart: "",
+        contractEnd: "",
+        verified: false,
+        remarks: "",
+        obExecUserId: "",
+        contractMediaId: null,
+        contractMediaUrl: null,
+      };
+      
+      const updated = {
+        ...current,
         [field]: value,
-      },
-    }));
+      };
+
+      // Auto-calculate end date when start date or tenure changes
+      if (field === "collaborationTenure" || field === "contractStart") {
+        const calculatedEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
+        if (calculatedEnd) {
+          updated.contractEnd = calculatedEnd;
+        }
+      }
+
+      return {
+        ...prev,
+        [programId]: updated,
+      };
+    });
+  }
+
+  // Upload handler for contract PDF
+  const [contractUploadingMap, setContractUploadingMap] = useState<Record<string, boolean>>({});
+
+  async function onContractPdf(programId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setContractUploadingMap((prev) => ({ ...prev, [programId]: true }));
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "PDF upload failed");
+        return;
+      }
+      updateContract(programId, "contractMediaId", data.mediaId);
+      updateContract(programId, "contractMediaUrl", data.url);
+    } catch {
+      alert("PDF upload failed");
+    } finally {
+      setContractUploadingMap((prev) => ({ ...prev, [programId]: false }));
+    }
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (!name.trim() || !sellerCode.trim()) {
+    // Validate required fields
+    if (!isNonEmptyString(name) || !isNonEmptyString(sellerCode)) {
       setError("Seller Name and Seller Code are required");
+      return;
+    }
+
+    // Optional membershipId validation: if provided, must be non‑empty
+    if (membershipId && !isNonEmptyString(membershipId)) {
+      setError("Membership ID cannot be empty");
       return;
     }
 
@@ -149,6 +309,8 @@ export default function SellerForm({
         contractEnd: details.contractEnd || null,
         verified: details.verified,
         remarks: details.remarks || null,
+        obExecUserId: details.obExecUserId || null,
+        contractMediaId: details.contractMediaId ? String(details.contractMediaId) : null,
       }));
 
       const payload = {
@@ -297,46 +459,112 @@ export default function SellerForm({
 
       {/* 2. Brands Mapped */}
       <div className={card}>
-        <StepHeader
-          n={2}
-          title="Associated Brands"
-          sub="Select the brands this seller is authorized to operate under"
-        />
-        {brands.length === 0 ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+          <StepHeader
+            n={2}
+            title="Associated Brands"
+            sub="Select the brands this seller is authorized to operate under"
+          />
+          <a
+            href="/masters/brands/new?origin=seller-onboarding"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm inline-block self-end sm:self-auto"
+          >
+            + Create New Brand
+          </a>
+        </div>
+        {localBrands.length === 0 ? (
           <p className="text-sm text-slate-400">
-            No active brands in this branch. Please ask the Branch Admin to activate brands.
+            No active brands in this branch. Please ask the Branch Admin to activate brands or click button to create one.
           </p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {brands.map((b) => {
-              const checked = selectedBrandIds.includes(b.id);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => toggleBrand(b.id)}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border text-left text-sm font-medium transition-all ${
-                    checked
-                      ? "border-brand-600 bg-brand-50/50 text-brand-900"
-                      : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
-                  }`}
-                >
-                  <div>
-                    <div>{b.name}</div>
-                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">{b.code}</div>
-                  </div>
-                  <span
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                      checked
-                        ? "border-brand-600 bg-brand-600 text-white text-[10px]"
-                        : "border-slate-300 bg-white"
-                    }`}
+          <div className="space-y-4">
+            {/* Search and Selection Status bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Search brands by name or code..."
+                  className="w-full rounded-lg border border-slate-300 py-1.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                />
+                {brandSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setBrandSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
                   >
-                    {checked && "✓"}
-                  </span>
-                </button>
-              );
-            })}
+                    ✕
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+                <span className="font-semibold text-slate-650">
+                  {selectedBrandIds.length} of {localBrands.length} selected
+                </span>
+                {selectedBrandIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBrandIds([])}
+                    className="text-brand-600 hover:text-brand-800 hover:underline font-semibold"
+                  >
+                    Clear selection
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Grid of Brand Options */}
+            {filteredBrands.length === 0 ? (
+              <div className="text-center py-8 bg-white border border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm">
+                No matching brands found for &ldquo;{brandSearch}&rdquo;.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto pr-1">
+                {filteredBrands.map((b) => {
+                  const checked = selectedBrandIds.includes(b.id);
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => toggleBrand(b.id)}
+                      className={`flex items-center justify-between p-3.5 rounded-xl border text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] ${
+                        checked
+                          ? "border-brand-600 bg-brand-50/50 text-brand-900 shadow-sm"
+                          : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="truncate font-semibold">{b.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate uppercase tracking-wider">{b.code}</div>
+                      </div>
+                      <span
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                          checked
+                            ? "border-brand-600 bg-brand-600 text-white text-[10px]"
+                            : "border-slate-300 bg-white group-hover:border-slate-400"
+                        }`}
+                      >
+                        {checked && "✓"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -466,6 +694,54 @@ export default function SellerForm({
                           placeholder="Special collaboration clauses, revenue sharing rules…"
                         />
                       </div>
+
+                      {/* PDF upload field */}
+                      <div className="pt-2">
+                        <label className={L}>Contract Proof (PDF)</label>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {details.contractMediaUrl ? (
+                            <a
+                              href={details.contractMediaUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-xs font-semibold text-brand-600 hover:text-brand-850 bg-white border border-slate-200 px-3.5 py-2.5 rounded-lg shadow-sm transition active:scale-[0.98]"
+                            >
+                              <svg className="w-4 h-4 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span>View Uploaded PDF</span>
+                            </a>
+                          ) : (
+                            <div className="text-xs text-slate-400 bg-white border border-slate-200 border-dashed px-3.5 py-2.5 rounded-lg select-none">
+                              No PDF uploaded yet
+                            </div>
+                          )}
+                          
+                          <label className={`cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition select-none ${contractUploadingMap[p.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
+                            {contractUploadingMap[p.id] ? "Uploading..." : details.contractMediaUrl ? "Change PDF File" : "⬆ Upload Contract PDF"}
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={(e) => onContractPdf(p.id, e)}
+                              className="hidden"
+                              disabled={!!contractUploadingMap[p.id]}
+                            />
+                          </label>
+
+                          {details.contractMediaUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateContract(p.id, "contractMediaId", null);
+                                updateContract(p.id, "contractMediaUrl", null);
+                              }}
+                              className="text-xs font-semibold text-red-500 hover:text-red-700 bg-white border border-slate-200 px-3 py-2.5 rounded-lg hover:bg-red-50 transition active:scale-[0.98] shadow-sm"
+                            >
+                              Remove PDF
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -479,6 +755,57 @@ export default function SellerForm({
           </div>
         )}
       </div>
+
+      {/* 4. Executive Assignments */}
+      {Object.keys(activeContracts).length > 0 && (
+        <div className={card}>
+          <StepHeader
+            n={4}
+            title="Onboarding Executive Assignments"
+            sub="Assign an onboarding executive for each active program contract"
+          />
+          <div className="space-y-4">
+            {programs
+              .filter((p) => !!activeContracts[p.id])
+              .map((p) => {
+                const details = activeContracts[p.id];
+                return (
+                  <div
+                    key={p.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-white shadow-sm"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 text-sm">
+                        {p.name}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono mt-0.5">
+                        Program Code: {p.code}
+                      </div>
+                    </div>
+                    <div className="w-full sm:max-w-xs">
+                      <label className="sr-only">Choose Executive</label>
+                      <select
+                        value={details.obExecUserId}
+                        onChange={(e) =>
+                          updateContract(p.id, "obExecUserId", e.target.value)
+                        }
+                        required
+                        className={I}
+                      >
+                        <option value="">— Select Executive —</option>
+                        {execs.map((ex) => (
+                          <option key={ex.id} value={ex.id}>
+                            {ex.fullName} ({ex.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end gap-2">
         <button

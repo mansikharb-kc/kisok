@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { ROLE_LABELS, RoleCode, hasRole } from "@/lib/rbac";
-import { prisma } from "@/lib/prisma";
+import { prisma, serialize } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 
 async function recentActivity(branchId: bigint | null) {
@@ -214,6 +214,56 @@ async function consignmentUserCounts(branchId: bigint) {
   return { statusBreakdown, pendingQcItems, passedToday };
 }
 
+async function getBranchWarehouseOccupancy(branchId: bigint) {
+  const eligibleNodes = await prisma.locationNode.findMany({
+    where: {
+      branchId,
+      isPlacementEligible: true,
+      status: "active",
+    },
+    select: {
+      id: true,
+      copies: {
+        where: {
+          status: "active",
+        },
+        select: {
+          copyRole: true,
+        },
+      },
+    },
+  });
+
+  const total = eligibleNodes.length;
+  let occupied = 0;
+  let masterLocations = 0;
+  let slaveOnlyLocations = 0;
+
+  for (const node of eligibleNodes) {
+    if (node.copies.length > 0) {
+      occupied++;
+      const hasMaster = node.copies.some((c) => c.copyRole === "MASTER");
+      if (hasMaster) {
+        masterLocations++;
+      } else {
+        slaveOnlyLocations++;
+      }
+    }
+  }
+
+  const empty = total - occupied;
+  const occupancyRate = total > 0 ? Math.round((occupied / total) * 100) : 0;
+
+  return {
+    total,
+    occupied,
+    empty,
+    occupancyRate,
+    masterLocations,
+    slaveOnlyLocations,
+  };
+}
+
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
@@ -247,17 +297,96 @@ export default async function DashboardPage() {
   let onbLeadData: Awaited<ReturnType<typeof onbLeadCounts>> | null = null;
   let obExecData: Awaited<ReturnType<typeof obExecCounts>> | null = null;
   let consignmentData: Awaited<ReturnType<typeof consignmentUserCounts>> | null = null;
+  let onbLeadAssignmentsList: any[] = [];
+  let obExecAssignmentsList: any[] = [];
 
   if (opsBranchId) {
     const branch = await prisma.branch.findUnique({ where: { id: opsBranchId }, select: { name: true } });
     opsBranchName = branch?.name || "Branch";
 
-    if (isOnbLead) onbLeadData = await onbLeadCounts(opsBranchId);
-    if (isOBExec) obExecData = await obExecCounts(opsBranchId, session.uid);
+    if (isOnbLead) {
+      onbLeadData = await onbLeadCounts(opsBranchId);
+      const assignments = await prisma.sellerAssignment.findMany({
+        where: { seller: { branchId: opsBranchId } },
+        orderBy: { assignedAt: "desc" },
+        include: {
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              sellerCode: true,
+              membershipId: true,
+              status: true,
+              sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
+            },
+          },
+          program: { select: { id: true, name: true, code: true } },
+          exec: { select: { id: true, fullName: true, email: true } },
+        },
+      });
+      const detailed = await Promise.all(
+        assignments.map(async (a) => {
+          const onboardedCount = await prisma.localOnboardingRecord.count({
+            where: {
+              sellerId: a.sellerId,
+              branchId: opsBranchId,
+              ...(a.programId ? { programId: a.programId } : {}),
+            },
+          });
+          return {
+            ...a,
+            onboardedCount,
+          };
+        })
+      );
+      onbLeadAssignmentsList = serialize(detailed);
+    }
+    if (isOBExec) {
+      obExecData = await obExecCounts(opsBranchId, session.uid);
+      const assignments = await prisma.sellerAssignment.findMany({
+        where: { obExecUserId: BigInt(session.uid), seller: { branchId: opsBranchId } },
+        orderBy: { assignedAt: "desc" },
+        include: {
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              sellerCode: true,
+              membershipId: true,
+              status: true,
+              sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
+            },
+          },
+          program: { select: { id: true, name: true, code: true } },
+        },
+      });
+      const detailed = await Promise.all(
+        assignments.map(async (a) => {
+          const onboardedCount = await prisma.localOnboardingRecord.count({
+            where: {
+              sellerId: a.sellerId,
+              branchId: opsBranchId,
+              ...(a.programId ? { programId: a.programId } : {}),
+            },
+          });
+          return {
+            ...a,
+            onboardedCount,
+          };
+        })
+      );
+      obExecAssignmentsList = serialize(detailed);
+    }
     if (isConsignment) consignmentData = await consignmentUserCounts(opsBranchId);
   }
 
-  const activity = await recentActivity(isHo ? null : (branchId ?? opsBranchId));
+  const targetBranchId = branchId ?? opsBranchId;
+  let occupancyData = null;
+  if (targetBranchId) {
+    occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
+  }
+
+  const activity = await recentActivity(isHo ? null : targetBranchId);
   const roleLabels = session.roles.map((r) => ROLE_LABELS[r.code as RoleCode] ?? r.code);
 
   const displayBranchName = branchName || opsBranchName;
@@ -389,8 +518,8 @@ export default async function DashboardPage() {
 
           {/* ONB_LEAD dashboard */}
           {isOnbLead && onbLeadData && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -424,13 +553,96 @@ export default async function DashboardPage() {
                   <div className="text-xs text-slate-500 mt-1">approved at branch</div>
                 </div>
               </div>
+
+              {/* Task Assignments & Tracking for Lead */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800">Task Assignments & Progress Tracking</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Track onboarding activities assigned to executives</p>
+                  </div>
+                  <a href="/ops/assignments" className="text-xs font-semibold text-brand-600 hover:underline">
+                    Manage Assignments →
+                  </a>
+                </div>
+                {onbLeadAssignmentsList.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-slate-400">
+                    No active assignments. Start by assigning a seller to an executive.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-semibold uppercase tracking-wider">
+                          <th className="px-5 py-3">Assigned Exec</th>
+                          <th className="px-5 py-3">Seller &amp; Program</th>
+                          <th className="px-5 py-3">Associated Brands</th>
+                          <th className="px-5 py-3">Progress</th>
+                          <th className="px-5 py-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-sm">
+                        {onbLeadAssignmentsList.map((a: any) => (
+                          <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">
+                                  {a.exec.fullName.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-slate-800">{a.exec.fullName}</div>
+                                  <div className="text-[10px] text-slate-400">{a.exec.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="font-medium text-slate-850">{a.seller.name}</div>
+                              <div className="text-xs text-slate-450 font-mono">
+                                {a.seller.sellerCode} {a.program ? `· ${a.program.name}` : ""}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex flex-wrap gap-1">
+                                {a.seller.sellerBrands.map((sb: any) => (
+                                  <span key={sb.brand.code} className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium">
+                                    {sb.brand.name}
+                                  </span>
+                                ))}
+                                {a.seller.sellerBrands.length === 0 && (
+                                  <span className="text-xs text-slate-450">—</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="font-medium text-slate-700">{a.onboardedCount} SKU{a.onboardedCount !== 1 ? "s" : ""} onboarded</div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              {a.onboardedCount > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-705 px-2 py-0.5 rounded-full border border-amber-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                  Pending Onboarding
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* OB_EXEC dashboard */}
           {isOBExec && obExecData && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -459,13 +671,97 @@ export default async function DashboardPage() {
                   <div className="text-xs text-slate-500 mt-1">eligible nodes at branch</div>
                 </div>
               </div>
+
+              {/* Assigned Onboarding Tasks for Executive */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800">My Assigned Onboarding Tasks</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Sellers assigned to you for product onboarding</p>
+                  </div>
+                  <a href="/ops/onboarding" className="text-xs font-semibold text-brand-600 hover:underline">
+                    View Onboarding Records →
+                  </a>
+                </div>
+                {obExecAssignmentsList.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-slate-400">
+                    No tasks assigned. Please contact your Onboarding Lead.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-semibold uppercase tracking-wider">
+                          <th className="px-5 py-3">Seller Name &amp; Code</th>
+                          <th className="px-5 py-3">Assigned Program</th>
+                          <th className="px-5 py-3">Associated Brands</th>
+                          <th className="px-5 py-3">Progress</th>
+                          <th className="px-5 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-sm">
+                        {obExecAssignmentsList.map((a: any) => (
+                          <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <div className="font-semibold text-slate-800">{a.seller.name}</div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                {a.seller.sellerCode} {a.seller.membershipId ? `· ${a.seller.membershipId}` : ""}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              {a.program ? (
+                                <div>
+                                  <span className="font-medium text-slate-700">{a.program.name}</span>
+                                  <div className="text-[10px] text-slate-400 font-mono">{a.program.code}</div>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {a.seller.sellerBrands.map((sb: any) => (
+                                  <span key={sb.brand.code} className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium">
+                                    {sb.brand.name}
+                                  </span>
+                                ))}
+                                {a.seller.sellerBrands.length === 0 && (
+                                  <span className="text-xs text-slate-450">—</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-slate-700">{a.onboardedCount} SKU{a.onboardedCount !== 1 ? "s" : ""}</span>
+                                {a.onboardedCount === 0 && (
+                                  <span className="text-[10px] bg-amber-50 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200">
+                                    Not Started
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 text-right">
+                              <a
+                                href={`/ops/onboarding/new?sellerId=${a.seller.id}${a.program ? `&programId=${a.program.id}` : ""}`}
+                                className="inline-flex items-center gap-1.5 rounded bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 transition-colors"
+                              >
+                                + Onboard Product
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* CONSIGNMENT_USER dashboard */}
           {isConsignment && consignmentData && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Consignment Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -479,24 +775,34 @@ export default async function DashboardPage() {
                     { key: "passed_back", label: "Passed Back", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
                   ] as { key: string; label: string; color: string }[]
                 ).map(({ key, label, color }) => (
-                  <div key={key} className={`rounded-xl border p-5 shadow-sm ${color}`}>
+                  <a
+                    href={`/ops/consignments?tab=consignments&status=${key}`}
+                    key={key}
+                    className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all hover:border-slate-300 block ${color}`}
+                  >
                     <div className="text-xs font-medium opacity-80">{label}</div>
                     <div className="text-3xl font-bold mt-1">{(consignmentData!.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
-                  </div>
+                  </a>
                 ))}
-                <div className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm">
+                <a
+                  href="/ops/consignments?tab=consignments&status=qc"
+                  className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 block"
+                >
                   <div className="text-xs font-medium text-purple-700 opacity-80">Pending QC Items</div>
                   <div className="text-3xl font-bold mt-1 text-purple-700">{consignmentData.pendingQcItems}</div>
-                  <div className="text-xs mt-1 text-purple-500">awaiting inspection</div>
-                </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                  <div className="text-xs mt-1 text-purple-500 font-medium">awaiting inspection</div>
+                </a>
+                <a
+                  href="/ops/consignments?tab=consignments&status=passed_back"
+                  className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-emerald-300 block"
+                >
                   <div className="text-xs font-medium text-emerald-700 opacity-80">Passed QC Today</div>
                   <div className="text-3xl font-bold mt-1 text-emerald-700">{consignmentData.passedToday}</div>
-                  <div className="text-xs mt-1 text-emerald-500">items cleared</div>
-                </div>
+                  <div className="text-xs mt-1 text-emerald-500 font-medium">items cleared</div>
+                </a>
               </div>
               <div className="mt-4">
-                <a href="/ops/consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
+                <a href="/ops/consignments?tab=consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
                   View all consignments →
                 </a>
               </div>
@@ -513,6 +819,78 @@ export default async function DashboardPage() {
           </a>{" "}
           (e.g. Glass, Wood, Stone…), then add Attributes and bind them to each
           category. Everything downstream selects from these masters.
+        </div>
+      )}
+
+      {occupancyData && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-905">Warehouse Location Occupancy</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time status of eligible nodes in {displayBranchName}</p>
+            </div>
+            <a
+              href="/branch/warehouse"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
+            >
+              View Warehouse Tree →
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            {/* Occupancy Rate */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-semibold text-slate-600">Occupancy Rate</span>
+                <span className="text-2xl font-extrabold text-slate-950">{occupancyData.occupancyRate}%</span>
+              </div>
+              <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div
+                  className="h-full bg-brand-650 rounded-full transition-all duration-500"
+                  style={{ width: `${occupancyData.occupancyRate}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-slate-400 font-medium">
+                <span>{occupancyData.occupied} Occupied</span>
+                <span>{occupancyData.empty} Empty</span>
+              </div>
+            </div>
+
+            {/* Counts Grid */}
+            <div className="grid grid-cols-2 gap-4 col-span-2">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Placement Eligible Nodes</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-2xl font-bold text-slate-900">{occupancyData.total}</span>
+                  <span className="text-xs font-medium text-slate-500">total locations</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Available (Empty)</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-2xl font-bold text-emerald-600">{occupancyData.empty}</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-250 animate-pulse">Free</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Master Copy Locations</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-2xl font-bold text-amber-700">{occupancyData.masterLocations}</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-250">👑 Master</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Slave Copy Only Locations</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-2xl font-bold text-indigo-700">{occupancyData.slaveOnlyLocations}</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-250">👥 Slave Only</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

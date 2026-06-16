@@ -214,7 +214,9 @@ export default function RoleUsersPage({ params }: PageProps) {
                           </div>
                           <div>
                             <div className="font-semibold text-slate-800">{user.fullName}</div>
-                            <div className="text-xs text-slate-500">{user.email}</div>
+                            <div className="text-xs text-slate-500">
+                              {user.email} {(user as any).username ? `· @${(user as any).username}` : ""}
+                            </div>
                           </div>
                         </div>
                       </td>

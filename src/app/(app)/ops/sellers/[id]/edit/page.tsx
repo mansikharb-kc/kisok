@@ -18,12 +18,13 @@ export default async function Page({ params }: { params: { id: string } }) {
   const sellerId = BigInt(params.id);
 
   // Brands = all HO-approved active brands. Programs = branch's approved programs.
-  const [seller, brandRows, branchPrograms] = await Promise.all([
+  const [seller, brandRows, branchPrograms, execRows, categoryRows] = await Promise.all([
     prisma.seller.findUnique({
       where: { id: sellerId },
       include: {
         sellerBrands: { select: { brandId: true } },
         contracts: true,
+        assignments: true,
       },
     }),
     prisma.brand.findMany({
@@ -35,6 +36,23 @@ export default async function Page({ params }: { params: { id: string } }) {
       where: { branchId, approvalStatus: "approved", program: { status: "active" } },
       include: { program: { select: { id: true, name: true, code: true } } },
     }),
+    prisma.user.findMany({
+      where: {
+        status: "active",
+        roles: {
+          some: {
+            role: { code: "OB_EXEC" },
+            branchId,
+          },
+        },
+      },
+      select: { id: true, fullName: true, email: true },
+      orderBy: { fullName: "asc" },
+    }),
+    prisma.category.findMany({
+      where: { status: "active" },
+      select: { id: true, name: true, parentId: true },
+    }),
   ]);
 
   if (!seller) notFound();
@@ -42,11 +60,13 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   const brands = serialize(brandRows);
   const programs = serialize(branchPrograms.map((bp) => bp.program));
+  const execs = serialize(execRows);
+  const flatCategories = serialize(categoryRows);
   const sellerData = serialize(seller);
 
   return (
     <div className="space-y-6">
-      <SellerForm brands={brands} programs={programs} seller={sellerData} />
+      <SellerForm brands={brands} programs={programs} execs={execs} flatCategories={flatCategories} seller={sellerData} />
     </div>
   );
 }

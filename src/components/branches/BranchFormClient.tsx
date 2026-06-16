@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isNonEmptyString } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -61,6 +62,15 @@ export default function BranchFormClient({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Validate required fields
+    if (!isNonEmptyString(form.name)) {
+      setError("Branch Name is required");
+      return;
+    }
+    if (!isNonEmptyString(form.branchCode)) {
+      setError("Branch Code is required");
+      return;
+    }
     setBusy(true);
     setError("");
     try {

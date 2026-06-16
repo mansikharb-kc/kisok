@@ -22,6 +22,7 @@ model User {
   id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
   fullName     String    @map("full_name") @db.VarChar(150)
   email        String    @unique @db.VarChar(190)
+  username     String?   @unique @db.VarChar(60)
   phone        String?   @db.VarChar(20)
   passwordHash String    @map("password_hash") @db.VarChar(255)
   status       String    @default("active") @db.VarChar(20)
@@ -105,6 +106,7 @@ model Media {
   localMedia     LocalMedia[]
   qrCopies       ProductCopy[]
   stickers       Sticker[]
+  sellerContracts SellerContract[]
 
   @@map("media")
 }
@@ -428,11 +430,13 @@ model SellerContract {
   verified            Boolean   @default(false)
   verifiedBy          BigInt?   @map("verified_by") @db.UnsignedBigInt
   remarks             String?   @db.VarChar(500)
+  contractMediaId     BigInt?   @map("contract_media_id") @db.UnsignedBigInt
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  seller  Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  program Program @relation(fields: [programId], references: [id])
+  seller        Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  program       Program @relation(fields: [programId], references: [id])
+  contractMedia Media?  @relation(fields: [contractMediaId], references: [id])
 
   @@index([sellerId])
   @@map("seller_contracts")

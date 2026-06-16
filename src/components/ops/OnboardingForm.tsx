@@ -82,12 +82,27 @@ export default function OnboardingForm() {
   const selectedSeller = useMemo(() => sellers.find((s) => s.id === sellerId) ?? null, [sellers, sellerId]);
   const brandOptions = selectedSeller?.brands ?? [];
 
+  const isBootingRef = useRef(true);
+
   // Bootstrap cascade data.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlSellerId = params.get("sellerId") || "";
+    const urlProgramId = params.get("programId") || "";
+    const urlBrandId = params.get("brandId") || "";
+
     getJSON("/api/onboarding/options")
       .then((d) => {
         setSellers(d.sellers ?? []);
         setPrograms(d.programs ?? []);
+        
+        if (urlSellerId) setSellerId(urlSellerId);
+        if (urlProgramId) setProgramId(urlProgramId);
+        if (urlBrandId) setBrandId(urlBrandId);
+
+        setTimeout(() => {
+          isBootingRef.current = false;
+        }, 0);
       })
       .catch((e) => setBootErr(e.message));
   }, []);
@@ -106,14 +121,24 @@ export default function OnboardingForm() {
     };
   }, [catQuery]);
 
-  // Reset brand when seller changes.
+  // When the seller changes, auto-select their first associated brand.
   useEffect(() => {
-    setBrandId("");
+    if (selectedSeller && selectedSeller.brands.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const urlBrandId = params.get("brandId");
+      if (isBootingRef.current && urlBrandId) {
+        return;
+      }
+      setBrandId(selectedSeller.brands[0].id);
+    } else {
+      setBrandId("");
+    }
     resetSkuState();
-  }, [sellerId]);
+  }, [sellerId, selectedSeller]);
 
   // Reset downstream SKU state whenever the master's identity inputs change.
   useEffect(() => {
+    if (isBootingRef.current) return;
     resetSkuState();
   }, [brandId, category?.id, programId]);
 

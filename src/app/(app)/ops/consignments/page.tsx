@@ -6,10 +6,17 @@ import TicketsClient from "@/components/ops/TicketsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConsignmentsPage() {
+export default async function ConsignmentsPage({
+  searchParams,
+}: {
+  searchParams: { status?: string; tab?: string };
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
   if (!hasRole(session.roles, "OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD")) redirect("/dashboard");
+
+  const initialStatus = searchParams.status || "";
+  const initialTab = searchParams.tab || "tickets";
 
   const roleEntry = session.roles.find(
     (r) => ["OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD"].includes(r.code) && r.branchId,
@@ -19,12 +26,13 @@ export default async function ConsignmentsPage() {
 
   const isExec = hasRole(session.roles, "OB_EXEC");
   const isConsign = hasRole(session.roles, "CONSIGNMENT_USER");
+  const isLead = hasRole(session.roles, "ONB_LEAD");
   const isOverseer = hasRole(session.roles, "CONSIGNMENT_USER", "ONB_LEAD");
   const uid = BigInt(session.uid);
 
   const ticketWhere = isOverseer ? { branchId } : { branchId, raisedBy: uid };
 
-  const [ticketRows, assignments] = await Promise.all([
+  const [ticketRows, assignments, obExecs, consignmentRows] = await Promise.all([
     prisma.ticket.findMany({
       where: ticketWhere,
       orderBy: [{ updatedAt: "desc" }],
@@ -50,6 +58,41 @@ export default async function ConsignmentsPage() {
           },
         })
       : Promise.resolve([]),
+    isLead
+      ? prisma.user.findMany({
+          where: {
+            roles: {
+              some: {
+                role: { code: "OB_EXEC" },
+                branchId,
+              },
+            },
+          },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        })
+      : Promise.resolve([]),
+    prisma.consignment.findMany({
+      where: { seller: { branchId } },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        seller: { select: { name: true, sellerCode: true } },
+        brand: { select: { name: true } },
+        items: {
+          select: {
+            id: true,
+            description: true,
+            expectedQty: true,
+            receivedQty: true,
+            sampleType: true,
+            status: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const tickets = serialize(ticketRows);
@@ -61,21 +104,28 @@ export default async function ConsignmentsPage() {
       brands: a.seller.sellerBrands.map((sb) => sb.brand),
     })),
   );
+  const execs = serialize(obExecs);
+  const consignments = serialize(consignmentRows);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Consignment Tickets</h1>
+        <h1 className="text-2xl font-bold">Consignments &amp; Tickets</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Sample / fabrication / damage requests bounce between OB Exec and Consignment User until resolved.
+          Manage physical shipments, QC steps, and track requests between OB Exec and Consignment User.
         </p>
       </div>
       <TicketsClient
         tickets={tickets as never[]}
         sellers={sellers as never[]}
+        execs={execs as never[]}
+        consignments={consignments as never[]}
         canRaise={isExec}
         isExec={isExec}
         isConsign={isConsign}
+        isLead={isLead}
+        initialStatus={initialStatus}
+        initialTab={initialTab}
       />
     </div>
   );

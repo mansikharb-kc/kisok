@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isValidPhone, isValidEmail, isNonEmptyString } from "../../lib/validation";
 import { Plus, X, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -28,6 +29,7 @@ export type UserRoleAssignment = {
 export type UserFormData = {
   fullName: string;
   email: string;
+  username: string;
   phone: string;
   password?: string;
   status: string;
@@ -40,6 +42,7 @@ interface RoleUserFormProps {
     id: string;
     fullName: string;
     email: string;
+    username?: string | null;
     phone: string | null;
     status: string;
     roles: UserRoleAssignment[];
@@ -85,6 +88,7 @@ export default function RoleUserForm({
   const [formData, setFormData] = useState<UserFormData>({
     fullName: "",
     email: "",
+    username: "",
     phone: "",
     password: "",
     status: "active",
@@ -137,7 +141,7 @@ export default function RoleUserForm({
       const targetRoleId = targetRole?.id ?? "";
 
       if (mode === "create") {
-        setFormData({ fullName: "", email: "", phone: "", password: "", status: "active" });
+        setFormData({ fullName: "", email: "", username: "", phone: "", password: "", status: "active" });
         // Set default assignment
         const defaultBranchId = isHo
           ? (loadedBranches.length > 0 ? loadedBranches[0].id : null)
@@ -147,6 +151,7 @@ export default function RoleUserForm({
         setFormData({
           fullName: initialUser.fullName,
           email: initialUser.email,
+          username: initialUser.username || "",
           phone: initialUser.phone || "",
           password: "",
           status: initialUser.status,
@@ -215,6 +220,24 @@ export default function RoleUserForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Validate required text fields
+    if (!isNonEmptyString(formData.fullName)) {
+      setError("Full Name is required");
+      return;
+    }
+    if (!isNonEmptyString(formData.username)) {
+      setError("Username is required");
+      return;
+    }
+    // Validate email and phone
+    if (formData.email && !isValidEmail(formData.email)) {
+      setError("Please enter a valid email address containing '@'");
+      return;
+    }
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      setError("Phone number must be exactly 10 digits");
+      return;
+    }
     if (formAssignments.length === 0) {
       setError("Please assign at least one branch scope.");
       return;
@@ -268,7 +291,7 @@ export default function RoleUserForm({
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" autoComplete="off">
         <div className="p-6 space-y-6">
           {/* Identity Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-600 uppercase">Full Name</label>
               <input
@@ -292,15 +315,28 @@ export default function RoleUserForm({
                 autoComplete="new-email"
               />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600 uppercase">Username</label>
+              <input
+                type="text"
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="w-full text-sm rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-1 focus:ring-brand-500"
+                placeholder="Enter username"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-600 uppercase">Phone Number</label>
               <input
-                type="text"
+                type="tel"
+                maxLength={10}
+                pattern="\d{10}"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "") })}
                 className="w-full text-sm rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-1 focus:ring-brand-500"
                 placeholder="Optional"
               />
@@ -351,7 +387,7 @@ export default function RoleUserForm({
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Branch Scope Mapping</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Assign which branches this {roleDisplayName} can operate in.</p>
               </div>
-              {targetRoleCode !== "HO_ADMIN" && (
+              {targetRoleCode !== "HO_ADMIN" && sessionUser?.isHo && (
                 <button
                   type="button"
                   onClick={addAssignmentRow}

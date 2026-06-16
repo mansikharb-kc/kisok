@@ -6,19 +6,24 @@ import type { RoleCode } from "@/lib/rbac";
 import { ok, fail, handler } from "@/lib/api";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().min(1),
   password: z.string().min(1),
 });
 
 export const POST = handler(async (req: Request) => {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return fail("Email and password required", 422);
+  if (!parsed.success) return fail("Username/Email and password required", 422);
 
   const { email, password } = parsed.data;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email },
+        { username: email }
+      ]
+    },
     include: { roles: { include: { role: true } } },
   });
 

@@ -20,6 +20,8 @@ const updateSchema = z.object({
     contractEnd: dateish,
     verified: z.boolean().optional().default(false),
     remarks: z.string().trim().max(500).optional().nullable(),
+    obExecUserId: z.coerce.bigint().optional().nullable(),
+    contractMediaId: z.coerce.bigint().optional().nullable(),
   })).optional(),
 });
 
@@ -40,7 +42,7 @@ export const GET = handler(async (_req: Request, ctx: { params: { id: string } }
     where: { id },
     include: {
       sellerBrands: { select: { brandId: true } },
-      contracts: true,
+      contracts: { include: { contractMedia: { select: { url: true } } } },
       assignments: { include: { exec: { select: { fullName: true } } } },
     },
   });
@@ -107,7 +109,23 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
             contractEnd: c.contractEnd ? new Date(c.contractEnd) : null,
             verified: c.verified,
             remarks: c.remarks,
+            contractMediaId: c.contractMediaId,
           })),
+        });
+      }
+
+      await tx.sellerAssignment.deleteMany({ where: { sellerId: id } });
+      const assignmentsToCreate = contracts
+        .filter((c) => c.obExecUserId)
+        .map((c) => ({
+          sellerId: id,
+          programId: c.programId,
+          obExecUserId: c.obExecUserId!,
+          assignedBy: BigInt(session.uid),
+        }));
+      if (assignmentsToCreate.length > 0) {
+        await tx.sellerAssignment.createMany({
+          data: assignmentsToCreate,
         });
       }
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isNonEmptyString } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 
@@ -69,6 +70,11 @@ export default function SampleSizesClient({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (viewOnly) return;
+    // Validate required label
+    if (!isNonEmptyString(label)) {
+      setError("Label is required");
+      return;
+    }
     setError("");
     setBusy(true);
 

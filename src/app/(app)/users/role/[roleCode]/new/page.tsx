@@ -24,6 +24,7 @@ export default function NewRoleUserPage({ params }: PageProps) {
     const payload = {
       fullName: formData.fullName,
       email: formData.email,
+      username: formData.username || null,
       phone: formData.phone || null,
       password: formData.password,
       status: formData.status,

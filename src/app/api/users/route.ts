@@ -8,6 +8,7 @@ import { writeAudit } from "@/lib/audit";
 const createUserSchema = z.object({
   fullName: z.string().trim().min(1).max(150),
   email: z.string().trim().email().max(190),
+  username: z.string().trim().min(1).max(60).optional().nullable(),
   phone: z.string().trim().max(20).optional().nullable(),
   password: z.string().min(4),
   status: z.enum(["active", "disabled"]).optional().default("active"),
@@ -136,6 +137,16 @@ export const POST = handler(async (req: Request) => {
     return fail("A user with this email address already exists.", 409);
   }
 
+  // Check unique username
+  if (data.username) {
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: data.username.toLowerCase() },
+    });
+    if (existingUsername) {
+      return fail("A user with this username already exists.", 409);
+    }
+  }
+
   const passwordHash = await bcrypt.hash(data.password, 10);
 
   // Create user and assignments in a transaction
@@ -143,6 +154,7 @@ export const POST = handler(async (req: Request) => {
     data: {
       fullName: data.fullName,
       email: data.email.toLowerCase(),
+      username: data.username ? data.username.toLowerCase() : null,
       phone: data.phone ?? null,
       passwordHash,
       status: data.status,

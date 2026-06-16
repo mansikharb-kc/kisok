@@ -37,8 +37,8 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email },
-    update: {},
-    create: { fullName: name, email, passwordHash, status: "active" },
+    update: { username: "admin" },
+    create: { fullName: name, email, passwordHash, status: "active", username: "admin" },
   });
 
   // Attach global HO_ADMIN role (branchId null = global)
