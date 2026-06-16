@@ -8,38 +8,181 @@ import { isNonEmptyString } from "@/lib/validation";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 
-function calculateEndDate(startDateStr: string, tenureStr: string): string {
-  if (!startDateStr || !tenureStr) return "";
-  const cleanTenure = tenureStr.trim().toLowerCase();
-  const numMatch = cleanTenure.match(/\d+/);
-  if (!numMatch) return "";
-  const num = parseInt(numMatch[0], 10);
-  if (isNaN(num)) return "";
-
+function parseTenureToPeriod(tenureStr: string): { years: number; months: number; days: number } {
+  const clean = tenureStr.trim().toLowerCase();
+  
+  let years = 0;
   let months = 0;
-  if (cleanTenure.includes("year") || cleanTenure.includes("yr")) {
-    months = num * 12;
-  } else if (cleanTenure.includes("month") || cleanTenure.includes("mo")) {
-    months = num;
-  } else {
-    // Just a number
-    if (num < 6) {
-      months = num * 12; // Assume years for small numbers
-    } else {
-      months = num; // Assume months for larger numbers
+  let days = 0;
+
+  // Extract years
+  const yearMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:year|yr)/);
+  if (yearMatch) {
+    years = parseFloat(yearMatch[1]);
+  }
+
+  // Extract months
+  const monthMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:month|mo)/);
+  if (monthMatch) {
+    months = parseFloat(monthMatch[1]);
+  }
+
+  // Extract days (matches '370 days', '370 d', '370d', but avoids matching letters in 'dashboard' or 'month')
+  const dayMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)/);
+  if (dayMatch) {
+    days = parseFloat(dayMatch[1]);
+  }
+
+  // If it's a raw number with no unit specified
+  if (!yearMatch && !monthMatch && !dayMatch) {
+    const num = parseFloat(clean);
+    if (!isNaN(num)) {
+      if (num >= 30) {
+        // Treat as days if >= 30 (e.g. 365, 370)
+        days = num;
+      } else {
+        // Treat as months if < 30 (e.g. 12, 24)
+        months = num;
+      }
     }
   }
 
-  const date = new Date(startDateStr);
+  return { years, months, days };
+}
+
+function formatTenure(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  
+  const parsed = parseTenureToPeriod(trimmed);
+  
+  // Check if input specified days, or was treated as days because raw number >= 30
+  const hasDays = trimmed.toLowerCase().includes("day") || 
+                  trimmed.toLowerCase().includes("d") ||
+                  (!trimmed.toLowerCase().includes("year") && 
+                   !trimmed.toLowerCase().includes("yr") && 
+                   !trimmed.toLowerCase().includes("month") && 
+                   !trimmed.toLowerCase().includes("mo") && 
+                   parseFloat(trimmed) >= 30);
+                   
+  let years = 0;
+  let months = 0;
+  let days = 0;
+  
+  if (hasDays) {
+    // Convert everything to days (1 year = 365 days, 1 month = 30 days)
+    const totalDays = (parsed.years * 365) + (parsed.months * 30) + parsed.days;
+    if (isNaN(totalDays) || totalDays <= 0) return val;
+    
+    years = Math.floor(totalDays / 365);
+    const remainingDays = totalDays % 365;
+    months = Math.floor(remainingDays / 30);
+    days = Math.round(remainingDays % 30);
+  } else {
+    // Convert months (1 year = 12 months)
+    const totalMonths = (parsed.years * 12) + parsed.months;
+    if (isNaN(totalMonths) || totalMonths <= 0) return val;
+    
+    years = Math.floor(totalMonths / 12);
+    months = Math.floor(totalMonths % 12);
+    days = Math.round(parsed.days);
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} Year${years > 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} Month${months > 1 ? "s" : ""}`);
+  if (days > 0) parts.push(`${days} Day${days > 1 ? "s" : ""}`);
+
+  if (parts.length === 0) return "0 Days";
+  return parts.join(", ");
+}
+
+function parseFitoutDays(fitoutStr: string): number {
+  const clean = fitoutStr.trim().toLowerCase();
+  const match = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)?/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+}
+
+function formatFitoutPeriod(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  const days = parseFitoutDays(trimmed);
+  if (days <= 0) return val;
+  return `${days} Day${days > 1 ? "s" : ""}`;
+}
+
+function addDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-based
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function subtractDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function calculateEndDate(startDateStr: string, tenureStr: string): string {
+  if (!startDateStr || !tenureStr) return "";
+  
+  const { years, months, days } = parseTenureToPeriod(tenureStr);
+  
+  const parts = startDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
   if (isNaN(date.getTime())) return "";
 
-  // Add months to the date
-  date.setMonth(date.getMonth() + months);
-  // Subtract one day
-  date.setDate(date.getDate() - 1);
+  const clean = tenureStr.trim().toLowerCase();
+  const isDaysBased = clean.includes("day") || 
+                      clean.includes("d") ||
+                      (!clean.includes("year") && 
+                       !clean.includes("yr") && 
+                       !clean.includes("month") && 
+                       !clean.includes("mo") && 
+                       parseFloat(clean) >= 30);
+
+  if (isDaysBased) {
+    // For day-based tenures, add total days directly
+    const totalDays = (years * 365) + (parsedMonthsToDays(months)) + days;
+    date.setUTCDate(date.getUTCDate() + totalDays - 1);
+  } else {
+    // For year/month-based tenures, add calendar months/years
+    const totalMonths = (years * 12) + months;
+    date.setUTCMonth(date.getUTCMonth() + totalMonths);
+    date.setUTCDate(date.getUTCDate() + days - 1);
+  }
   
-  // Return in yyyy-mm-dd format
   return date.toISOString().slice(0, 10);
+}
+
+// Helper for exact day logic
+function parsedMonthsToDays(months: number): number {
+  return months * 30;
 }
 
 type BrandOption = {
@@ -120,6 +263,8 @@ export default function SellerForm({
       {
         collaborationTenure: string;
         fitoutPeriod: string;
+        baseStartDate: string;
+        fitoutEnd: string;
         contractStart: string;
         contractEnd: string;
         verified: boolean;
@@ -134,10 +279,16 @@ export default function SellerForm({
     if (seller?.contracts) {
       for (const c of seller.contracts) {
         const match = seller.assignments?.find((a) => String(a.programId) === String(c.programId));
+        const fitoutStr = c.fitoutPeriod ?? "45 Days";
+        const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
+        const baseStartStr = startStr && fitoutStr ? subtractDays(startStr, fitoutStr) : "";
+        const fitoutEndStr = baseStartStr && fitoutStr ? subtractDays(startStr, "1") : "";
         initial[c.programId] = {
           collaborationTenure: c.collaborationTenure ?? "",
-          fitoutPeriod: c.fitoutPeriod ?? "",
-          contractStart: c.contractStart ? c.contractStart.slice(0, 10) : "",
+          fitoutPeriod: fitoutStr,
+          baseStartDate: baseStartStr,
+          fitoutEnd: fitoutEndStr,
+          contractStart: startStr,
           contractEnd: c.contractEnd ? c.contractEnd.slice(0, 10) : "",
           verified: c.verified,
           remarks: c.remarks ?? "",
@@ -209,7 +360,9 @@ export default function SellerForm({
       } else {
         next[programId] = {
           collaborationTenure: "",
-          fitoutPeriod: "",
+          fitoutPeriod: "45 Days",
+          baseStartDate: "",
+          fitoutEnd: "",
           contractStart: "",
           contractEnd: "",
           verified: false,
@@ -228,7 +381,9 @@ export default function SellerForm({
     setActiveContracts((prev) => {
       const current = prev[programId] || {
         collaborationTenure: "",
-        fitoutPeriod: "",
+        fitoutPeriod: "45 Days",
+        baseStartDate: "",
+        fitoutEnd: "",
         contractStart: "",
         contractEnd: "",
         verified: false,
@@ -243,11 +398,37 @@ export default function SellerForm({
         [field]: value,
       };
 
-      // Auto-calculate end date when start date or tenure changes
-      if (field === "collaborationTenure" || field === "contractStart") {
-        const calculatedEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
-        if (calculatedEnd) {
-          updated.contractEnd = calculatedEnd;
+      if (field === "baseStartDate") {
+        updated.baseStartDate = value;
+        // contractStart = baseStartDate + fitoutPeriod
+        if (updated.baseStartDate) {
+          updated.contractStart = addDays(updated.baseStartDate, updated.fitoutPeriod);
+          updated.fitoutEnd = subtractDays(updated.contractStart, "1");
+        } else {
+          updated.contractStart = "";
+          updated.fitoutEnd = "";
+        }
+        // contractEnd = contractStart + collaborationTenure - 1 day
+        if (updated.contractStart && updated.collaborationTenure) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
+        } else {
+          updated.contractEnd = "";
+        }
+      } else if (field === "fitoutPeriod") {
+        if (updated.baseStartDate) {
+          updated.contractStart = addDays(updated.baseStartDate, value);
+          updated.fitoutEnd = subtractDays(updated.contractStart, "1");
+        }
+        if (updated.contractStart && updated.collaborationTenure) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
+        } else {
+          updated.contractEnd = "";
+        }
+      } else if (field === "collaborationTenure") {
+        if (updated.contractStart && value) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, value);
+        } else {
+          updated.contractEnd = "";
         }
       }
 
@@ -623,51 +804,114 @@ export default function SellerForm({
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className={L}>Collaboration Tenure</label>
-                          <input
-                            value={details.collaborationTenure}
-                            onChange={(e) =>
-                              updateContract(p.id, "collaborationTenure", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 12 months"
-                          />
+                      <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
+                        {/* Left Column: Collaboration Tenure Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Collaboration Tenure</label>
+                            <input
+                              value={details.collaborationTenure}
+                              onChange={(e) =>
+                                updateContract(p.id, "collaborationTenure", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatTenure(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "collaborationTenure", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 12 months"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure Start Date</label>
+                            <input
+                              type="date"
+                              value={details.contractStart}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure End Date</label>
+                            <input
+                              type="date"
+                              value={details.contractEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Fitout Period</label>
-                          <input
-                            value={details.fitoutPeriod}
-                            onChange={(e) =>
-                              updateContract(p.id, "fitoutPeriod", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 30 days"
-                          />
+
+                        {/* Right Column: Fitout Period Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Fitout Period</label>
+                            <input
+                              value={details.fitoutPeriod}
+                              onChange={(e) =>
+                                updateContract(p.id, "fitoutPeriod", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatFitoutPeriod(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "fitoutPeriod", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 45 Days"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period Start Date</label>
+                            <input
+                              type="date"
+                              value={details.baseStartDate}
+                              onChange={(e) =>
+                                updateContract(p.id, "baseStartDate", e.target.value)
+                              }
+                              className={I}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period End Date</label>
+                            <input
+                              type="date"
+                              value={details.fitoutEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Contract Start Date</label>
-                          <input
-                            type="date"
-                            value={details.contractStart}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractStart", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
-                        <div>
-                          <label className={L}>Contract End Date</label>
-                          <input
-                            type="date"
-                            value={details.contractEnd}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractEnd", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
+
+                        {details.baseStartDate && (
+                          <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
+                            <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout Start:</span>
+                              <strong className="text-slate-800">{formatDMY(details.baseStartDate)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout End:</span>
+                              <strong className="text-slate-800">{details.fitoutEnd ? formatDMY(details.fitoutEnd) : "—"}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab Start:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractStart)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab End:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractEnd)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">

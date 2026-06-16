@@ -37,10 +37,28 @@ async function recentActivity(branchId: bigint | null) {
   }));
 }
 
+async function countL4Categories(status?: string) {
+  const l1 = await prisma.category.findMany({ where: { parentId: null }, select: { id: true } });
+  const l1Ids = l1.map((c) => c.id);
+  if (l1Ids.length === 0) return 0;
+
+  const l2 = await prisma.category.findMany({ where: { parentId: { in: l1Ids } }, select: { id: true } });
+  const l2Ids = l2.map((c) => c.id);
+  if (l2Ids.length === 0) return 0;
+
+  const l3 = await prisma.category.findMany({ where: { parentId: { in: l2Ids } }, select: { id: true } });
+  const l3Ids = l3.map((c) => c.id);
+  if (l3Ids.length === 0) return 0;
+
+  const whereClause: any = { parentId: { in: l3Ids } };
+  if (status) whereClause.status = status;
+  return prisma.category.count({ where: whereClause });
+}
+
 async function globalCounts() {
   const [categories, attributes, brands, programs, sellers, products, copies, pendingApprovals] =
     await Promise.all([
-      prisma.category.count(),
+      countL4Categories(),
       prisma.attribute.count(),
       prisma.brand.count(),
       prisma.program.count(),
@@ -71,7 +89,7 @@ async function branchCounts(branchId: bigint) {
     pendingApprovalsCount,
     programsCount,
   ] = await Promise.all([
-    prisma.category.count({ where: { status: "active" } }),
+    countL4Categories("active"),
     prisma.attribute.count({ where: { status: "active" } }),
     prisma.categoryAttribute.count(),
     prisma.brand.count({ where: { status: "active" } }),
