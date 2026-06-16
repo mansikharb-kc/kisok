@@ -30,7 +30,7 @@ function BrandLogo({ url, name }: { url: string | null; name: string }) {
 
   if (url && !failed) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={name} onError={() => setFailed(true)} className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-white object-contain" />;
+    return <img src={url} alt={name} onError={() => setFailed(true)} className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md object-contain" />;
   }
 
   return <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white">{initials}</div>;
@@ -74,7 +74,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   }
 
   const emptyState = (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+    <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
       No brands yet. Click <strong>New Brand</strong> to add one.
     </div>
   );
@@ -89,7 +89,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
 
         <div className="flex items-center gap-3 lg:ml-auto">
           <span className="text-sm text-slate-500">{initial.length} total</span>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-1 shadow-sm">
             <button type="button" onClick={() => setViewMode("table")} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === "table" ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>
               Table
             </button>
@@ -110,7 +110,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
       ) : viewMode === "card" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((b) => (
-            <div key={b.id} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-200 ${b.status === "inactive" ? "opacity-60" : ""}`}>
+            <div key={b.id} className={`rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm transition-colors hover:border-brand-200 ${b.status === "inactive" ? "opacity-60" : ""}`}>
               <div className="flex items-start gap-3">
                 <BrandLogo url={b.logoUrl} name={b.name} />
                 <div className="min-w-0 flex-1">
@@ -191,7 +191,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
               <tr>

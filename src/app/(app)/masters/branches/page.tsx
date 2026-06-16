@@ -35,7 +35,7 @@ export default async function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-brand-700">
             <span className="h-2 w-2 rounded-full bg-brand-600" />

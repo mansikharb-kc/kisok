@@ -99,7 +99,7 @@ export default function ProgramsClient({
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Programs</div>
               <div className="mt-2 text-4xl font-bold text-slate-900">{initialPrograms.length}</div>
             </div>
-            <div className="text-3xl opacity-10 group-hover:opacity-15 transition-opacity">📋</div>
+            <div className="text-3xl opacity-10 group-hover:opacity-15 transition-opacity"></div>
           </div>
           {initialPrograms.length === 0 && (
             <div className="mt-3 text-xs text-slate-400">Start by creating your first program.</div>
@@ -125,7 +125,7 @@ export default function ProgramsClient({
               <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Attributes</div>
               <div className="mt-2 text-4xl font-bold text-brand-700">{attributes.length}</div>
             </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity">🏷️</div>
+            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
           </div>
           <div className="mt-3 text-xs text-slate-500">Available for mapping</div>
         </div>
@@ -136,7 +136,7 @@ export default function ProgramsClient({
               <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Bindings</div>
               <div className="mt-2 text-4xl font-bold text-indigo-700">{totalBindings}</div>
             </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity">🔗</div>
+            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
           </div>
           <div className="mt-3 text-xs text-slate-500">Across all programs</div>
         </div>
@@ -153,7 +153,7 @@ export default function ProgramsClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search programs, codes, or bound attributes…"
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
         <div className="inline-flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 border border-slate-200">
@@ -173,7 +173,7 @@ export default function ProgramsClient({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Program Master List</h3>
           <p className="mt-1 text-xs text-slate-500">Open details, edit, or attribute bindings on separate pages.</p>
@@ -192,7 +192,7 @@ export default function ProgramsClient({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1060px] text-sm">
-              <thead className="bg-white text-xs uppercase tracking-wider text-slate-500">
+              <thead className="bg-white/60 backdrop-blur-md text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Program</th>
                   <th className="px-4 py-3 text-left font-medium">Code</th>

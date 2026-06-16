@@ -225,7 +225,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
 
   const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
   const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500";
-  const card = "bg-white rounded-2xl border border-slate-200 p-6";
+  const card = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6";
 
   function StepHeader({ n, title, sub }: { n: number; title: string; sub: string }) {
     return (
@@ -241,7 +241,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-200 max-w-lg mx-auto mt-16 shadow-lg space-y-6">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white/60 backdrop-blur-md rounded-3xl border border-slate-200 max-w-lg mx-auto mt-16 shadow-lg space-y-6">
         <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center animate-bounce">
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
@@ -254,7 +254,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
           </p>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 w-full">
-          🔄 This window will close automatically in 3 seconds...
+           This window will close automatically in 3 seconds...
         </div>
         <button
           type="button"
@@ -333,12 +333,12 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
             <div className="flex items-center gap-3">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="logo" className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white" />
+                <img src={logoUrl} alt="logo" className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white/60 backdrop-blur-md" />
               ) : (
                 <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-300 text-xs">IMG</div>
               )}
               <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 text-center">
-                {logoBusy ? "Uploading…" : logoUrl ? "Change logo" : "⬆ Choose Logo File"}
+                {logoBusy ? "Uploading…" : logoUrl ? "Change logo" : " Choose Logo File"}
                 <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
               </label>
             </div>
@@ -387,7 +387,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
                 const node = byId.get(id);
                 return (
                   <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">
-                    <span className="text-[9px] px-1 rounded bg-white">{node ? levelMeta(node.level).label : ""}</span>
+                    <span className="text-[9px] px-1 rounded bg-white/60 backdrop-blur-md">{node ? levelMeta(node.level).label : ""}</span>
                     {node?.name ?? id}
                     <button type="button" onClick={() => removeAssociation(id)} className="text-brand-500 hover:text-brand-800">✕</button>
                   </span>

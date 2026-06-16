@@ -105,7 +105,7 @@ function Stepper({ status }: { status: string }) {
                   ? STATUS_BADGE[s]
                   : done
                   ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                  : "bg-white text-slate-300 border-slate-200"
+                  : "bg-white/60 backdrop-blur-md text-slate-300 border-slate-200"
               }`}
             >
               {done ? "✓" : ""} {STATUS_LABEL[s]}
@@ -219,7 +219,7 @@ export default function ConsignmentsClient({
 
       {/* List */}
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
           <p className="text-sm text-slate-400">No consignments yet.</p>
           {canInitiate && (
             <button
@@ -248,7 +248,7 @@ export default function ConsignmentsClient({
       {/* New Consignment modal */}
       {creating && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-10 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
+          <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl w-full max-w-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">Initiate Consignment</h3>
               <button
@@ -294,7 +294,7 @@ function ConsignmentCard({
   const next = nextStatus(c.status);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm overflow-hidden">
       {/* Card header */}
       <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="space-y-1">
@@ -303,7 +303,7 @@ function ConsignmentCard({
             <span className="text-xs text-slate-400 font-mono">#{c.id}</span>
             <span
               className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${
-                STATUS_BADGE[c.status] ?? "bg-white border-slate-200"
+                STATUS_BADGE[c.status] ?? "bg-white/60 backdrop-blur-md border-slate-200"
               }`}
             >
               {STATUS_LABEL[c.status] ?? c.status}

@@ -127,7 +127,7 @@ export default function CategoryCreateForm({
         </div>
       </div>
 
-      <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 p-7 space-y-6">
+      <form onSubmit={submit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-7 space-y-6">
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{error}</div>
         )}
@@ -250,7 +250,7 @@ export default function CategoryCreateForm({
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
           />
           <p className="text-xs text-slate-400">
-            💡 Add multiple names (one per line) to create them all at once
+             Add multiple names (one per line) to create them all at once
             {names.length > 0 && <span className="text-slate-500"> — {names.length} will be created</span>}
           </p>
         </div>

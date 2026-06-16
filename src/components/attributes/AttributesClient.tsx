@@ -161,12 +161,12 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
       </div>
 
       {initial.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-10 text-center text-sm text-slate-400">
           No attributes yet. Click <strong>New Attribute</strong> to define your first one (e.g. Unit Thickness, Color, Fire Rating).
         </div>
       ) : (
         filtered.map(([group, rows]) => (
-          <div key={group} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+          <div key={group} className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
             <div className="px-4 py-2 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               {group} <span className="text-slate-400">· {rows.length}</span>
             </div>
@@ -216,7 +216,7 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
 
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-8 overflow-y-auto">
-          <form onSubmit={save} className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
+          <form onSubmit={save} className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
             <h3 className="text-lg font-bold">{editing ? "Edit attribute" : requestMode ? "Request attribute" : "New attribute"}</h3>
             {requestMode && !editing && (
               <p className="text-xs text-slate-500">Submitted to HO Admin — added only after approval.</p>

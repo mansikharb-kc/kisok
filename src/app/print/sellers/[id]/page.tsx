@@ -34,7 +34,7 @@ export default async function PrintSellerPage({ params }: { params: { id: string
   const s = serialize(seller) as any;
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 p-8 max-w-4xl mx-auto">
+    <div className="min-h-screen bg-white/60 backdrop-blur-md text-slate-900 p-8 max-w-4xl mx-auto">
       {/* Control bar: Hidden when printing */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-8 print:hidden">
         <Link

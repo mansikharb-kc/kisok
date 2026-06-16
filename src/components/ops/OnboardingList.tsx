@@ -15,7 +15,7 @@ type OnboardingRecord = {
 export default function OnboardingList({ records }: { records: OnboardingRecord[] }) {
   if (records.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center">
+      <div className="rounded-lg border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
         <p className="text-sm text-slate-400">
           No products onboarded yet for your assigned sellers.
         </p>
@@ -24,7 +24,7 @@ export default function OnboardingList({ records }: { records: OnboardingRecord[
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
       <table className="w-full text-left text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
           <tr>

@@ -61,7 +61,7 @@ function AttributeChecklist({
                   <label
                     key={attribute.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${
-                      checked ? "border-brand-300 bg-brand-50" : "border-slate-200 bg-white hover:border-brand-200 hover:bg-brand-50/30"
+                      checked ? "border-brand-300 bg-brand-50" : "border-slate-200 bg-white/60 backdrop-blur-md hover:border-brand-200 hover:bg-brand-50/30"
                     } ${attribute.status !== "active" ? "opacity-70" : ""}`}
                   >
                     <input
@@ -74,11 +74,11 @@ function AttributeChecklist({
                       <div className="font-semibold text-slate-900">{attribute.name}</div>
                       <div className="mt-0.5 text-xs font-mono text-slate-500">{attribute.code}</div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-600">
+                        <span className="rounded-full border border-slate-200 bg-white/60 backdrop-blur-md px-2 py-1 text-[10px] font-medium text-slate-600">
                           {attribute.dataType}
                         </span>
                         {attribute.sectionGroup ? (
-                          <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-600">
+                          <span className="rounded-full border border-slate-200 bg-white/60 backdrop-blur-md px-2 py-1 text-[10px] font-medium text-slate-600">
                             {attribute.sectionGroup}
                           </span>
                         ) : null}
@@ -133,7 +133,7 @@ export default function ProgramBindingsClient({ program, attributes }: { program
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link href={`/masters/programs/${program.id}`} className="text-sm font-semibold text-brand-600 hover:text-brand-700">
             Back to program details
@@ -142,10 +142,10 @@ export default function ProgramBindingsClient({ program, attributes }: { program
           <p className="mt-2 max-w-2xl text-sm text-slate-600">This page only groups existing attributes under the program. Definition attributes are contract terms; common attributes are shared product fields.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/masters/programs/${program.id}/edit`} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href={`/masters/programs/${program.id}/edit`} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             Edit core
           </Link>
-          <Link href="/masters/programs" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/masters/programs" className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             List
           </Link>
           <button

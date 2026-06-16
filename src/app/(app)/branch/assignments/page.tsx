@@ -49,13 +49,13 @@ export default async function Page() {
       </div>
 
       {byExec.size === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
           No assignments yet. The Onboarding Lead assigns sellers to execs.
         </div>
       ) : (
         <div className="space-y-4">
           {[...byExec.values()].map(({ exec, sellers }) => (
-            <div key={exec.email} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <div key={exec.email} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
               <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {exec.fullName.slice(0, 2).toUpperCase()}

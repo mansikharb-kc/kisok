@@ -303,7 +303,7 @@ export default function TicketsClient({
           )}
 
           {tickets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
               No tickets yet.{canRaise ? " Raise one when you need a sample, fabrication, or report damage." : ""}
             </div>
           ) : (
@@ -313,7 +313,7 @@ export default function TicketsClient({
                 const owner = t.currentRole === "OB_EXEC" ? "OB Exec" : "Consignment";
                 const active = t.status !== "CLOSED";
                 return (
-                  <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div key={t.id} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-4">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -391,7 +391,7 @@ export default function TicketsClient({
                             <select
                                 value={selectedExec[t.id] ?? ""}
                                 onChange={(e) => setSelectedExec((p) => ({ ...p, [t.id]: e.target.value }))}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs outline-none bg-white font-medium text-slate-700"
+                                className="rounded border border-slate-300 px-2 py-1 text-xs outline-none bg-white/60 backdrop-blur-md font-medium text-slate-700"
                               >
                                 <option value="">Transfer to Exec…</option>
                                 {execs.map((ex) => (
@@ -418,7 +418,7 @@ export default function TicketsClient({
         ) : (
           <div className="space-y-4">
             {/* Status Filter Bar */}
-            <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex-wrap">
+            <div className="flex items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Filter:</span>
                 <select
@@ -442,13 +442,13 @@ export default function TicketsClient({
             </div>
 
             {filteredConsignments.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
                 No consignments matching the selected status filter.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {filteredConsignments.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                  <div key={c.id} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div>
                         <div className="text-sm font-bold text-slate-800">{c.seller.name}</div>
@@ -563,12 +563,12 @@ export default function TicketsClient({
                                     <select
                                       value={qcResultInput[it.id] || "pass"}
                                       onChange={(e) => setQcResultInput((p) => ({ ...p, [it.id]: e.target.value }))}
-                                      className="rounded border border-purple-200 px-2 py-1 text-xs bg-white focus:outline-none"
+                                      className="rounded border border-purple-200 px-2 py-1 text-xs bg-white/60 backdrop-blur-md focus:outline-none"
                                     >
-                                      <option value="pass">🟢 Pass</option>
-                                      <option value="flag">🔴 Flag</option>
-                                      <option value="repair">🛠️ Repair</option>
-                                      <option value="fabricate">🏗️ Fabricate</option>
+                                      <option value="pass"> Pass</option>
+                                      <option value="flag"> Flag</option>
+                                      <option value="repair"> Repair</option>
+                                      <option value="fabricate"> Fabricate</option>
                                     </select>
                                   </div>
                                   <input
@@ -576,7 +576,7 @@ export default function TicketsClient({
                                     placeholder="Notes (optional)…"
                                     value={qcNotesInput[it.id] || ""}
                                     onChange={(e) => setQcNotesInput((p) => ({ ...p, [it.id]: e.target.value }))}
-                                    className="flex-1 min-w-[120px] rounded border border-purple-250 px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
+                                    className="flex-1 min-w-[120px] rounded border border-purple-250 px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white/60 backdrop-blur-md"
                                   />
                                   <button
                                     onClick={() => submitQc(it.id)}
@@ -605,7 +605,7 @@ export default function TicketsClient({
       {/* Raise modal */}
       {showRaise && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={raise} className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={raise} className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 className="text-lg font-bold">Raise Ticket</h3>
             {rErr && <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{rErr}</div>}
             <div className="space-y-1">

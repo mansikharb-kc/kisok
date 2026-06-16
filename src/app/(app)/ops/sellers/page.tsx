@@ -59,19 +59,19 @@ export default async function Page() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Sellers</div>
           <div className="text-3xl font-bold mt-1 text-slate-900">{totalSellers}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned</div>
           <div className="text-3xl font-bold mt-1 text-emerald-600">{assignedCount}</div>
         </div>
-        <div className={`rounded-xl border p-5 shadow-sm ${unassignedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+        <div className={`rounded-xl border p-5 shadow-sm ${unassignedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
           <div className={`text-xs font-semibold uppercase tracking-wider ${unassignedCount > 0 ? "text-amber-600" : "text-slate-400"}`}>Unassigned</div>
           <div className={`text-3xl font-bold mt-1 ${unassignedCount > 0 ? "text-amber-700" : "text-slate-900"}`}>{unassignedCount}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Contracts</div>
           <div className="text-3xl font-bold mt-1 text-brand-600">{activeContractsCount}</div>
         </div>
@@ -79,14 +79,14 @@ export default async function Page() {
 
       {/* Table */}
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
           <p className="text-sm text-slate-400">No sellers yet.</p>
           <Link href="/ops/sellers/new" className="mt-3 inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
             + Add the first seller
           </Link>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
               <tr>
@@ -136,7 +136,7 @@ export default async function Page() {
                                 : "bg-amber-50 text-amber-700"
                             }`}
                           >
-                            {c.program.name} {c.verified ? "✓" : "⏳"}
+                            {c.program.name} {c.verified ? "✓" : ""}
                           </span>
                         ))
                       )}

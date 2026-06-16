@@ -14,7 +14,7 @@ type Row = {
 
 export default function PlacementList({ rows }: { rows: Row[] }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
         <h2 className="font-bold text-slate-800 text-sm">Physical Copy Catalogues</h2>
         <span className="text-xs font-medium text-slate-400">{rows.length} copies total</span>
@@ -45,7 +45,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                         <img
                           src={c.qr.url}
                           alt={`QR for ${c.instanceCode}`}
-                          className="w-12 h-12 rounded border border-slate-200 bg-white object-contain shrink-0"
+                          className="w-12 h-12 rounded border border-slate-200 bg-white/60 backdrop-blur-md object-contain shrink-0"
                         />
                       ) : (
                         <div className="w-12 h-12 rounded border border-dashed border-slate-200 bg-slate-50 shrink-0" />

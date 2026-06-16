@@ -90,19 +90,19 @@ export default async function PlacementPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Copies on shelf</div>
           <div className="text-3xl font-bold mt-1 text-slate-900">{total}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Master Copies</div>
           <div className="text-3xl font-bold mt-1 text-indigo-700">{masterCount}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Slave Copies</div>
           <div className="text-3xl font-bold mt-1 text-slate-700">{slaveCount}</div>
         </div>
-        <div className={`rounded-xl border p-5 shadow-sm ${unplacedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+        <div className={`rounded-xl border p-5 shadow-sm ${unplacedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
           <div className={`text-xs font-semibold uppercase tracking-wider ${unplacedCount > 0 ? "text-amber-600" : "text-slate-400"}`}>Unplaced Copies</div>
           <div className={`text-3xl font-bold mt-1 ${unplacedCount > 0 ? "text-amber-700" : "text-slate-900"}`}>{unplacedCount}</div>
         </div>

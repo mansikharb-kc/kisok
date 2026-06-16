@@ -32,7 +32,7 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   const s = serialize(seller) as any;
 
-  const card = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm";
+  const card = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
   const labelStyle = "text-xs font-semibold uppercase tracking-wider text-slate-400";
   const valStyle = "text-sm font-medium text-slate-800 mt-1";
 
@@ -54,7 +54,7 @@ export default async function Page({ params }: { params: { id: string } }) {
           <Link
             href={`/print/sellers/${s.id}`}
             target="_blank"
-            className="rounded-lg border border-slate-350 bg-white text-slate-750 px-5 py-2 text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+            className="rounded-lg border border-slate-350 bg-white/60 backdrop-blur-md text-slate-750 px-5 py-2 text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
           >
             Print Contract / Profile
           </Link>
@@ -163,7 +163,7 @@ export default async function Page({ params }: { params: { id: string } }) {
                             : "bg-amber-50 text-amber-700 border border-amber-200"
                         }`}
                       >
-                        {c.verified ? "Verified ✓" : "Verification Pending ⏳"}
+                        {c.verified ? "Verified ✓" : "Verification Pending "}
                       </span>
                     </div>
 

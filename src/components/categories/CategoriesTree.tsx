@@ -242,7 +242,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       {/* Search + add */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -261,7 +261,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       </div>
 
       {/* Tree */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
         {roots.length === 0 ? (
           <div className="px-4 py-12 text-center text-slate-400 text-sm">
             No categories yet. Click <strong>New Category</strong> to create your first one.
@@ -298,7 +298,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       {/* Edit modal (name + code) */}
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={saveEdit} className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={saveEdit} className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 className="text-lg font-bold">Edit category</h3>
 
             {error && (

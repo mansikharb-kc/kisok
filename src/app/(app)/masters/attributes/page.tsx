@@ -44,7 +44,7 @@ export default async function AttributesPage() {
       </div>
 
       <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 flex gap-3">
-        <span className="text-lg leading-none">🌐</span>
+        <span className="text-lg leading-none"></span>
         <div>
           <strong>These are global attributes</strong> — defined once here and reusable everywhere.
           An attribute is <em>not</em> tied to one category; you <strong>map</strong> it to categories from the{" "}

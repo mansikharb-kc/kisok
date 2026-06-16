@@ -272,7 +272,7 @@ export default function OnboardingForm() {
       )}
 
       {/* Step 1–3: Seller → Brand → Program */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">1. Seller, Brand &amp; Program</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Seller">
@@ -333,7 +333,7 @@ export default function OnboardingForm() {
       </section>
 
       {/* Step 4: Category */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">2. Category</h2>
         {category ? (
           <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
@@ -359,7 +359,7 @@ export default function OnboardingForm() {
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
             {catOpen && catResults.length > 0 && (
-              <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+              <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-lg">
                 {catResults.map((c) => (
                   <li key={c.id}>
                     <button
@@ -384,7 +384,7 @@ export default function OnboardingForm() {
       </section>
 
       {/* Step 5: SKU */}
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">3. SKU</h2>
         <div className="flex items-end gap-3">
           <Field label="SKU" className="flex-1">
@@ -457,7 +457,7 @@ export default function OnboardingForm() {
 
       {/* Step 6b: NEW master — name + dynamic attributes */}
       {skuChecked && !existing && (
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
               New master — enter product details

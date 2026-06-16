@@ -7,11 +7,42 @@ body {
   height: 100%;
 }
 
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #18181b;
+  /* Soft monochrome backdrop so glass surfaces read as glass */
+  background: linear-gradient(135deg, #e8e8ea 0%, #f4f4f5 45%, #e4e4e7 100%);
+  background-attachment: fixed;
+}
+
+/* ── Glass surfaces ─────────────────────────────────────────────── */
+.glass {
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.12);
+}
+
+.glass-dark {
+  background-color: rgba(10, 10, 10, 0.72);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Make the common Tailwind card pattern glassy automatically */
+.glass-auto {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
 /* Hide scrollbar visually but keep scroll functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari, Opera */
+  display: none;
 }
