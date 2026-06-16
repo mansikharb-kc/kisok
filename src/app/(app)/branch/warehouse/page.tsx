@@ -62,8 +62,8 @@ export default async function Page({
     return (
       <div className="space-y-2">
         {branchTag}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-16 text-center text-slate-500 text-sm">
-          <div className="text-4xl mb-3">📋</div>
+        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-16 text-center text-slate-500 text-sm">
+          <div className="text-4xl mb-3"></div>
           This branch has no approved programs yet. A program must be approved before
           you can build its warehouse tree.
         </div>
@@ -78,7 +78,7 @@ export default async function Page({
     : null;
 
   const programSelector = (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-3">
       <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-1">
         Program
       </span>
@@ -106,8 +106,8 @@ export default async function Page({
       <div className="space-y-2">
         {branchTag}
         {programSelector}
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-16 text-center text-slate-500 text-sm">
-          <div className="text-4xl mb-3">🏭</div>
+        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-16 text-center text-slate-500 text-sm">
+          <div className="text-4xl mb-3"></div>
           Select a program above to build or view its warehouse location tree.
         </div>
       </div>

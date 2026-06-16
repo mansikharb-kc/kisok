@@ -30,8 +30,8 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  roles         UserRole[]
-  assignments   SellerAssignment[] @relation("ExecAssignments")
+  roles       UserRole[]
+  assignments SellerAssignment[] @relation("ExecAssignments")
 
   @@map("users")
 }
@@ -100,12 +100,12 @@ model Media {
   uploadedBy BigInt?  @map("uploaded_by") @db.UnsignedBigInt
   createdAt  DateTime @default(now()) @map("created_at")
 
-  brandLogos     Brand[]
-  productMedia   ProductMedia[]
-  localOverrides LocalOverride[]
-  localMedia     LocalMedia[]
-  qrCopies       ProductCopy[]
-  stickers       Sticker[]
+  brandLogos      Brand[]
+  productMedia    ProductMedia[]
+  localOverrides  LocalOverride[]
+  localMedia      LocalMedia[]
+  qrCopies        ProductCopy[]
+  stickers        Sticker[]
   sellerContracts SellerContract[]
 
   @@map("media")
@@ -145,9 +145,9 @@ model Attribute {
   dataType     String   @map("data_type") @db.VarChar(20)
   unit         String?  @db.VarChar(20)
   sectionGroup String?  @map("section_group") @db.VarChar(60) // ML section group (Technical, Aesthetics…)
-  isVariant    Boolean  @default(false) @map("is_variant")    // value varies per variant
+  isVariant    Boolean  @default(false) @map("is_variant") // value varies per variant
   isPriceable  Boolean  @default(false) @map("is_priceable")
-  isRequired   Boolean  @default(false) @map("is_required")   // default; per-category can override
+  isRequired   Boolean  @default(false) @map("is_required") // default; per-category can override
   status       String   @default("active") @db.VarChar(20)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -191,34 +191,34 @@ model CategoryAttribute {
 }
 
 model Brand {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  brandNo        String?  @unique @map("brand_no") @db.VarChar(20)
-  name           String   @db.VarChar(150)
-  code           String   @unique @db.VarChar(60)
-  brandType      String?  @map("brand_type") @db.VarChar(40)
-  logoMediaId    BigInt?  @map("logo_media_id") @db.UnsignedBigInt
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  brandNo           String?   @unique @map("brand_no") @db.VarChar(20)
+  name              String    @db.VarChar(150)
+  code              String    @unique @db.VarChar(60)
+  brandType         String?   @map("brand_type") @db.VarChar(40)
+  logoMediaId       BigInt?   @map("logo_media_id") @db.UnsignedBigInt
   // contact
-  contactPerson  String?  @map("contact_person") @db.VarChar(150)
-  phoneCc        String?  @map("phone_cc") @db.VarChar(8)
-  phone          String?  @db.VarChar(20)
-  email          String?  @db.VarChar(190)
-  website        String?  @db.VarChar(255)
-  address        String?  @db.VarChar(500)
-  pincode        String?  @db.VarChar(20)
-  city           String?  @db.VarChar(120)
-  state          String?  @db.VarChar(120)
+  contactPerson     String?   @map("contact_person") @db.VarChar(150)
+  phoneCc           String?   @map("phone_cc") @db.VarChar(8)
+  phone             String?   @db.VarChar(20)
+  email             String?   @db.VarChar(190)
+  website           String?   @db.VarChar(255)
+  address           String?   @db.VarChar(500)
+  pincode           String?   @db.VarChar(20)
+  city              String?   @db.VarChar(120)
+  state             String?   @db.VarChar(120)
   // membership & contract
-  gstNumber          String?   @map("gst_number") @db.VarChar(30)
-  agreementDuration  String?   @map("agreement_duration") @db.VarChar(40)
-  contractStart      DateTime? @map("contract_start") @db.Date
-  contractEnd        DateTime? @map("contract_end") @db.Date
-  description        String?   @db.Text
-  approvalStatus String   @default("draft") @map("approval_status") @db.VarChar(20)
-  status         String   @default("active") @db.VarChar(20)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  gstNumber         String?   @map("gst_number") @db.VarChar(30)
+  agreementDuration String?   @map("agreement_duration") @db.VarChar(40)
+  contractStart     DateTime? @map("contract_start") @db.Date
+  contractEnd       DateTime? @map("contract_end") @db.Date
+  description       String?   @db.Text
+  approvalStatus    String    @default("draft") @map("approval_status") @db.VarChar(20)
+  status            String    @default("active") @db.VarChar(20)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  logo            Media?           @relation(fields: [logoMediaId], references: [id])
+  logo            Media?          @relation(fields: [logoMediaId], references: [id])
   branchBrands    BranchBrand[]
   sellerBrands    SellerBrand[]
   consignments    Consignment[]
@@ -352,11 +352,11 @@ model LocationNode {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  branch   Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  program  Program?      @relation(fields: [programId], references: [id])
-  parent   LocationNode? @relation("LocationTree", fields: [parentId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  program  Program?       @relation(fields: [programId], references: [id])
+  parent   LocationNode?  @relation("LocationTree", fields: [parentId], references: [id])
   children LocationNode[] @relation("LocationTree")
-  category Category?     @relation(fields: [categoryId], references: [id])
+  category Category?      @relation(fields: [categoryId], references: [id])
 
   copies  ProductCopy[]
   screens Screen[]
@@ -393,13 +393,17 @@ model Seller {
   name         String   @db.VarChar(150)
   sellerCode   String   @unique @map("seller_code") @db.VarChar(60)
   membershipId String?  @unique @map("membership_id") @db.VarChar(60)
+  memberType   String?  @map("member_type") @db.VarChar(40)
+  salesperson  String?  @db.VarChar(120)
+  spocName     String?  @map("spoc_name") @db.VarChar(120)
+  spocPhone    String?  @map("spoc_phone") @db.VarChar(30)
+  spocEmail    String?  @map("spoc_email") @db.VarChar(150)
   status       String   @default("active") @db.VarChar(20)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   branch       Branch                  @relation(fields: [branchId], references: [id])
   sellerBrands SellerBrand[]
-  sellerCategories SellerCategory[]
   contracts    SellerContract[]
   assignments  SellerAssignment[]
   consignments Consignment[]
@@ -407,6 +411,18 @@ model Seller {
   tickets      Ticket[]
 
   @@map("sellers")
+}
+
+model SellerCategory {
+  id         BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId   BigInt @map("seller_id") @db.UnsignedBigInt
+  categoryId BigInt @map("category_id") @db.UnsignedBigInt
+
+  seller   Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([sellerId, categoryId])
+  @@map("seller_categories")
 }
 
 model SellerBrand {
@@ -445,6 +461,7 @@ model SellerContract {
   verified            Boolean   @default(false)
   verifiedBy          BigInt?   @map("verified_by") @db.UnsignedBigInt
   remarks             String?   @db.VarChar(500)
+  customFields        Json?     @map("custom_fields")
   contractMediaId     BigInt?   @map("contract_media_id") @db.UnsignedBigInt
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
@@ -474,6 +491,26 @@ model SellerAssignment {
   @@map("seller_assignments")
 }
 
+// HO-defined extra fields rendered dynamically on a form (e.g. the
+// Collaboration form). Values are stored as JSON on the target record.
+model CustomFieldDef {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  entity       String   @db.VarChar(40) // e.g. "collaboration"
+  label        String   @db.VarChar(120)
+  code         String   @db.VarChar(60)
+  fieldType    String   @map("field_type") @db.VarChar(20) // text | number | date | enum
+  options      Json? // for enum: array of strings
+  isRequired   Boolean  @default(false) @map("is_required")
+  displayOrder Int      @default(0) @map("display_order")
+  status       String   @default("active") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([entity, code])
+  @@index([entity])
+  @@map("custom_field_defs")
+}
+
 // ---------------------------------------------------------------------
 // Consignment & QC (L3)
 // ---------------------------------------------------------------------
@@ -501,15 +538,15 @@ model Consignment {
 }
 
 model ConsignmentItem {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  consignmentId  BigInt   @map("consignment_id") @db.UnsignedBigInt
-  description    String?  @db.VarChar(255)
-  expectedQty    Int?     @map("expected_qty")
-  receivedQty    Int?     @map("received_qty")
-  sampleType     String?  @map("sample_type") @db.VarChar(120)
-  status         String   @default("pending") @db.VarChar(20)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  consignmentId BigInt   @map("consignment_id") @db.UnsignedBigInt
+  description   String?  @db.VarChar(255)
+  expectedQty   Int?     @map("expected_qty")
+  receivedQty   Int?     @map("received_qty")
+  sampleType    String?  @map("sample_type") @db.VarChar(120)
+  status        String   @default("pending") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   consignment Consignment @relation(fields: [consignmentId], references: [id], onDelete: Cascade)
   qcRecords   QcRecord[]
@@ -559,14 +596,14 @@ model BrandProduct {
 }
 
 model ProductAttributeValue {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  brandProductId BigInt   @map("brand_product_id") @db.UnsignedBigInt
-  attributeId    BigInt   @map("attribute_id") @db.UnsignedBigInt
-  valueText      String?  @map("value_text") @db.Text
-  valueNumber    Decimal? @map("value_number") @db.Decimal(20, 6)
-  valueBool      Boolean? @map("value_bool")
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  brandProductId BigInt    @map("brand_product_id") @db.UnsignedBigInt
+  attributeId    BigInt    @map("attribute_id") @db.UnsignedBigInt
+  valueText      String?   @map("value_text") @db.Text
+  valueNumber    Decimal?  @map("value_number") @db.Decimal(20, 6)
+  valueBool      Boolean?  @map("value_bool")
   valueDate      DateTime? @map("value_date") @db.Date
-  optionId       BigInt?  @map("option_id") @db.UnsignedBigInt
+  optionId       BigInt?   @map("option_id") @db.UnsignedBigInt
 
   product   BrandProduct     @relation(fields: [brandProductId], references: [id], onDelete: Cascade)
   attribute Attribute        @relation(fields: [attributeId], references: [id])
@@ -578,11 +615,11 @@ model ProductAttributeValue {
 }
 
 model ProductMedia {
-  id             BigInt @id @default(autoincrement()) @db.UnsignedBigInt
-  brandProductId BigInt @map("brand_product_id") @db.UnsignedBigInt
-  mediaId        BigInt @map("media_id") @db.UnsignedBigInt
+  id             BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  brandProductId BigInt  @map("brand_product_id") @db.UnsignedBigInt
+  mediaId        BigInt  @map("media_id") @db.UnsignedBigInt
   isPrimary      Boolean @default(false) @map("is_primary")
-  displayOrder   Int    @default(0) @map("display_order")
+  displayOrder   Int     @default(0) @map("display_order")
 
   product BrandProduct @relation(fields: [brandProductId], references: [id], onDelete: Cascade)
   media   Media        @relation(fields: [mediaId], references: [id], onDelete: Cascade)
@@ -721,11 +758,11 @@ model Ticket {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   resolvedAt    DateTime? @map("resolved_at")
 
-  branch  Branch                 @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  seller  Seller?                @relation(fields: [sellerId], references: [id])
-  brand   Brand?                 @relation(fields: [brandId], references: [id])
-  record  LocalOnboardingRecord? @relation(fields: [localRecordId], references: [id])
-  events  TicketEvent[]
+  branch Branch                 @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  seller Seller?                @relation(fields: [sellerId], references: [id])
+  brand  Brand?                 @relation(fields: [brandId], references: [id])
+  record LocalOnboardingRecord? @relation(fields: [localRecordId], references: [id])
+  events TicketEvent[]
 
   @@index([branchId])
   @@index([sellerId])

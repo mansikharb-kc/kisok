@@ -8,8 +8,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-slate-50 text-slate-900 antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Apply saved theme before paint to avoid a flash of the wrong theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('kc_theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

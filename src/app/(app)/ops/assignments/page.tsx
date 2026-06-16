@@ -75,11 +75,11 @@ export default async function Page() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Assignments</div>
           <div className="text-3xl font-bold mt-1 text-slate-900">{totalAssignments}</div>
         </div>
-        <div className={`rounded-xl border p-5 shadow-sm ${unassignedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+        <div className={`rounded-xl border p-5 shadow-sm ${unassignedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
           <div className={`text-xs font-semibold uppercase tracking-wider ${unassignedCount > 0 ? "text-amber-600" : "text-slate-400"}`}>
             Unassigned Sellers
           </div>
@@ -87,7 +87,7 @@ export default async function Page() {
             {unassignedCount}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Exec Count</div>
           <div className="text-3xl font-bold mt-1 text-brand-600">{execCount}</div>
         </div>
@@ -95,7 +95,7 @@ export default async function Page() {
 
       {/* Grouped by exec */}
       {byExec.size === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
           <p className="text-sm text-slate-400">No assignments yet.</p>
           <Link
             href="/ops/assignments/new"
@@ -109,7 +109,7 @@ export default async function Page() {
           {[...byExec.values()].map(({ exec, assignments }) => (
             <div
               key={exec.id}
-              className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm"
+              className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden shadow-sm"
             >
               {/* Exec header */}
               <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex items-center gap-3">

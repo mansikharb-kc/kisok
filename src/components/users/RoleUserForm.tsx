@@ -288,7 +288,7 @@ export default function RoleUserForm({
       )}
 
       {/* Form Card */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" autoComplete="off">
+      <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden" autoComplete="off">
         <div className="p-6 space-y-6">
           {/* Identity Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -363,7 +363,7 @@ export default function RoleUserForm({
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full text-sm rounded-lg border border-slate-300 px-4 py-2.5 outline-none bg-white focus:ring-1 focus:ring-brand-500"
+                className="w-full text-sm rounded-lg border border-slate-300 px-4 py-2.5 outline-none bg-white/60 backdrop-blur-md focus:ring-1 focus:ring-brand-500"
               >
                 <option value="active">Active</option>
                 <option value="disabled">Disabled</option>
@@ -426,7 +426,7 @@ export default function RoleUserForm({
                         <select
                           value={a.branchId || ""}
                           onChange={(e) => updateAssignmentRow(idx, e.target.value || null)}
-                          className="w-full text-sm rounded border border-slate-300 px-3 py-2 outline-none bg-white focus:ring-1 focus:ring-brand-500"
+                          className="w-full text-sm rounded border border-slate-300 px-3 py-2 outline-none bg-white/60 backdrop-blur-md focus:ring-1 focus:ring-brand-500"
                         >
                           <option value="">— Select Branch —</option>
                           {getAvailableBranches().map((b) => (

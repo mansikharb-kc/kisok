@@ -119,7 +119,7 @@ export default function CategoryAttributePanel({
   }
 
   return (
-    <div className="w-[420px] shrink-0 border-l border-slate-200 bg-white h-[calc(100vh-4rem)] sticky top-0 overflow-y-auto">
+    <div className="w-[420px] shrink-0 border-l border-slate-200 bg-white/60 backdrop-blur-md h-[calc(100vh-4rem)] sticky top-0 overflow-y-auto">
       <div className="px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-2">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-slate-400">{levelLabel} · attributes</div>

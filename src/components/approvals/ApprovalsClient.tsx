@@ -112,7 +112,7 @@ export default function ApprovalsClient({ initialRequests }: { initialRequests: 
         </nav>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         {visible.length === 0 ? (
           <div className="px-6 py-14 text-center text-sm text-slate-400">No change requests in this inbox.</div>
         ) : (

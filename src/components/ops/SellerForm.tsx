@@ -8,38 +8,181 @@ import { isNonEmptyString } from "@/lib/validation";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 
-function calculateEndDate(startDateStr: string, tenureStr: string): string {
-  if (!startDateStr || !tenureStr) return "";
-  const cleanTenure = tenureStr.trim().toLowerCase();
-  const numMatch = cleanTenure.match(/\d+/);
-  if (!numMatch) return "";
-  const num = parseInt(numMatch[0], 10);
-  if (isNaN(num)) return "";
-
+function parseTenureToPeriod(tenureStr: string): { years: number; months: number; days: number } {
+  const clean = tenureStr.trim().toLowerCase();
+  
+  let years = 0;
   let months = 0;
-  if (cleanTenure.includes("year") || cleanTenure.includes("yr")) {
-    months = num * 12;
-  } else if (cleanTenure.includes("month") || cleanTenure.includes("mo")) {
-    months = num;
-  } else {
-    // Just a number
-    if (num < 6) {
-      months = num * 12; // Assume years for small numbers
-    } else {
-      months = num; // Assume months for larger numbers
+  let days = 0;
+
+  // Extract years
+  const yearMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:year|yr)/);
+  if (yearMatch) {
+    years = parseFloat(yearMatch[1]);
+  }
+
+  // Extract months
+  const monthMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:month|mo)/);
+  if (monthMatch) {
+    months = parseFloat(monthMatch[1]);
+  }
+
+  // Extract days (matches '370 days', '370 d', '370d', but avoids matching letters in 'dashboard' or 'month')
+  const dayMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)/);
+  if (dayMatch) {
+    days = parseFloat(dayMatch[1]);
+  }
+
+  // If it's a raw number with no unit specified
+  if (!yearMatch && !monthMatch && !dayMatch) {
+    const num = parseFloat(clean);
+    if (!isNaN(num)) {
+      if (num >= 30) {
+        // Treat as days if >= 30 (e.g. 365, 370)
+        days = num;
+      } else {
+        // Treat as months if < 30 (e.g. 12, 24)
+        months = num;
+      }
     }
   }
 
-  const date = new Date(startDateStr);
+  return { years, months, days };
+}
+
+function formatTenure(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  
+  const parsed = parseTenureToPeriod(trimmed);
+  
+  // Check if input specified days, or was treated as days because raw number >= 30
+  const hasDays = trimmed.toLowerCase().includes("day") || 
+                  trimmed.toLowerCase().includes("d") ||
+                  (!trimmed.toLowerCase().includes("year") && 
+                   !trimmed.toLowerCase().includes("yr") && 
+                   !trimmed.toLowerCase().includes("month") && 
+                   !trimmed.toLowerCase().includes("mo") && 
+                   parseFloat(trimmed) >= 30);
+                   
+  let years = 0;
+  let months = 0;
+  let days = 0;
+  
+  if (hasDays) {
+    // Convert everything to days (1 year = 365 days, 1 month = 30 days)
+    const totalDays = (parsed.years * 365) + (parsed.months * 30) + parsed.days;
+    if (isNaN(totalDays) || totalDays <= 0) return val;
+    
+    years = Math.floor(totalDays / 365);
+    const remainingDays = totalDays % 365;
+    months = Math.floor(remainingDays / 30);
+    days = Math.round(remainingDays % 30);
+  } else {
+    // Convert months (1 year = 12 months)
+    const totalMonths = (parsed.years * 12) + parsed.months;
+    if (isNaN(totalMonths) || totalMonths <= 0) return val;
+    
+    years = Math.floor(totalMonths / 12);
+    months = Math.floor(totalMonths % 12);
+    days = Math.round(parsed.days);
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} Year${years > 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} Month${months > 1 ? "s" : ""}`);
+  if (days > 0) parts.push(`${days} Day${days > 1 ? "s" : ""}`);
+
+  if (parts.length === 0) return "0 Days";
+  return parts.join(", ");
+}
+
+function parseFitoutDays(fitoutStr: string): number {
+  const clean = fitoutStr.trim().toLowerCase();
+  const match = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)?/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+}
+
+function formatFitoutPeriod(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  const days = parseFitoutDays(trimmed);
+  if (days <= 0) return val;
+  return `${days} Day${days > 1 ? "s" : ""}`;
+}
+
+function addDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-based
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function subtractDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function calculateEndDate(startDateStr: string, tenureStr: string): string {
+  if (!startDateStr || !tenureStr) return "";
+  
+  const { years, months, days } = parseTenureToPeriod(tenureStr);
+  
+  const parts = startDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
   if (isNaN(date.getTime())) return "";
 
-  // Add months to the date
-  date.setMonth(date.getMonth() + months);
-  // Subtract one day
-  date.setDate(date.getDate() - 1);
+  const clean = tenureStr.trim().toLowerCase();
+  const isDaysBased = clean.includes("day") || 
+                      clean.includes("d") ||
+                      (!clean.includes("year") && 
+                       !clean.includes("yr") && 
+                       !clean.includes("month") && 
+                       !clean.includes("mo") && 
+                       parseFloat(clean) >= 30);
+
+  if (isDaysBased) {
+    // For day-based tenures, add total days directly
+    const totalDays = (years * 365) + (parsedMonthsToDays(months)) + days;
+    date.setUTCDate(date.getUTCDate() + totalDays - 1);
+  } else {
+    // For year/month-based tenures, add calendar months/years
+    const totalMonths = (years * 12) + months;
+    date.setUTCMonth(date.getUTCMonth() + totalMonths);
+    date.setUTCDate(date.getUTCDate() + days - 1);
+  }
   
-  // Return in yyyy-mm-dd format
   return date.toISOString().slice(0, 10);
+}
+
+// Helper for exact day logic
+function parsedMonthsToDays(months: number): number {
+  return months * 30;
 }
 
 type BrandOption = {
@@ -129,6 +272,8 @@ export default function SellerForm({
       {
         collaborationTenure: string;
         fitoutPeriod: string;
+        baseStartDate: string;
+        fitoutEnd: string;
         contractStart: string;
         contractEnd: string;
         verified: boolean;
@@ -143,10 +288,16 @@ export default function SellerForm({
     if (seller?.contracts) {
       for (const c of seller.contracts) {
         const match = seller.assignments?.find((a) => String(a.programId) === String(c.programId));
+        const fitoutStr = c.fitoutPeriod ?? "45 Days";
+        const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
+        const baseStartStr = startStr && fitoutStr ? subtractDays(startStr, fitoutStr) : "";
+        const fitoutEndStr = baseStartStr && fitoutStr ? subtractDays(startStr, "1") : "";
         initial[c.programId] = {
           collaborationTenure: c.collaborationTenure ?? "",
-          fitoutPeriod: c.fitoutPeriod ?? "",
-          contractStart: c.contractStart ? c.contractStart.slice(0, 10) : "",
+          fitoutPeriod: fitoutStr,
+          baseStartDate: baseStartStr,
+          fitoutEnd: fitoutEndStr,
+          contractStart: startStr,
           contractEnd: c.contractEnd ? c.contractEnd.slice(0, 10) : "",
           verified: c.verified,
           remarks: c.remarks ?? "",
@@ -248,7 +399,9 @@ export default function SellerForm({
       } else {
         next[programId] = {
           collaborationTenure: "",
-          fitoutPeriod: "",
+          fitoutPeriod: "45 Days",
+          baseStartDate: "",
+          fitoutEnd: "",
           contractStart: "",
           contractEnd: "",
           verified: false,
@@ -267,7 +420,9 @@ export default function SellerForm({
     setActiveContracts((prev) => {
       const current = prev[programId] || {
         collaborationTenure: "",
-        fitoutPeriod: "",
+        fitoutPeriod: "45 Days",
+        baseStartDate: "",
+        fitoutEnd: "",
         contractStart: "",
         contractEnd: "",
         verified: false,
@@ -282,11 +437,37 @@ export default function SellerForm({
         [field]: value,
       };
 
-      // Auto-calculate end date when start date or tenure changes
-      if (field === "collaborationTenure" || field === "contractStart") {
-        const calculatedEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
-        if (calculatedEnd) {
-          updated.contractEnd = calculatedEnd;
+      if (field === "baseStartDate") {
+        updated.baseStartDate = value;
+        // contractStart = baseStartDate + fitoutPeriod
+        if (updated.baseStartDate) {
+          updated.contractStart = addDays(updated.baseStartDate, updated.fitoutPeriod);
+          updated.fitoutEnd = subtractDays(updated.contractStart, "1");
+        } else {
+          updated.contractStart = "";
+          updated.fitoutEnd = "";
+        }
+        // contractEnd = contractStart + collaborationTenure - 1 day
+        if (updated.contractStart && updated.collaborationTenure) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
+        } else {
+          updated.contractEnd = "";
+        }
+      } else if (field === "fitoutPeriod") {
+        if (updated.baseStartDate) {
+          updated.contractStart = addDays(updated.baseStartDate, value);
+          updated.fitoutEnd = subtractDays(updated.contractStart, "1");
+        }
+        if (updated.contractStart && updated.collaborationTenure) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, updated.collaborationTenure);
+        } else {
+          updated.contractEnd = "";
+        }
+      } else if (field === "collaborationTenure") {
+        if (updated.contractStart && value) {
+          updated.contractEnd = calculateEndDate(updated.contractStart, value);
+        } else {
+          updated.contractEnd = "";
         }
       }
 
@@ -385,7 +566,7 @@ export default function SellerForm({
 
   const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
   const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500";
-  const card = "bg-white rounded-2xl border border-slate-200 p-6";
+  const card = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6";
 
   function StepHeader({ n, title, sub }: { n: number; title: string; sub: string }) {
     return (
@@ -538,7 +719,7 @@ export default function SellerForm({
                     }
                   }}
                   placeholder="Search brands by name or code..."
-                  className="w-full rounded-lg border border-slate-300 py-1.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  className="w-full rounded-lg border border-slate-300 py-1.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/60 backdrop-blur-md"
                 />
                 {brandSearch && (
                   <button
@@ -569,7 +750,7 @@ export default function SellerForm({
 
             {/* Grid of Brand Options */}
             {filteredBrands.length === 0 ? (
-              <div className="text-center py-8 bg-white border border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm">
+              <div className="text-center py-8 bg-white/60 backdrop-blur-md border border-dashed border-slate-200 rounded-2xl text-slate-400 text-sm">
                 No matching brands found for &ldquo;{brandSearch}&rdquo;.
               </div>
             ) : (
@@ -595,7 +776,7 @@ export default function SellerForm({
                         className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                           checked
                             ? "border-brand-600 bg-brand-600 text-white text-[10px]"
-                            : "border-slate-300 bg-white group-hover:border-slate-400"
+                            : "border-slate-300 bg-white/60 backdrop-blur-md group-hover:border-slate-400"
                         }`}
                       >
                         {checked && "✓"}
@@ -684,7 +865,7 @@ export default function SellerForm({
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                       checked
                         ? "bg-brand-600 text-white border-brand-600"
-                        : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                        : "bg-white/60 backdrop-blur-md text-slate-600 border-slate-300 hover:bg-slate-50"
                     }`}
                   >
                     {p.name} {checked ? "✓" : "+"}
@@ -716,14 +897,14 @@ export default function SellerForm({
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className={L}>Collaboration Tenure (in days)</label>
+                          <label className={L}>Collaboration Tenure</label>
                           <input
                             value={details.collaborationTenure}
                             onChange={(e) =>
                               updateContract(p.id, "collaborationTenure", e.target.value)
                             }
                             className={I}
-                            placeholder="e.g. 365 days"
+                            placeholder="e.g. 12 months"
                           />
                         </div>
                         <div>
@@ -795,7 +976,7 @@ export default function SellerForm({
                               href={details.contractMediaUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 text-xs font-semibold text-brand-600 hover:text-brand-850 bg-white border border-slate-200 px-3.5 py-2.5 rounded-lg shadow-sm transition active:scale-[0.98]"
+                              className="inline-flex items-center gap-2 text-xs font-semibold text-brand-600 hover:text-brand-850 bg-white/60 backdrop-blur-md border border-slate-200 px-3.5 py-2.5 rounded-lg shadow-sm transition active:scale-[0.98]"
                             >
                               <svg className="w-4 h-4 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -803,13 +984,13 @@ export default function SellerForm({
                               <span>View Uploaded PDF</span>
                             </a>
                           ) : (
-                            <div className="text-xs text-slate-400 bg-white border border-slate-200 border-dashed px-3.5 py-2.5 rounded-lg select-none">
+                            <div className="text-xs text-slate-400 bg-white/60 backdrop-blur-md border border-slate-200 border-dashed px-3.5 py-2.5 rounded-lg select-none">
                               No PDF uploaded yet
                             </div>
                           )}
                           
-                          <label className={`cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition select-none ${contractUploadingMap[p.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
-                            {contractUploadingMap[p.id] ? "Uploading..." : details.contractMediaUrl ? "Change PDF File" : "⬆ Upload Contract PDF"}
+                          <label className={`cursor-pointer rounded-lg border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition select-none ${contractUploadingMap[p.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
+                            {contractUploadingMap[p.id] ? "Uploading..." : details.contractMediaUrl ? "Change PDF File" : " Upload Contract PDF"}
                             <input
                               type="file"
                               accept="application/pdf"
@@ -826,7 +1007,7 @@ export default function SellerForm({
                                 updateContract(p.id, "contractMediaId", null);
                                 updateContract(p.id, "contractMediaUrl", null);
                               }}
-                              className="text-xs font-semibold text-red-500 hover:text-red-700 bg-white border border-slate-200 px-3 py-2.5 rounded-lg hover:bg-red-50 transition active:scale-[0.98] shadow-sm"
+                              className="text-xs font-semibold text-red-500 hover:text-red-700 bg-white/60 backdrop-blur-md border border-slate-200 px-3 py-2.5 rounded-lg hover:bg-red-50 transition active:scale-[0.98] shadow-sm"
                             >
                               Remove PDF
                             </button>
@@ -838,7 +1019,7 @@ export default function SellerForm({
                 })}
 
               {Object.keys(activeContracts).length === 0 && (
-                <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-white text-slate-400 text-sm">
+                <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-white/60 backdrop-blur-md text-slate-400 text-sm">
                   Click a program button above to create a contract for it.
                 </div>
               )}
@@ -863,7 +1044,7 @@ export default function SellerForm({
                 return (
                   <div
                     key={p.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-white shadow-sm"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm"
                   >
                     <div className="min-w-0">
                       <div className="font-semibold text-slate-800 text-sm">

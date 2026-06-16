@@ -30,7 +30,7 @@ function BrandLogo({ url, name }: { url: string | null; name: string }) {
 
   if (url && !failed) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={name} onError={() => setFailed(true)} className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-white object-contain" />;
+    return <img src={url} alt={name} onError={() => setFailed(true)} className="h-9 w-9 shrink-0 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md object-contain" />;
   }
 
   return <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white">{initials}</div>;
@@ -40,12 +40,13 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return initial;
-    return initial.filter((b) => b.name.toLowerCase().includes(q) || b.code.toLowerCase().includes(q));
+    const base = initial.filter((b) => b.status !== "archived");
+    if (!q) return base;
+    return base.filter((b) => b.name.toLowerCase().includes(q) || b.code.toLowerCase().includes(q));
   }, [initial, query]);
 
   async function patch(b: BrandRow, body: Record<string, unknown>) {
@@ -63,10 +64,10 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   }
 
   async function remove(b: BrandRow) {
-    if (!confirm(`Delete brand "${b.name}"? If in use it will be deactivated instead.`)) return;
+    if (!confirm(`Archive brand "${b.name}"? You can restore it later from Archived.`)) return;
     setBusy(true);
     try {
-      await fetch(`/api/brands/${b.id}`, { method: "DELETE" });
+      await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "brand", id: b.id, action: "archive" }) });
       router.refresh();
     } finally {
       setBusy(false);
@@ -74,7 +75,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   }
 
   const emptyState = (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+    <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
       No brands yet. Click <strong>New Brand</strong> to add one.
     </div>
   );
@@ -89,7 +90,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
 
         <div className="flex items-center gap-3 lg:ml-auto">
           <span className="text-sm text-slate-500">{initial.length} total</span>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-1 shadow-sm">
             <button type="button" onClick={() => setViewMode("table")} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === "table" ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>
               Table
             </button>
@@ -110,88 +111,90 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
       ) : viewMode === "card" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((b) => (
-            <div key={b.id} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-200 ${b.status === "inactive" ? "opacity-60" : ""}`}>
+            <div key={b.id} className={`group flex flex-col rounded border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-slate-300 ${b.status === "inactive" ? "opacity-70" : ""}`}>
+              {/* Header */}
               <div className="flex items-start gap-3">
                 <BrandLogo url={b.logoUrl} name={b.name} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-base font-semibold text-slate-900">{b.name}</div>
-                      <div className="font-mono text-[11px] text-slate-400">{b.code}</div>
-                    </div>
-                    {b.brandNo ? <span className="shrink-0 rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white">{b.brandNo}</span> : null}
+                  <div className="truncate text-base font-semibold text-slate-900">{b.name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-white">{b.code}</span>
+                    <span className="text-xs text-slate-500">{b.brandType ?? "—"}</span>
                   </div>
-                  <div className="mt-2 text-sm text-slate-600">{b.brandType ?? "-"}</div>
                 </div>
+                <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${b.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${b.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                  {b.status}
+                </span>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-1.5">
+              {/* Categories */}
+              <div className="mt-4">
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Categories</div>
                 {b.categories.length === 0 ? (
-                  <span className="text-sm text-slate-300">-</span>
+                  <span className="text-xs text-slate-300">None mapped</span>
                 ) : (
-                  <>
-                    {b.categories.slice(0, 3).map((c) => (
-                      <span key={c} className="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] text-brand-700">
-                        {c}
-                      </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {b.categories.slice(0, 4).map((c) => (
+                      <span key={c} className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] text-brand-700">{c}</span>
                     ))}
-                    {b.categories.length > 3 ? <span className="self-center text-[10px] text-slate-400">+{b.categories.length - 3}</span> : null}
-                  </>
+                    {b.categories.length > 4 ? <span title={b.categories.join(", ")} className="cursor-default self-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">+{b.categories.length - 4} more</span> : null}
+                  </div>
                 )}
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-slate-400">Approval</div>
-                  <span className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${APPROVAL_BADGE[b.approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>{b.approvalStatus}</span>
+              {/* Usage stats */}
+              <div className="mt-4 grid grid-cols-3 divide-x divide-slate-100 rounded-md border border-slate-100 bg-slate-50/60">
+                <div className="px-2 py-2 text-center">
+                  <div className="text-sm font-bold text-slate-800">{b.productCount}</div>
+                  <div className="text-[10px] text-slate-400">Products</div>
                 </div>
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-slate-400">Status</div>
-                  <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${b.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${b.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
-                    {b.status}
-                  </span>
+                <div className="px-2 py-2 text-center">
+                  <div className="text-sm font-bold text-slate-800">{b.sellerCount}</div>
+                  <div className="text-[10px] text-slate-400">Sellers</div>
                 </div>
-                <div className="col-span-2 text-[11px] text-slate-500">
-                  <div>{b.productCount} products</div>
-                  <div>{b.sellerCount} sellers</div>
-                  <div>{b.branchCount} branches</div>
+                <div className="px-2 py-2 text-center">
+                  <div className="text-sm font-bold text-slate-800">{b.branchCount}</div>
+                  <div className="text-[10px] text-slate-400">Branches</div>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {!readOnly && b.approvalStatus !== "approved" ? (
-                  <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
-                    Approve
-                  </button>
-                ) : null}
-                {!readOnly && b.approvalStatus !== "rejected" ? (
-                  <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50">
-                    Reject
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                {!readOnly && (
-                  <>
-                    <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
-                      Edit
+              {/* Approval + approve/reject */}
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${APPROVAL_BADGE[b.approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>{b.approvalStatus}</span>
+                {!readOnly && b.approvalStatus !== "approved" && (
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+                      Approve
                     </button>
-                    <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-                      {b.status === "active" ? "Deactivate" : "Activate"}
-                    </button>
-                    <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-                      Delete
-                    </button>
-                  </>
+                    {b.approvalStatus !== "rejected" && (
+                      <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="rounded border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50">
+                        Reject
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
+
+              {/* Row actions */}
+              {!readOnly && (
+                <div className="mt-3 flex items-center gap-2">
+                  <button type="button" title="Edit" aria-label="Edit" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-brand-600 hover:bg-brand-50">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  </button>
+                  <button type="button" title={b.status === "active" ? "Deactivate" : "Activate"} aria-label={b.status === "active" ? "Deactivate" : "Activate"} onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>
+                  </button>
+                  <button type="button" title="Archive" aria-label="Archive" onClick={() => remove(b)} disabled={busy} className="flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="22" height="5" rx="1" /><path d="M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8" /><line x1="10" y1="13" x2="14" y2="13" /></svg>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
               <tr>
@@ -207,21 +210,20 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((b) => (
-                <tr key={b.id} className={`hover:bg-slate-50 ${b.status === "inactive" ? "opacity-60" : ""}`}>
-                  <td className="px-4 py-3 align-middle">
+                <tr key={b.id} className={`group hover:bg-slate-50 ${b.status === "inactive" ? "opacity-60" : ""}`}>
+                  <td className="px-4 py-4 align-middle">
                     <div className="flex items-center gap-3">
                       <BrandLogo url={b.logoUrl} name={b.name} />
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-slate-800">{b.name}</div>
-                        <div className="font-mono text-[11px] text-slate-400">{b.code}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle">
-                    {b.brandNo ? <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white">{b.brandNo}</span> : <span className="text-slate-300">-</span>}
+                  <td className="px-4 py-4 align-middle">
+                    <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white">{b.code}</span>
                   </td>
-                  <td className="px-4 py-3 align-middle text-slate-600">{b.brandType ?? "-"}</td>
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-4 py-4 align-middle text-slate-600">{b.brandType ?? "-"}</td>
+                  <td className="px-4 py-4 align-middle">
                     {b.categories.length === 0 ? (
                       <span className="text-slate-300">-</span>
                     ) : (
@@ -231,54 +233,55 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
                             {c}
                           </span>
                         ))}
-                        {b.categories.length > 3 ? <span className="self-center text-[10px] text-slate-400">+{b.categories.length - 3}</span> : null}
-                      </div>
+                        {b.categories.length > 3 ? <span title={b.categories.join(", ")} className="cursor-default self-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">+{b.categories.length - 3} more</span> : null}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="space-y-2">
+                  <td className="px-4 py-4 align-middle">
+                    <div className="flex items-center gap-2">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${APPROVAL_BADGE[b.approvalStatus] ?? "bg-slate-100 text-slate-500"}`}>{b.approvalStatus}</span>
-                      {!readOnly && (
-                        <div className="flex flex-wrap gap-2 text-[11px]">
-                          {b.approvalStatus !== "approved" ? (
-                            <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="text-emerald-600 hover:underline">
-                              Approve
-                            </button>
-                          ) : null}
-                          {b.approvalStatus !== "rejected" ? (
-                            <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="text-rose-600 hover:underline">
+                      {!readOnly && b.approvalStatus !== "approved" && (
+                        <div className="flex items-center gap-2 text-[11px] opacity-0 transition-opacity group-hover:opacity-100">
+                          <button type="button" onClick={() => patch(b, { approvalStatus: "approved" })} disabled={busy} className="font-medium text-emerald-600 hover:underline">
+                            Approve
+                          </button>
+                          {b.approvalStatus !== "rejected" && (
+                            <button type="button" onClick={() => patch(b, { approvalStatus: "rejected" })} disabled={busy} className="font-medium text-rose-600 hover:underline">
                               Reject
                             </button>
-                          ) : null}
+                          )}
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-4 py-4 align-middle">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${b.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${b.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
                       {b.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 align-middle text-[11px] text-slate-500 whitespace-nowrap">
-                    <div>{b.productCount} products</div>
-                    <div>{b.sellerCount} sellers</div>
-                    <div>{b.branchCount} branches</div>
+                  <td className="px-4 py-4 align-middle text-[11px] text-slate-500 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span><span className="font-semibold text-slate-700">{b.productCount}</span> products</span>
+                      <span className="text-slate-300">·</span>
+                      <span><span className="font-semibold text-slate-700">{b.sellerCount}</span> sellers</span>
+                      <span className="text-slate-300">·</span>
+                      <span><span className="font-semibold text-slate-700">{b.branchCount}</span> branches</span>
+                    </span>
                   </td>
-                  <td className="px-4 py-3 align-middle text-right whitespace-nowrap">
+                  <td className="px-4 py-4 align-middle text-right whitespace-nowrap">
                     <div className="inline-flex flex-wrap justify-end gap-2">
                       {readOnly ? (
                         <span className="text-xs text-slate-400 italic">View only</span>
                       ) : (
                         <>
-                          <button type="button" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50">
-                            Edit
+                          <button type="button" title="Edit" aria-label="Edit" onClick={() => router.push(`/masters/brands/${b.id}/edit`)} className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-brand-600 hover:bg-brand-50">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                           </button>
-                          <button type="button" onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-                            {b.status === "active" ? "Deactivate" : "Activate"}
+                          <button type="button" title={b.status === "active" ? "Deactivate" : "Activate"} aria-label={b.status === "active" ? "Deactivate" : "Activate"} onClick={() => patch(b, { status: b.status === "active" ? "inactive" : "active" })} disabled={busy} className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>
                           </button>
-                          <button type="button" onClick={() => remove(b)} disabled={busy} className="rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-                            Delete
+                          <button type="button" title="Archive" aria-label="Archive" onClick={() => remove(b)} disabled={busy} className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="22" height="5" rx="1" /><path d="M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8" /><line x1="10" y1="13" x2="14" y2="13" /></svg>
                           </button>
                         </>
                       )}

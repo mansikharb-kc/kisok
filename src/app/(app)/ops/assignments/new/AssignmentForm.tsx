@@ -86,10 +86,10 @@ export default function AssignmentForm({
   }
 
   const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
-  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white";
+  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/60 backdrop-blur-md";
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-6 shadow-sm">
+    <form onSubmit={submit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 space-y-6 shadow-sm">
       <div>
         <button
           type="button"

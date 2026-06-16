@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LEVELS, MAX_LEVEL, levelMeta, slugify } from "@/lib/categoryLevels";
 import CategoryAttributePanel from "./CategoryAttributePanel";
+import IconButton from "@/components/ui/IconButton";
 
 export type FlatCategory = {
   id: string;
@@ -147,9 +148,9 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
   }
 
   async function remove(node: TreeNode) {
-    if (!confirm(`Delete "${node.name}"? If it has sub-items or products it will be retired instead.`)) return;
+    if (!confirm(`Archive "${node.name}"? You can restore it later from Archived.`)) return;
     setBusy(true);
-    await fetch(`/api/categories/${node.id}`, { method: "DELETE" });
+    await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "category", id: node.id, action: "archive" }) });
     setBusy(false);
     router.refresh();
   }
@@ -157,6 +158,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
   // Recursive render
   function renderNodes(nodes: TreeNode[]): React.ReactNode {
     return nodes.map((n) => {
+      if (n.status === "archived") return null;
       if (visible && !visible.has(n.id)) return null;
       const meta = levelMeta(n.level);
       const hasChildren = n.children.length > 0;
@@ -176,7 +178,19 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
                 className="w-5 h-5 shrink-0 flex items-center justify-center text-slate-400 hover:text-slate-700"
                 aria-label={open ? "Collapse" : "Expand"}
               >
-                <span className={`transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`transition-transform ${open ? "rotate-90" : ""}`}
+                >
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
               </button>
             ) : (
               <span className="w-5 shrink-0" />
@@ -196,24 +210,16 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
 
             <div className="ml-auto flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
               {(canCreate || !readOnly) && (
-                <div className="hidden group-hover:flex items-center gap-3">
+                <div className="hidden group-hover:flex items-center gap-2">
                   {canCreate && n.level < MAX_LEVEL && (
-                    <button onClick={() => openCreateChild(n)} className="text-xs text-brand-600 hover:underline">
-                      {requestMode ? "+ Request Sub" : "+ Sub"}
-                    </button>
+                    <IconButton kind="add" tone="primary" title={requestMode ? "Request sub-category" : "Add sub-category"} onClick={() => openCreateChild(n)} />
                   )}
                   {/* edit/retire/delete only for HO Admin */}
                   {!readOnly && (
                     <>
-                      <button onClick={() => startEdit(n)} className="text-xs text-slate-600 hover:underline">
-                        Edit
-                      </button>
-                      <button onClick={() => patchStatus(n)} className="text-xs text-slate-500 hover:underline">
-                        {n.status === "active" ? "Retire" : "Activate"}
-                      </button>
-                      <button onClick={() => remove(n)} className="text-xs text-red-600 hover:underline">
-                        Delete
-                      </button>
+                      <IconButton kind="edit" title="Edit" onClick={() => startEdit(n)} />
+                      <IconButton kind={n.status === "active" ? "retire" : "activate"} title={n.status === "active" ? "Retire" : "Activate"} onClick={() => patchStatus(n)} />
+                      <IconButton kind="archive" title="Archive" onClick={() => remove(n)} />
                     </>
                   )}
                 </div>
@@ -242,7 +248,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       {/* Search + add */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -261,7 +267,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       </div>
 
       {/* Tree */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
         {roots.length === 0 ? (
           <div className="px-4 py-12 text-center text-slate-400 text-sm">
             No categories yet. Click <strong>New Category</strong> to create your first one.
@@ -298,7 +304,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       {/* Edit modal (name + code) */}
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={saveEdit} className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={saveEdit} className="bg-white/60 backdrop-blur-md rounded-lg shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 className="text-lg font-bold">Edit category</h3>
 
             {error && (

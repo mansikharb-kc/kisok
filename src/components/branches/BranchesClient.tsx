@@ -27,7 +27,7 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Branches</div>
           <div className="mt-2 text-4xl font-bold text-slate-900">{initial.length}</div>
         </div>
@@ -56,7 +56,7 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search branches or branch codes…"
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
         <Link href="/masters/branches/new" className="inline-flex items-center justify-center rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-700">
@@ -64,7 +64,7 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Branch Master List</h3>
           <p className="mt-1 text-xs text-slate-500">Branch master only. Warehouse and location setup live in the Branch Setup area.</p>
@@ -78,7 +78,7 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-sm">
-              <thead className="bg-white text-xs uppercase tracking-wider text-slate-500">
+              <thead className="bg-white/60 backdrop-blur-md text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Branch</th>
                   <th className="px-4 py-3 text-left font-medium">Code</th>

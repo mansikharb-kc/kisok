@@ -175,7 +175,7 @@ export default function StickerTemplatesClient({
   }
 
   const emptyState = (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+    <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
       {readOnly ? (
         "No sticker templates defined yet."
       ) : (
@@ -215,7 +215,7 @@ export default function StickerTemplatesClient({
       {rows.length === 0 ? (
         emptyState
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
               <tr>
@@ -345,7 +345,7 @@ function TemplateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 py-10">
-      <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white shadow-xl">
+      <div className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{draft.id ? "Edit Sticker Template" : "New Sticker Template"}</h2>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600">

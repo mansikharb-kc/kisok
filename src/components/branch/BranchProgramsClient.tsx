@@ -99,7 +99,7 @@ export default function BranchProgramsClient({
       )}
 
       {/* Selected programs */}
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Selected Programs</h3>
           <p className="mt-1 text-xs text-slate-500">Programs requested for your branch and their HO approval status.</p>
@@ -150,7 +150,7 @@ export default function BranchProgramsClient({
       </div>
 
       {/* Request a program */}
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Request a Program</h3>
           <p className="mt-1 text-xs text-slate-500">Active HO programs not yet selected for your branch.</p>
@@ -161,7 +161,7 @@ export default function BranchProgramsClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search programs or codes…"
-            className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full max-w-md rounded-lg border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-2.5 text-sm placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
 

@@ -106,7 +106,7 @@ export default function PlacementForm({
   }
 
   const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
-  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white";
+  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/60 backdrop-blur-md";
 
   return (
     <>
@@ -122,7 +122,7 @@ export default function PlacementForm({
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
           <form
             onSubmit={submit}
-            className="mt-10 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-6"
+            className="mt-10 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-xl space-y-6"
           >
             <div className="flex items-start justify-between">
               <div>
@@ -213,7 +213,7 @@ export default function PlacementForm({
                       <select
                         value={row.sampleSizeId}
                         onChange={(e) => setSize(idx, e.target.value)}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs bg-white/60 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-brand-500"
                       >
                         <option value="">— No size —</option>
                         {sizes.map((s) => (

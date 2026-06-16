@@ -167,7 +167,7 @@ export default function RoleUsersPage({ params }: PageProps) {
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-lg border border-slate-200 max-w-md">
+      <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-4 py-3 rounded-lg border border-slate-200 max-w-md">
         <Search className="w-4 h-4 text-slate-400 shrink-0" />
         <input
           type="text"
@@ -179,7 +179,7 @@ export default function RoleUsersPage({ params }: PageProps) {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="bg-white/60 backdrop-blur-md rounded-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

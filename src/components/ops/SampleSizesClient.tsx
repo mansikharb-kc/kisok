@@ -142,7 +142,7 @@ export default function SampleSizesClient({
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Sizes</div>
           <div className="text-3xl font-bold mt-1 text-slate-900">{totalSizes}</div>
         </div>
@@ -154,7 +154,7 @@ export default function SampleSizesClient({
 
       {/* Table */}
       {sizes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
           <p className="text-sm text-slate-400">No sample sizes defined yet.</p>
           <button
             onClick={openCreate}
@@ -164,7 +164,7 @@ export default function SampleSizesClient({
           </button>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
               <tr>
@@ -224,7 +224,7 @@ export default function SampleSizesClient({
       {/* Modal Form */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-10 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">
                 {viewOnly

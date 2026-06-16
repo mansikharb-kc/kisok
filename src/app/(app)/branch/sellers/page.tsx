@@ -41,11 +41,11 @@ export default async function Page() {
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
           No sellers registered yet. The Onboarding Lead manages sellers.
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
               <tr>
@@ -87,7 +87,7 @@ export default async function Page() {
                         ? <span className="text-slate-300 text-xs">—</span>
                         : s.contracts.map((c: any) => (
                           <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded-full ${c.verified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                            {c.program.name} {c.verified ? "✓" : "⏳"}
+                            {c.program.name} {c.verified ? "✓" : ""}
                           </span>
                         ))
                       }

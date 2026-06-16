@@ -63,6 +63,7 @@ async function attachRole(userId: bigint, roleCode: string, branchId: bigint | n
 
 async function createNode(
   branchId: bigint,
+  programId: bigint | null,
   parentId: bigint | null,
   parentPath: string | null,
   nodeType: string,
@@ -72,9 +73,21 @@ async function createNode(
   isPlacementEligible: boolean,
   isScreenMountable: boolean,
 ) {
+  // Idempotent: if a node with this branch + code exists, update it (so re-runs
+  // don't duplicate and a missing programId gets backfilled).
+  const existing = code ? await prisma.locationNode.findFirst({ where: { branchId, code } }) : null;
+  if (existing) {
+    const path = buildPath(parentPath, existing.id);
+    const locationId = isPlacementEligible ? `LOC-${branchId}-${existing.id}` : null;
+    return prisma.locationNode.update({
+      where: { id: existing.id },
+      data: { programId, parentId, nodeType, name, depth, path, isPlacementEligible, isScreenMountable, locationId, status: "active" },
+    });
+  }
   const node = await prisma.locationNode.create({
     data: {
       branchId,
+      programId,
       parentId,
       nodeType,
       name,
@@ -359,19 +372,19 @@ async function main() {
    */
 
   // -- Immersive Hub warehouse --
-  const wh1 = await createNode(branch.id, null, null, "WAREHOUSE", "Immersive Hub", "WH-IH", 0, false, false);
+  const wh1 = await createNode(branch.id, progImmersive.id, null, null, "WAREHOUSE", "Immersive Hub", "WH-IH", 0, false, false);
 
-  const blkA = await createNode(branch.id, wh1.id, wh1.path, "BLOCK", "Block A – Bathware Zone", "BLK-A", 1, false, true);
-  const rackA1 = await createNode(branch.id, blkA.id, blkA.path, "RACK",  "Rack A1 – Kohler Display", "RCK-A1", 2, true, false);
-  const rackA2 = await createNode(branch.id, blkA.id, blkA.path, "RACK",  "Rack A2 – Jaquar Display",  "RCK-A2", 2, true, false);
+  const blkA = await createNode(branch.id, progImmersive.id, wh1.id, wh1.path, "BLOCK", "Block A – Bathware Zone", "BLK-A", 1, false, true);
+  const rackA1 = await createNode(branch.id, progImmersive.id, blkA.id, blkA.path, "RACK",  "Rack A1 – Kohler Display", "RCK-A1", 2, true, false);
+  const rackA2 = await createNode(branch.id, progImmersive.id, blkA.id, blkA.path, "RACK",  "Rack A2 – Jaquar Display",  "RCK-A2", 2, true, false);
 
-  const blkB = await createNode(branch.id, wh1.id, wh1.path, "BLOCK", "Block B – Paints Zone", "BLK-B", 1, false, true);
-  const rackB1 = await createNode(branch.id, blkB.id, blkB.path, "RACK",  "Rack B1 – Asian Paints",    "RCK-B1", 2, true, false);
+  const blkB = await createNode(branch.id, progImmersive.id, wh1.id, wh1.path, "BLOCK", "Block B – Paints Zone", "BLK-B", 1, false, true);
+  const rackB1 = await createNode(branch.id, progImmersive.id, blkB.id, blkB.path, "RACK",  "Rack B1 – Asian Paints",    "RCK-B1", 2, true, false);
 
   // -- Catalogue Library warehouse --
-  const wh2 = await createNode(branch.id, null, null, "WAREHOUSE", "Catalogue Library", "WH-CL", 0, false, false);
-  const trayCL1 = await createNode(branch.id, wh2.id, wh2.path, "TRAY", "Tray CL-1 – Kohler eCat",      "TRY-CL1", 1, true, false);
-  const trayCL2 = await createNode(branch.id, wh2.id, wh2.path, "TRAY", "Tray CL-2 – Paints Swatches",  "TRY-CL2", 1, true, false);
+  const wh2 = await createNode(branch.id, progCatalogue.id, null, null, "WAREHOUSE", "Catalogue Library", "WH-CL", 0, false, false);
+  const trayCL1 = await createNode(branch.id, progCatalogue.id, wh2.id, wh2.path, "TRAY", "Tray CL-1 – Kohler eCat",      "TRY-CL1", 1, true, false);
+  const trayCL2 = await createNode(branch.id, progCatalogue.id, wh2.id, wh2.path, "TRAY", "Tray CL-2 – Paints Swatches",  "TRY-CL2", 1, true, false);
 
   console.log(`✓ Location tree:`);
   console.log(`    🏭 Immersive Hub`);
@@ -573,7 +586,95 @@ async function main() {
   console.log(`    ${cpAP2.instanceCode}  → Rack B1 (Immersive Hub) [MASTER]`);
   console.log(`    ${cpJQ1.instanceCode}  → Rack A2 (Immersive Hub) [MASTER]`);
 
-  // ── 15. Summary ───────────────────────────────────────────────────────────
+  // ── 15. Sticker Templates (HO, category-wise) ────────────────────────────
+  const defaultElements = {
+    brandLogo: true, branchName: true, productName: true, category: true,
+    attributes: false, locationId: true, sku: true, qr: true,
+  };
+  async function upsertStickerTemplate(categoryId: bigint, name: string) {
+    const existing = await prisma.stickerTemplate.findFirst({ where: { categoryId, name } });
+    if (existing) return existing;
+    return prisma.stickerTemplate.create({
+      data: { categoryId, name, elements: defaultElements, layout: {}, status: "active" },
+    });
+  }
+  await upsertStickerTemplate(catFaucets.id, "Faucet Label (Standard)");
+  await upsertStickerTemplate(catPaints.id, "Paint Swatch Label");
+  console.log(`✓ Sticker templates: Faucet Label, Paint Swatch Label`);
+
+  // ── 16. Consignment Tickets (OB Exec ↔ Consignment to-and-fro) ────────────
+  async function upsertTicket(
+    ticketNo: string,
+    data: {
+      type: string; status: string; currentRole: string; title: string;
+      description?: string; sellerId: bigint; brandId: bigint; localRecordId?: bigint;
+      resolution?: string; resolved?: boolean;
+      events: { action: string; fromRole?: string; toRole?: string; note?: string; byUserId: bigint }[];
+    },
+  ) {
+    const existing = await prisma.ticket.findFirst({ where: { ticketNo } });
+    if (existing) return existing;
+    const t = await prisma.ticket.create({
+      data: {
+        ticketNo, type: data.type, branchId: branch.id, sellerId: data.sellerId,
+        brandId: data.brandId, localRecordId: data.localRecordId ?? null,
+        title: data.title, description: data.description ?? null,
+        status: data.status, currentRole: data.currentRole, raisedBy: obExec1.id,
+        resolution: data.resolution ?? null, resolvedAt: data.resolved ? new Date() : null,
+      },
+    });
+    for (const ev of data.events) {
+      await prisma.ticketEvent.create({
+        data: { ticketId: t.id, action: ev.action, fromRole: ev.fromRole ?? null, toRole: ev.toRole ?? null, note: ev.note ?? null, byUserId: ev.byUserId },
+      });
+    }
+    return t;
+  }
+
+  await upsertTicket("TKT-0001", {
+    type: "SAMPLE_REQUEST", status: "WITH_CONSIGNMENT", currentRole: "CONSIGNMENT_USER",
+    title: "Need Kohler Veil faucet sample", description: "Require 1 sample for Immersive Hub display",
+    sellerId: sellerKohler.id, brandId: brandKohler.id, localRecordId: lorKohlerFaucet.id,
+    events: [{ action: "raise", fromRole: "OB_EXEC", toRole: "CONSIGNMENT_USER", note: "Require 1 sample for Immersive Hub display", byUserId: obExec1.id }],
+  });
+  await upsertTicket("TKT-0002", {
+    type: "FABRICATION", status: "WITH_EXEC", currentRole: "OB_EXEC",
+    title: "AP Texture panel needs cutting to A3", description: "Cut panel to A3 for swatch tray",
+    sellerId: sellerAP.id, brandId: brandAsianPaints.id, localRecordId: lorAPTexture.id,
+    events: [
+      { action: "raise", fromRole: "OB_EXEC", toRole: "CONSIGNMENT_USER", note: "Cut to A3 please", byUserId: obExec1.id },
+      { action: "send_to_exec", fromRole: "CONSIGNMENT_USER", toRole: "OB_EXEC", note: "Fabricated to A3, please verify & place", byUserId: csgnUser.id },
+    ],
+  });
+  await upsertTicket("TKT-0003", {
+    type: "DAMAGE", status: "RESOLVED", currentRole: "OB_EXEC", resolved: true,
+    title: "Jaquar faucet chrome scratched", description: "Surface scratch on received unit",
+    resolution: "Replacement received & placed",
+    sellerId: sellerJaquar.id, brandId: brandJaquar.id, localRecordId: lorJaquarFaucet.id,
+    events: [
+      { action: "raise", fromRole: "OB_EXEC", toRole: "CONSIGNMENT_USER", note: "Unit scratched, need replacement", byUserId: obExec1.id },
+      { action: "note", note: "Re-ordered from brand SPOC", byUserId: csgnUser.id },
+      { action: "resolve", note: "Replacement received & placed", byUserId: csgnUser.id },
+    ],
+  });
+  console.log(`✓ Consignment tickets: TKT-0001 (sample), TKT-0002 (fabrication), TKT-0003 (damage, resolved)`);
+
+  // ── 17. Pending Change Request (Branch Admin → HO approval demo) ──────────
+  const existingCr = await prisma.changeRequest.findFirst({
+    where: { type: "NEW_CATEGORY", status: "pending", branchId: branch.id },
+  });
+  if (!existingCr) {
+    await prisma.changeRequest.create({
+      data: {
+        type: "NEW_CATEGORY",
+        payload: { name: "Acoustic Panels", code: "acoustic-panels", parentId: null },
+        branchId: branch.id, requestedBy: branchAdmin.id, status: "pending",
+      },
+    });
+  }
+  console.log(`✓ Pending change request: "Acoustic Panels" (awaiting HO approval)`);
+
+  // ── 18. Summary ───────────────────────────────────────────────────────────
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║            KC-Bangalore Demo Data — COMPLETE                 ║

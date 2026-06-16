@@ -83,23 +83,18 @@ export default function ProgramsClient({
     });
   }, [initialPrograms, query]);
 
-  const totalBindings = initialPrograms.reduce(
-    (sum, program) => sum + program.definitionAttributes.length + program.commonAttributes.length,
-    0,
-  );
-
   const activeCount = initialPrograms.filter((program) => program.status === "active").length;
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
           <div className="flex items-baseline justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Programs</div>
               <div className="mt-2 text-4xl font-bold text-slate-900">{initialPrograms.length}</div>
             </div>
-            <div className="text-3xl opacity-10 group-hover:opacity-15 transition-opacity">📋</div>
+            <div className="text-3xl opacity-10 group-hover:opacity-15 transition-opacity"></div>
           </div>
           {initialPrograms.length === 0 && (
             <div className="mt-3 text-xs text-slate-400">Start by creating your first program.</div>
@@ -125,21 +120,11 @@ export default function ProgramsClient({
               <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Attributes</div>
               <div className="mt-2 text-4xl font-bold text-brand-700">{attributes.length}</div>
             </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity">🏷️</div>
+            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
           </div>
           <div className="mt-3 text-xs text-slate-500">Available for mapping</div>
         </div>
 
-        <div className="group rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm transition-all hover:shadow-md hover:border-indigo-300">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Bindings</div>
-              <div className="mt-2 text-4xl font-bold text-indigo-700">{totalBindings}</div>
-            </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity">🔗</div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">Across all programs</div>
-        </div>
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -153,7 +138,7 @@ export default function ProgramsClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search programs, codes, or bound attributes…"
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
         <div className="inline-flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 border border-slate-200">
@@ -173,10 +158,10 @@ export default function ProgramsClient({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Program Master List</h3>
-          <p className="mt-1 text-xs text-slate-500">Open details, edit, or attribute bindings on separate pages.</p>
+          <p className="mt-1 text-xs text-slate-500">Open details or edit on separate pages.</p>
         </div>
 
         {rows.length === 0 ? (
@@ -192,12 +177,11 @@ export default function ProgramsClient({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1060px] text-sm">
-              <thead className="bg-white text-xs uppercase tracking-wider text-slate-500">
+              <thead className="bg-white/60 backdrop-blur-md text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Program</th>
                   <th className="px-4 py-3 text-left font-medium">Code</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Attributes</th>
                   <th className="px-4 py-3 text-left font-medium">Usage</th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
@@ -219,10 +203,6 @@ export default function ProgramsClient({
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle text-xs text-slate-500">
-                      <div>{program.definitionAttributes.length} definition</div>
-                      <div>{program.commonAttributes.length} common</div>
-                    </td>
-                    <td className="px-4 py-3 align-middle text-xs text-slate-500">
                       <div>{program.branchCount} branches</div>
                       <div>{program.contractCount} contracts</div>
                       <div>{program.localCount} local records</div>
@@ -233,14 +213,9 @@ export default function ProgramsClient({
                           View
                         </Link>
                         {!readOnly && (
-                          <>
-                            <Link href={`/masters/programs/${program.id}/attributes`} className="rounded-full border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                              Bindings
-                            </Link>
-                            <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                              Edit
-                            </Link>
-                          </>
+                          <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
+                            Edit
+                          </Link>
                         )}
                       </div>
                     </td>

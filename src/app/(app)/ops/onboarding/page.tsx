@@ -79,7 +79,7 @@ export default async function OnboardingPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
             Total Onboarded
           </div>

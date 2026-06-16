@@ -303,7 +303,7 @@ export default function TicketsClient({
           )}
 
           {tickets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
               No tickets yet.{canRaise ? " Raise one when you need a sample, fabrication, or report damage." : ""}
             </div>
           ) : (
@@ -313,7 +313,7 @@ export default function TicketsClient({
                 const owner = t.currentRole === "OB_EXEC" ? "OB Exec" : "Consignment";
                 const active = t.status !== "CLOSED";
                 return (
-                  <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div key={t.id} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-4">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -322,13 +322,13 @@ export default function TicketsClient({
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${TICKET_STATUS_BADGE[t.status]}`}>
                             {TICKET_STATUS_LABEL[t.status]}
                           </span>
-                          {active && <span className="text-[10px] text-slate-400">· in {owner}'s court</span>}
+                          {active && <span className="text-[10px] text-slate-400">Â· in {owner}'s court</span>}
                         </div>
                         <div className="font-semibold text-slate-800 mt-1">{t.title}</div>
                         <div className="text-xs text-slate-500 mt-0.5">
                           {t.seller?.name}
-                          {t.brand ? ` · ${t.brand.name}` : ""}
-                          {t.record ? ` · ${t.record.product.name} (${t.record.product.sku})` : ""}
+                          {t.brand ? ` Â· ${t.brand.name}` : ""}
+                          {t.record ? ` Â· ${t.record.product.name} (${t.record.product.sku})` : ""}
                         </div>
                       </div>
                       <button onClick={() => setOpenThread(open ? null : t.id)} className="text-xs text-brand-600 hover:underline shrink-0">
@@ -343,9 +343,9 @@ export default function TicketsClient({
                           <div key={ev.id} className="text-xs flex gap-2">
                             <span className="font-medium text-slate-600 capitalize">{ev.action.replace(/_/g, " ")}</span>
                             {ev.fromRole && ev.toRole && (
-                              <span className="text-slate-400">{ev.fromRole === "OB_EXEC" ? "Exec" : "Consign"} → {ev.toRole === "OB_EXEC" ? "Exec" : "Consign"}</span>
+                              <span className="text-slate-400">{ev.fromRole === "OB_EXEC" ? "Exec" : "Consign"} â†’ {ev.toRole === "OB_EXEC" ? "Exec" : "Consign"}</span>
                             )}
-                            {ev.note && <span className="text-slate-600">“{ev.note}”</span>}
+                            {ev.note && <span className="text-slate-600">â€œ{ev.note}â€</span>}
                             <span className="ml-auto text-slate-300">{new Date(ev.createdAt).toLocaleString()}</span>
                           </div>
                         ))}
@@ -359,7 +359,7 @@ export default function TicketsClient({
                         <input
                           value={noteText[t.id] ?? ""}
                           onChange={(e) => setNoteText((p) => ({ ...p, [t.id]: e.target.value }))}
-                          placeholder="Add a note…"
+                          placeholder="Add a noteâ€¦"
                           className="flex-1 min-w-[160px] rounded-md border border-slate-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                         />
                         <button onClick={() => act(t.id, "note", { note: noteText[t.id] })} disabled={busy || !(noteText[t.id]?.trim())} className="text-xs text-slate-600 hover:underline disabled:opacity-40">
@@ -368,12 +368,12 @@ export default function TicketsClient({
 
                         {isConsign && t.currentRole === "CONSIGNMENT_USER" && (
                           <button onClick={() => act(t.id, "send_to_exec", { note: noteText[t.id] })} disabled={busy} className="rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs hover:bg-blue-700">
-                            Send to Exec →
+                            Send to Exec â†’
                           </button>
                         )}
                         {isExec && t.currentRole === "OB_EXEC" && (
                           <button onClick={() => act(t.id, "send_to_consignment", { note: noteText[t.id] })} disabled={busy} className="rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs hover:bg-amber-700">
-                            ← Send to Consignment
+                            â† Send to Consignment
                           </button>
                         )}
                         {((isExec && t.currentRole === "OB_EXEC") || (isConsign && t.currentRole === "CONSIGNMENT_USER")) && t.status !== "RESOLVED" && (
@@ -391,9 +391,9 @@ export default function TicketsClient({
                             <select
                                 value={selectedExec[t.id] ?? ""}
                                 onChange={(e) => setSelectedExec((p) => ({ ...p, [t.id]: e.target.value }))}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs outline-none bg-white font-medium text-slate-700"
+                                className="rounded border border-slate-300 px-2 py-1 text-xs outline-none bg-white/60 backdrop-blur-md font-medium text-slate-700"
                               >
-                                <option value="">Transfer to Exec…</option>
+                                <option value="">Transfer to Execâ€¦</option>
                                 {execs.map((ex) => (
                                   <option key={ex.id} value={ex.id}>{ex.fullName} ({ex.email})</option>
                                 ))}
@@ -403,7 +403,7 @@ export default function TicketsClient({
                                 disabled={busy || !selectedExec[t.id]}
                                 className="rounded bg-indigo-600 text-white px-2.5 py-1 text-xs font-semibold hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                               >
-                                Assign →
+                                Assign â†’
                               </button>
                             </div>
                           )}
@@ -418,7 +418,7 @@ export default function TicketsClient({
         ) : (
           <div className="space-y-4">
             {/* Status Filter Bar */}
-            <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex-wrap">
+            <div className="flex items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status Filter:</span>
                 <select
@@ -442,17 +442,17 @@ export default function TicketsClient({
             </div>
 
             {filteredConsignments.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center text-sm text-slate-400">
                 No consignments matching the selected status filter.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {filteredConsignments.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                  <div key={c.id} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div>
                         <div className="text-sm font-bold text-slate-800">{c.seller.name}</div>
-                        <div className="text-xs text-slate-400 font-mono mt-0.5">{c.seller.sellerCode} · Brand: {c.brand.name}</div>
+                        <div className="text-xs text-slate-400 font-mono mt-0.5">{c.seller.sellerCode} Â· Brand: {c.brand.name}</div>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         {isConsign && c.status !== "closed" && (
@@ -466,7 +466,7 @@ export default function TicketsClient({
                                 disabled={busy}
                                 className="rounded bg-indigo-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-indigo-750 transition-colors disabled:opacity-50"
                               >
-                                {busy ? "Updating…" : `${actionLabel} →`}
+                                {busy ? "Updatingâ€¦" : `${actionLabel} â†’`}
                               </button>
                             );
                           })()
@@ -493,16 +493,16 @@ export default function TicketsClient({
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs text-slate-600">
                       <div>
                         <span className="font-semibold text-slate-400 block mb-0.5">SPOC Name</span>
-                        <span className="text-slate-800 font-medium">{c.spocName || "—"}</span>
+                        <span className="text-slate-800 font-medium">{c.spocName || "â€”"}</span>
                       </div>
                       <div>
                         <span className="font-semibold text-slate-400 block mb-0.5">SPOC Contact</span>
-                        <span className="text-slate-800 font-medium font-mono">{c.spocContact || "—"}</span>
+                        <span className="text-slate-800 font-medium font-mono">{c.spocContact || "â€”"}</span>
                       </div>
                       {c.remarks && (
                         <div className="sm:col-span-2 md:col-span-1">
                           <span className="font-semibold text-slate-400 block mb-0.5">Remarks</span>
-                          <span className="text-slate-800 italic">“{c.remarks}”</span>
+                          <span className="text-slate-800 italic">â€œ{c.remarks}â€</span>
                         </div>
                       )}
                     </div>
@@ -516,12 +516,12 @@ export default function TicketsClient({
                               <div className="flex items-center justify-between gap-3">
                                 <div>
                                   <span className="font-medium text-slate-700">{it.description || "Unlabeled item"}</span>
-                                  {it.sampleType && <span className="text-[10px] text-slate-450 ml-1.5 font-semibold px-1 py-0.5 bg-slate-200/50 rounded">{it.sampleType}</span>}
+                                  {it.sampleType && <span className="text-[10px] text-slate-400 ml-1.5 font-semibold px-1 py-0.5 bg-slate-200/50 rounded">{it.sampleType}</span>}
                                 </div>
                                 <div className="flex items-center gap-3 text-[11px]">
                                   {isConsign && c.status !== "closed" ? (
                                     <div className="flex items-center gap-1">
-                                      <span className="text-slate-450">Qty:</span>
+                                      <span className="text-slate-400">Qty:</span>
                                       <input
                                         type="number"
                                         min={0}
@@ -538,7 +538,7 @@ export default function TicketsClient({
                                         <button
                                           onClick={() => saveReceivedQty(it.id, receivedQtyInput[it.id])}
                                           disabled={busy}
-                                          className="ml-1 text-[10px] text-brand-650 font-bold bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded px-1.5 py-0.5"
+                                          className="ml-1 text-[10px] text-brand-600 font-bold bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded px-1.5 py-0.5"
                                         >
                                           Save
                                         </button>
@@ -563,27 +563,27 @@ export default function TicketsClient({
                                     <select
                                       value={qcResultInput[it.id] || "pass"}
                                       onChange={(e) => setQcResultInput((p) => ({ ...p, [it.id]: e.target.value }))}
-                                      className="rounded border border-purple-200 px-2 py-1 text-xs bg-white focus:outline-none"
+                                      className="rounded border border-purple-200 px-2 py-1 text-xs bg-white/60 backdrop-blur-md focus:outline-none"
                                     >
-                                      <option value="pass">🟢 Pass</option>
-                                      <option value="flag">🔴 Flag</option>
-                                      <option value="repair">🛠️ Repair</option>
-                                      <option value="fabricate">🏗️ Fabricate</option>
+                                      <option value="pass"> Pass</option>
+                                      <option value="flag"> Flag</option>
+                                      <option value="repair"> Repair</option>
+                                      <option value="fabricate"> Fabricate</option>
                                     </select>
                                   </div>
                                   <input
                                     type="text"
-                                    placeholder="Notes (optional)…"
+                                    placeholder="Notes (optional)â€¦"
                                     value={qcNotesInput[it.id] || ""}
                                     onChange={(e) => setQcNotesInput((p) => ({ ...p, [it.id]: e.target.value }))}
-                                    className="flex-1 min-w-[120px] rounded border border-purple-250 px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
+                                    className="flex-1 min-w-[120px] rounded border border-purple-250 px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white/60 backdrop-blur-md"
                                   />
                                   <button
                                     onClick={() => submitQc(it.id)}
                                     disabled={busy}
                                     className="rounded bg-purple-600 text-white px-3 py-1 text-xs font-semibold hover:bg-purple-700 transition-colors"
                                   >
-                                    {busy ? "Submitting…" : "Submit QC"}
+                                    {busy ? "Submittingâ€¦" : "Submit QC"}
                                   </button>
                                   {actionError[it.id] && (
                                     <div className="w-full text-[10px] text-rose-600 font-semibold">{actionError[it.id]}</div>
@@ -605,7 +605,7 @@ export default function TicketsClient({
       {/* Raise modal */}
       {showRaise && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={raise} className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={raise} className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
             <h3 className="text-lg font-bold">Raise Ticket</h3>
             {rErr && <div className="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">{rErr}</div>}
             <div className="space-y-1">
@@ -625,7 +625,7 @@ export default function TicketsClient({
               <div className="space-y-1">
                 <label className="text-sm font-medium">Brand (optional)</label>
                 <select value={rBrand} onChange={(e) => setRBrand(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <option value="">—</option>
+                  <option value="">â€”</option>
                   {sellerBrands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
@@ -636,12 +636,12 @@ export default function TicketsClient({
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Details</label>
-              <textarea value={rDesc} onChange={(e) => setRDesc(e.target.value)} rows={3} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="What's needed / notes…" />
+              <textarea value={rDesc} onChange={(e) => setRDesc(e.target.value)} rows={3} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="What's needed / notesâ€¦" />
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setShowRaise(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">Cancel</button>
               <button type="submit" disabled={busy} className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-60">
-                {busy ? "Raising…" : "Raise Ticket"}
+                {busy ? "Raisingâ€¦" : "Raise Ticket"}
               </button>
             </div>
           </form>

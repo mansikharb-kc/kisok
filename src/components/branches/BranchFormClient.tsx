@@ -110,7 +110,7 @@ export default function BranchFormClient({
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
 
-      <form onSubmit={onSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <form onSubmit={onSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-slate-900">Branch Name</label>
@@ -122,7 +122,7 @@ export default function BranchFormClient({
               }}
               required
               autoFocus
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               placeholder="e.g. KC One"
             />
           </div>
@@ -135,7 +135,7 @@ export default function BranchFormClient({
                 setCodeTouched(true);
               }}
               required
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-3 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               placeholder="kc-one"
             />
           </div>
@@ -146,7 +146,7 @@ export default function BranchFormClient({
           <select
             value={form.status}
             onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as BranchStatus }))}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -158,7 +158,7 @@ export default function BranchFormClient({
         </div>
 
         <div className="flex items-center justify-end gap-3">
-          <Link href="/masters/branches" className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/masters/branches" className="rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             Cancel
           </Link>
           <button

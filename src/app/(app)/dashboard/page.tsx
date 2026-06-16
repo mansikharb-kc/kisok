@@ -37,10 +37,28 @@ async function recentActivity(branchId: bigint | null) {
   }));
 }
 
+async function countL4Categories(status?: string) {
+  const l1 = await prisma.category.findMany({ where: { parentId: null }, select: { id: true } });
+  const l1Ids = l1.map((c) => c.id);
+  if (l1Ids.length === 0) return 0;
+
+  const l2 = await prisma.category.findMany({ where: { parentId: { in: l1Ids } }, select: { id: true } });
+  const l2Ids = l2.map((c) => c.id);
+  if (l2Ids.length === 0) return 0;
+
+  const l3 = await prisma.category.findMany({ where: { parentId: { in: l2Ids } }, select: { id: true } });
+  const l3Ids = l3.map((c) => c.id);
+  if (l3Ids.length === 0) return 0;
+
+  const whereClause: any = { parentId: { in: l3Ids } };
+  if (status) whereClause.status = status;
+  return prisma.category.count({ where: whereClause });
+}
+
 async function globalCounts() {
   const [categories, attributes, brands, programs, sellers, products, copies, pendingApprovals] =
     await Promise.all([
-      prisma.category.count(),
+      countL4Categories(),
       prisma.attribute.count(),
       prisma.brand.count(),
       prisma.program.count(),
@@ -71,7 +89,7 @@ async function branchCounts(branchId: bigint) {
     pendingApprovalsCount,
     programsCount,
   ] = await Promise.all([
-    prisma.category.count({ where: { status: "active" } }),
+    countL4Categories("active"),
     prisma.attribute.count({ where: { status: "active" } }),
     prisma.categoryAttribute.count(),
     prisma.brand.count({ where: { status: "active" } }),
@@ -396,42 +414,42 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
+          Signed in as {roleLabels.join(", ")} {displayBranchName && `Â· ${displayBranchName}`}
         </p>
       </div>
 
       {isHo || (!branchId && !opsBranchId) ? (
         // HO Admin Global Dashboard
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.categories as number}</div>
             <div className="text-xs text-slate-500 mt-1">Categories</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.attributes as number}</div>
             <div className="text-xs text-slate-500 mt-1">Attributes</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.brands as number}</div>
             <div className="text-xs text-slate-500 mt-1">Brands</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.programs as number}</div>
             <div className="text-xs text-slate-500 mt-1">Programs</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.sellers as number}</div>
             <div className="text-xs text-slate-500 mt-1">Sellers</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.products as number}</div>
             <div className="text-xs text-slate-500 mt-1">Products (SKUs)</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.copies as number}</div>
             <div className="text-xs text-slate-500 mt-1">Physical Copies</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
             <div className="text-2xl font-bold">{countsData.pendingApprovals as number}</div>
             <div className="text-xs text-slate-500 mt-1">Pending Approvals</div>
           </div>
@@ -442,25 +460,25 @@ export default async function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">HO Masters</span>
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue · view only</span>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue Â· view only</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+              <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Categories</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalCategories as number}</div>
                 <div className="text-xs text-slate-500 mt-1">{countsData.totalAttributeBindings as number} attribute bindings</div>
               </a>
-              <a href="/masters/attributes" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+              <a href="/masters/attributes" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Attributes</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalAttributes as number}</div>
                 <div className="text-xs text-slate-500 mt-1">global attribute library</div>
               </a>
-              <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+              <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Brands</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved · {countsData.branchBrands as number} at this branch</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved Â· {countsData.branchBrands as number} at this branch</div>
               </a>
-              <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+              <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Programs</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalProducts as number}</div>
                 <div className="text-xs text-slate-500 mt-1">{countsData.programs as number} programs active at branch</div>
@@ -474,34 +492,34 @@ export default async function DashboardPage() {
               <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{branchName}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Sellers</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers as number}</div>
                 <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers as number} assigned to execs</div>
               </div>
-              <a href="/branch/warehouse" className="group rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+              <a href="/branch/warehouse" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Location IDs</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations as number}</div>
                 <div className="text-xs text-slate-500 mt-1">placement-eligible nodes</div>
               </a>
-              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies as number}</div>
                 <div className="text-xs text-slate-500 mt-1">
-                  {countsData.labeledCopies as number} labeled · {countsData.pendingCopies as number} pending
+                  {countsData.labeledCopies as number} labeled Â· {countsData.pendingCopies as number} pending
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Products onboarded</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.branchProducts as number}</div>
                 <div className="text-xs text-slate-500 mt-1">of {countsData.totalProducts as number} total SKUs</div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                 <div className="text-xs font-medium text-slate-400">Open consignments</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments as number}</div>
                 <div className="text-xs text-slate-500 mt-1">in progress</div>
               </div>
-              <div className={`rounded-lg border p-5 shadow-sm ${(countsData.pendingApprovals as number) > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+              <div className={`rounded-lg border p-5 shadow-sm ${(countsData.pendingApprovals as number) > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
                 <div className={`text-xs font-medium ${(countsData.pendingApprovals as number) > 0 ? "text-amber-600" : "text-slate-400"}`}>HO Approvals pending</div>
                 <div className={`text-3xl font-bold mt-1 ${(countsData.pendingApprovals as number) > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals as number}</div>
                 <div className="text-xs text-slate-500 mt-1">change requests awaiting HO</div>
@@ -523,31 +541,31 @@ export default async function DashboardPage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <a href="/ops/sellers" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/sellers" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Sellers</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
                   <div className="text-xs text-slate-500 mt-1">
-                    {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
+                    {onbLeadData.assignedCount} assigned Â· {onbLeadData.unassignedCount} unassigned
                   </div>
                 </a>
-                <a href="/ops/assignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/assignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assignments</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.assignedCount}</div>
                   <div className={`text-xs mt-1 ${onbLeadData.unassignedCount > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
                     {onbLeadData.unassignedCount} sellers unassigned
                   </div>
                 </a>
-                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Open Consignments</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
                   <div className="text-xs text-slate-500 mt-1">not yet closed</div>
                 </a>
-                <a href="/ops/sample-sizes" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/sample-sizes" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Sample Sizes</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sampleSizes}</div>
                   <div className="text-xs text-slate-500 mt-1">defined at branch</div>
                 </a>
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                   <div className="text-xs font-medium text-slate-400">Active Programs</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.programs}</div>
                   <div className="text-xs text-slate-500 mt-1">approved at branch</div>
@@ -555,14 +573,14 @@ export default async function DashboardPage() {
               </div>
 
               {/* Task Assignments & Tracking for Lead */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-bold text-slate-800">Task Assignments & Progress Tracking</h2>
                     <p className="text-xs text-slate-500 mt-0.5">Track onboarding activities assigned to executives</p>
                   </div>
                   <a href="/ops/assignments" className="text-xs font-semibold text-brand-600 hover:underline">
-                    Manage Assignments →
+                    Manage Assignments â†’
                   </a>
                 </div>
                 {onbLeadAssignmentsList.length === 0 ? (
@@ -596,9 +614,9 @@ export default async function DashboardPage() {
                               </div>
                             </td>
                             <td className="px-5 py-3.5">
-                              <div className="font-medium text-slate-850">{a.seller.name}</div>
-                              <div className="text-xs text-slate-450 font-mono">
-                                {a.seller.sellerCode} {a.program ? `· ${a.program.name}` : ""}
+                              <div className="font-medium text-slate-800">{a.seller.name}</div>
+                              <div className="text-xs text-slate-400 font-mono">
+                                {a.seller.sellerCode} {a.program ? `Â· ${a.program.name}` : ""}
                               </div>
                             </td>
                             <td className="px-5 py-3.5">
@@ -609,7 +627,7 @@ export default async function DashboardPage() {
                                   </span>
                                 ))}
                                 {a.seller.sellerBrands.length === 0 && (
-                                  <span className="text-xs text-slate-450">—</span>
+                                  <span className="text-xs text-slate-400">â€”</span>
                                 )}
                               </div>
                             </td>
@@ -623,7 +641,7 @@ export default async function DashboardPage() {
                                   Active
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-705 px-2 py-0.5 rounded-full border border-amber-200">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                   Pending Onboarding
                                 </span>
@@ -646,26 +664,26 @@ export default async function DashboardPage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assigned Sellers</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.assignedSellersCount}</div>
                   <div className={`text-xs mt-1 ${obExecData.pendingConsignments > 0 ? "text-emerald-600 font-medium" : "text-slate-500"}`}>
                     {obExecData.pendingConsignments} consignments ready for you
                   </div>
                 </a>
-                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Products Onboarded</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.productsOnboarded}</div>
                   <div className="text-xs text-slate-500 mt-1">local records</div>
                 </a>
-                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Copies Placed</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.copiesPlaced}</div>
                   <div className={`text-xs mt-1 ${obExecData.copiesUnplaced > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
                     {obExecData.copiesUnplaced} unplaced
                   </div>
                 </a>
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
                   <div className="text-xs font-medium text-slate-400">Placement Locations</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.placementLocations}</div>
                   <div className="text-xs text-slate-500 mt-1">eligible nodes at branch</div>
@@ -673,14 +691,14 @@ export default async function DashboardPage() {
               </div>
 
               {/* Assigned Onboarding Tasks for Executive */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-bold text-slate-800">My Assigned Onboarding Tasks</h2>
                     <p className="text-xs text-slate-500 mt-0.5">Sellers assigned to you for product onboarding</p>
                   </div>
                   <a href="/ops/onboarding" className="text-xs font-semibold text-brand-600 hover:underline">
-                    View Onboarding Records →
+                    View Onboarding Records â†’
                   </a>
                 </div>
                 {obExecAssignmentsList.length === 0 ? (
@@ -705,7 +723,7 @@ export default async function DashboardPage() {
                             <td className="px-5 py-3.5">
                               <div className="font-semibold text-slate-800">{a.seller.name}</div>
                               <div className="text-[11px] text-slate-400 font-mono">
-                                {a.seller.sellerCode} {a.seller.membershipId ? `· ${a.seller.membershipId}` : ""}
+                                {a.seller.sellerCode} {a.seller.membershipId ? `Â· ${a.seller.membershipId}` : ""}
                               </div>
                             </td>
                             <td className="px-5 py-3.5">
@@ -715,7 +733,7 @@ export default async function DashboardPage() {
                                   <div className="text-[10px] text-slate-400 font-mono">{a.program.code}</div>
                                 </div>
                               ) : (
-                                <span className="text-xs text-slate-400">—</span>
+                                <span className="text-xs text-slate-400">â€”</span>
                               )}
                             </td>
                             <td className="px-5 py-3.5">
@@ -726,7 +744,7 @@ export default async function DashboardPage() {
                                   </span>
                                 ))}
                                 {a.seller.sellerBrands.length === 0 && (
-                                  <span className="text-xs text-slate-450">—</span>
+                                  <span className="text-xs text-slate-400">â€”</span>
                                 )}
                               </div>
                             </td>
@@ -803,7 +821,7 @@ export default async function DashboardPage() {
               </div>
               <div className="mt-4">
                 <a href="/ops/consignments?tab=consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
-                  View all consignments →
+                  View all consignments â†’
                 </a>
               </div>
             </div>
@@ -817,23 +835,23 @@ export default async function DashboardPage() {
           <a className="underline" href="/masters/categories">
             Categories
           </a>{" "}
-          (e.g. Glass, Wood, Stone…), then add Attributes and bind them to each
+          (e.g. Glass, Wood, Stoneâ€¦), then add Attributes and bind them to each
           category. Everything downstream selects from these masters.
         </div>
       )}
 
       {occupancyData && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-lg font-bold text-slate-905">Warehouse Location Occupancy</h2>
+              <h2 className="text-lg font-bold text-slate-900">Warehouse Location Occupancy</h2>
               <p className="text-xs text-slate-500 mt-0.5">Real-time status of eligible nodes in {displayBranchName}</p>
             </div>
             <a
               href="/branch/warehouse"
               className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
             >
-              View Warehouse Tree →
+              View Warehouse Tree â†’
             </a>
           </div>
 
@@ -846,7 +864,7 @@ export default async function DashboardPage() {
               </div>
               <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
                 <div
-                  className="h-full bg-brand-650 rounded-full transition-all duration-500"
+                  className="h-full bg-brand-600 rounded-full transition-all duration-500"
                   style={{ width: `${occupancyData.occupancyRate}%` }}
                 />
               </div>
@@ -870,7 +888,7 @@ export default async function DashboardPage() {
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Available (Empty)</span>
                 <div className="flex items-baseline gap-2 mt-2">
                   <span className="text-2xl font-bold text-emerald-600">{occupancyData.empty}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-250 animate-pulse">Free</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">Free</span>
                 </div>
               </div>
 
@@ -878,7 +896,7 @@ export default async function DashboardPage() {
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Master Copy Locations</span>
                 <div className="flex items-baseline gap-2 mt-2">
                   <span className="text-2xl font-bold text-amber-700">{occupancyData.masterLocations}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-250">👑 Master</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200"> Master</span>
                 </div>
               </div>
 
@@ -886,7 +904,7 @@ export default async function DashboardPage() {
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Slave Copy Only Locations</span>
                 <div className="flex items-baseline gap-2 mt-2">
                   <span className="text-2xl font-bold text-indigo-700">{occupancyData.slaveOnlyLocations}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-250">👥 Slave Only</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200"> Slave Only</span>
                 </div>
               </div>
             </div>
@@ -896,7 +914,7 @@ export default async function DashboardPage() {
 
       <div>
         <h2 className="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h2>
-        <div className="rounded-lg border border-slate-200 bg-white divide-y divide-slate-100">
+        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md divide-y divide-slate-100">
           {activity.length === 0 ? (
             <div className="px-4 py-10 text-center text-sm text-slate-400">
               No activity yet.{" "}
@@ -906,7 +924,7 @@ export default async function DashboardPage() {
                 ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
                 : isConsignment
                 ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
-                : "Actions you take (create, edit, retire…) will appear here."}
+                : "Actions you take (create, edit, retireâ€¦) will appear here."}
             </div>
           ) : (
             activity.map((a) => (
@@ -917,7 +935,7 @@ export default async function DashboardPage() {
                   {a.target && <span className="text-slate-600"> {a.target}</span>}
                 </div>
                 <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-                  {a.actor} · {a.when}
+                  {a.actor} Â· {a.when}
                 </span>
               </div>
             ))
