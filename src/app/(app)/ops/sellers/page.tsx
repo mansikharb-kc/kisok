@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
-import SellersClient from "@/components/ops/SellersClient";
+import SellersTableClient from "@/components/ops/SellersTableClient";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +106,7 @@ export default async function Page() {
           </Link>
         </div>
       ) : (
-        <SellersClient initialSellers={rows} />
+        <SellersTableClient rows={rows} />
       )}
     </div>
   );

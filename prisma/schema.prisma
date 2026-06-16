@@ -402,25 +402,26 @@ model Seller {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  branch       Branch                  @relation(fields: [branchId], references: [id])
-  sellerBrands SellerBrand[]
-  categories   SellerCategory[]
-  contracts    SellerContract[]
-  assignments  SellerAssignment[]
-  consignments Consignment[]
-  localRecords LocalOnboardingRecord[]
-  tickets      Ticket[]
+  branch           Branch                  @relation(fields: [branchId], references: [id])
+  sellerBrands     SellerBrand[]
+  sellerCategories SellerCategory[]
+  contracts        SellerContract[]
+  assignments      SellerAssignment[]
+  consignments     Consignment[]
+  localRecords     LocalOnboardingRecord[]
+  tickets          Ticket[]
 
   @@map("sellers")
 }
 
 model SellerCategory {
-  id         BigInt @id @default(autoincrement()) @db.UnsignedBigInt
-  sellerId   BigInt @map("seller_id") @db.UnsignedBigInt
-  categoryId BigInt @map("category_id") @db.UnsignedBigInt
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sellerId   BigInt   @map("seller_id") @db.UnsignedBigInt
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+  createdAt  DateTime @default(now()) @map("created_at")
 
   seller   Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([sellerId, categoryId])
   @@map("seller_categories")

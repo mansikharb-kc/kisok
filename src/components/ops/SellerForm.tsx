@@ -210,6 +210,7 @@ type SellerEdit = {
   membershipId: string | null;
   status: string;
   sellerBrands: { brandId: string }[];
+  sellerCategories?: { categoryId: string }[];
   contracts: {
     programId: string;
     collaborationTenure: string | null;
@@ -253,6 +254,14 @@ export default function SellerForm({
   // Brands Mapped
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(
     seller?.sellerBrands.map((sb) => sb.brandId) ?? []
+  );
+
+  const parents = useMemo(() => buildParentOptions(flatCategories), [flatCategories]);
+  const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
+
+  const [sel, setSel] = useState<Record<number, string>>({});
+  const [pickedCategoryIds, setPickedCategoryIds] = useState<string[]>(
+    seller?.sellerCategories?.map((sc) => String(sc.categoryId)) ?? []
   );
 
   // Contracts/Programs
@@ -349,6 +358,36 @@ export default function SellerForm({
     setSelectedBrandIds((prev) =>
       prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
     );
+  }
+
+  // ---- category cascade ----
+  function optionsForLevel(k: number) {
+    if (k === 1) return parents.filter((p) => p.level === 1);
+    const parentSel = sel[k - 1];
+    if (!parentSel) return [];
+    return parents.filter((p) => p.level === k && p.parentId === parentSel);
+  }
+  function selectAt(k: number, id: string) {
+    setSel((prev) => {
+      const next: Record<number, string> = {};
+      for (let i = 1; i < k; i++) if (prev[i]) next[i] = prev[i];
+      next[k] = id;
+      return next;
+    });
+  }
+  const deepest = useMemo(() => {
+    let id: string | null = null;
+    for (let k = 1; k <= LEVELS.length; k++) if (sel[k]) id = sel[k];
+    return id;
+  }, [sel]);
+
+  function addAssociation() {
+    if (!deepest || pickedCategoryIds.includes(deepest)) return;
+    setPickedCategoryIds((p) => [...p, deepest]);
+    setSel({});
+  }
+  function removeAssociation(id: string) {
+    setPickedCategoryIds((p) => p.filter((x) => x !== id));
   }
 
   // Toggle program contract selection
@@ -500,6 +539,7 @@ export default function SellerForm({
         membershipId: membershipId.trim() || null,
         status,
         brandIds: selectedBrandIds,
+        categoryIds: pickedCategoryIds,
         contracts: contractPayload,
       };
 
@@ -750,10 +790,61 @@ export default function SellerForm({
         )}
       </div>
 
-      {/* 3. Contracts */}
+      {/* 3. Categories Operated In */}
+      <div className={card}>
+        <StepHeader n={3} title="Categories Operated In" sub="Link the seller to categories in your taxonomy" />
+        <div className="space-y-3">
+          {LEVELS.map((lvl, idx) => {
+            const k = idx + 1;
+            if (k > 1 && !sel[k - 1]) return null;
+            const opts = optionsForLevel(k);
+            return (
+              <div key={k} className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center ${lvl.badge}`}>{lvl.label}</span>
+                <select
+                  value={sel[k] ?? ""}
+                  onChange={(e) => e.target.value ? selectAt(k, e.target.value) : null}
+                  className={`${I} flex-1`}
+                >
+                  <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
+                  {opts.map((o) => <option key={o.id} value={o.id}>{o.number} · {o.name}</option>)}
+                </select>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={addAssociation}
+              disabled={!deepest}
+              className="rounded-md bg-slate-800 text-white px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+            >
+              + Add this category
+            </button>
+            <span className="text-xs text-slate-400">Pick a Domain, drill down as deep as you want, then add. Repeat for multiple.</span>
+          </div>
+
+          {pickedCategoryIds.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {pickedCategoryIds.map((id) => {
+                const node = byId.get(id);
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">
+                    <span className="text-[9px] px-1 rounded bg-white">{node ? levelMeta(node.level).label : ""}</span>
+                    {node?.name ?? id}
+                    <button type="button" onClick={() => removeAssociation(id)} className="text-brand-500 hover:text-brand-800">✕</button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Contracts */}
       <div className={card}>
         <StepHeader
-          n={3}
+          n={4}
           title="Program Contracts"
           sub="Assign programs and define the tenure & start/end collaboration metrics"
         />
@@ -804,114 +895,51 @@ export default function SellerForm({
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
-                        {/* Left Column: Collaboration Tenure Dates */}
-                        <div className="space-y-4">
-                          <div>
-                            <label className={L}>Collaboration Tenure</label>
-                            <input
-                              value={details.collaborationTenure}
-                              onChange={(e) =>
-                                updateContract(p.id, "collaborationTenure", e.target.value)
-                              }
-                              onBlur={(e) => {
-                                const formatted = formatTenure(e.target.value);
-                                if (formatted !== e.target.value) {
-                                  updateContract(p.id, "collaborationTenure", formatted);
-                                }
-                              }}
-                              className={I}
-                              placeholder="e.g. 12 months"
-                            />
-                          </div>
-                          <div>
-                            <label className={L}>Collaboration Tenure Start Date</label>
-                            <input
-                              type="date"
-                              value={details.contractStart}
-                              readOnly
-                              disabled
-                              className={`${I} bg-slate-50 cursor-not-allowed`}
-                            />
-                          </div>
-                          <div>
-                            <label className={L}>Collaboration Tenure End Date</label>
-                            <input
-                              type="date"
-                              value={details.contractEnd}
-                              readOnly
-                              disabled
-                              className={`${I} bg-slate-50 cursor-not-allowed`}
-                            />
-                          </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={L}>Collaboration Tenure</label>
+                          <input
+                            value={details.collaborationTenure}
+                            onChange={(e) =>
+                              updateContract(p.id, "collaborationTenure", e.target.value)
+                            }
+                            className={I}
+                            placeholder="e.g. 12 months"
+                          />
                         </div>
-
-                        {/* Right Column: Fitout Period Dates */}
-                        <div className="space-y-4">
-                          <div>
-                            <label className={L}>Fitout Period</label>
-                            <input
-                              value={details.fitoutPeriod}
-                              onChange={(e) =>
-                                updateContract(p.id, "fitoutPeriod", e.target.value)
-                              }
-                              onBlur={(e) => {
-                                const formatted = formatFitoutPeriod(e.target.value);
-                                if (formatted !== e.target.value) {
-                                  updateContract(p.id, "fitoutPeriod", formatted);
-                                }
-                              }}
-                              className={I}
-                              placeholder="e.g. 45 Days"
-                            />
-                          </div>
-                          <div>
-                            <label className={L}>Fitout Period Start Date</label>
-                            <input
-                              type="date"
-                              value={details.baseStartDate}
-                              onChange={(e) =>
-                                updateContract(p.id, "baseStartDate", e.target.value)
-                              }
-                              className={I}
-                            />
-                          </div>
-                          <div>
-                            <label className={L}>Fitout Period End Date</label>
-                            <input
-                              type="date"
-                              value={details.fitoutEnd}
-                              readOnly
-                              disabled
-                              className={`${I} bg-slate-50 cursor-not-allowed`}
-                            />
-                          </div>
+                        <div>
+                          <label className={L}>Fitout Period</label>
+                          <input
+                            value={details.fitoutPeriod}
+                            onChange={(e) =>
+                              updateContract(p.id, "fitoutPeriod", e.target.value)
+                            }
+                            className={I}
+                            placeholder="e.g. 30 days"
+                          />
                         </div>
-
-                        {details.baseStartDate && (
-                          <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
-                            <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-400">Fitout Start:</span>
-                              <strong className="text-slate-800">{formatDMY(details.baseStartDate)}</strong>
-                            </div>
-                            <span className="text-slate-300 font-bold">➔</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-400">Fitout End:</span>
-                              <strong className="text-slate-800">{details.fitoutEnd ? formatDMY(details.fitoutEnd) : "—"}</strong>
-                            </div>
-                            <span className="text-slate-300 font-bold">➔</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-400">Collab Start:</span>
-                              <strong className="text-brand-600">{formatDMY(details.contractStart)}</strong>
-                            </div>
-                            <span className="text-slate-300 font-bold">➔</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-slate-400">Collab End:</span>
-                              <strong className="text-brand-600">{formatDMY(details.contractEnd)}</strong>
-                            </div>
-                          </div>
-                        )}
+                        <div>
+                          <label className={L}>Contract Start Date</label>
+                          <input
+                            type="date"
+                            value={details.contractStart}
+                            onChange={(e) =>
+                              updateContract(p.id, "contractStart", e.target.value)
+                            }
+                            className={I}
+                          />
+                        </div>
+                        <div>
+                          <label className={L}>Contract End Date</label>
+                          <input
+                            type="date"
+                            value={details.contractEnd}
+                            onChange={(e) =>
+                              updateContract(p.id, "contractEnd", e.target.value)
+                            }
+                            className={I}
+                          />
+                        </div>
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">
@@ -1000,11 +1028,11 @@ export default function SellerForm({
         )}
       </div>
 
-      {/* 4. Executive Assignments */}
+      {/* 5. Executive Assignments */}
       {Object.keys(activeContracts).length > 0 && (
         <div className={card}>
           <StepHeader
-            n={4}
+            n={5}
             title="Onboarding Executive Assignments"
             sub="Assign an onboarding executive for each active program contract"
           />
