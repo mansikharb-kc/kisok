@@ -15,6 +15,50 @@ function Chevron({ dir }: { dir: "up" | "left" | "right" }) {
   );
 }
 
+// Minimal line icon per route (used for the collapsed icon-rail).
+function NavIcon({ href }: { href: string }) {
+  const p: Record<string, string> = {
+    dashboard: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
+    categories: "M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+    attributes: "M20.59 13.41 11 3.83V2h-1.83L2 9.17 11.59 18.76a2 2 0 0 0 2.83 0l6.17-6.17a2 2 0 0 0 0-2.18zM7 9a1 1 0 1 1 0-2 1 1 0 0 1 0 2z",
+    brands: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96 12 12.01l8.73-5.05 M12 22.08V12",
+    programs: "M9 11H3v10h6zM21 3h-6v18h6zM15 8H9v13h6z",
+    sticker: "M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM7 7h10M7 12h10M7 17h6",
+    branches: "M3 21h18M5 21V7l8-4v18M19 21V11l-6-4",
+    approvals: "M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3",
+    warehouse: "M3 21V8l9-5 9 5v13M3 21h18M9 21v-6h6v6",
+    sellers: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+    assignments: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71",
+    sizes: "M21 3 3 21M9 3H3v6M21 15v6h-6",
+    consignments: "M22 12h-6l-2 3h-4l-2-3H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+    onboarding: "M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12",
+    placement: "M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+    users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  };
+  let key = "dashboard";
+  if (href.includes("categories")) key = "categories";
+  else if (href.includes("attributes")) key = "attributes";
+  else if (href.includes("brands")) key = "brands";
+  else if (href.includes("programs")) key = "programs";
+  else if (href.includes("sticker")) key = "sticker";
+  else if (href.includes("branches")) key = "branches";
+  else if (href.includes("approvals")) key = "approvals";
+  else if (href.includes("warehouse")) key = "warehouse";
+  else if (href.includes("sellers")) key = "sellers";
+  else if (href.includes("assignments")) key = "assignments";
+  else if (href.includes("sample-sizes")) key = "sizes";
+  else if (href.includes("consignments")) key = "consignments";
+  else if (href.includes("onboarding")) key = "onboarding";
+  else if (href.includes("placement")) key = "placement";
+  else if (href.includes("users")) key = "users";
+  else if (href.includes("dashboard")) key = "dashboard";
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {p[key].split(/(?=M)/).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
 function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; pathname: string }) {
   const [open, setOpen] = useState(true);
   return (
@@ -103,14 +147,31 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
       </div>
 
       {/* Nav (hidden when collapsed) */}
-      {!collapsed && (
+      {!collapsed ? (
         <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-5">
           {groups.map((g) => (
             <NavGroup key={g.name} name={g.name} items={g.items} pathname={pathname} />
           ))}
         </nav>
+      ) : (
+        <nav className="flex-1 overflow-y-auto scrollbar-hide py-4 flex flex-col items-center gap-1">
+          {nav.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                className={`w-10 h-10 flex items-center justify-center rounded transition ${
+                  active ? "bg-white/15 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <NavIcon href={item.href} />
+              </Link>
+            );
+          })}
+        </nav>
       )}
-      {collapsed && <div className="flex-1" />}
 
       {/* Footer */}
       <div className="px-3 py-4 border-t border-white/10">
