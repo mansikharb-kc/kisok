@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
+import SellersTableClient from "@/components/ops/SellersTableClient";
 
 export const dynamic = "force-dynamic";
 
@@ -105,109 +106,7 @@ export default async function Page() {
           </Link>
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Seller</th>
-                <th className="px-4 py-3 text-left font-medium">Membership ID</th>
-                <th className="px-4 py-3 text-left font-medium">Brands</th>
-                <th className="px-4 py-3 text-left font-medium">Programs / Contracts</th>
-                <th className="px-4 py-3 text-left font-medium">Assigned Exec</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((s: any) => (
-                <tr key={s.id} className={`hover:bg-slate-50 transition-colors ${s.status !== "active" ? "opacity-60" : ""}`}>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="font-semibold text-slate-800">{s.name}</div>
-                    <div className="font-mono text-[11px] text-slate-400">{s.sellerCode}</div>
-                  </td>
-                  <td className="px-4 py-3 align-middle font-mono text-xs text-slate-600">
-                    {s.membershipId ?? <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.sellerBrands.length === 0 ? (
-                        <span className="text-slate-300 text-xs">—</span>
-                      ) : (
-                        s.sellerBrands.map((sb: any) => (
-                          <span key={sb.brand.code} className="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium">
-                            {sb.brand.name}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.contracts.length === 0 ? (
-                        <span className="text-slate-300 text-xs">—</span>
-                      ) : (
-                        s.contracts.map((c: any) => (
-                          <span
-                            key={c.id}
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                              c.verified
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
-                            }`}
-                          >
-                            {c.program.name} {c.verified ? "✓" : "⏳"}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle text-xs text-slate-600">
-                    {s.assignments.length === 0 ? (
-                      <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                        Unassigned
-                      </span>
-                    ) : (
-                      s.assignments.map((a: any) => a.exec.fullName).join(", ")
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        s.status === "active"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
-                        }`}
-                      />
-                      {s.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/ops/sellers/${s.id}/edit`}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-600 transition-colors"
-                      >
-                        Edit
-                      </Link>
-                      <Link
-                        href={`/ops/sellers/${s.id}`}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:border-brand-300 hover:text-brand-600 transition-colors"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SellersTableClient rows={rows} />
       )}
     </div>
   );
