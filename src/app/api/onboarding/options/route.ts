@@ -137,7 +137,7 @@ export const GET = handler(async (req: Request) => {
   // the branch's APPROVED programs.
   const [assignments, branchPrograms] = await Promise.all([
     prisma.sellerAssignment.findMany({
-      where: { obExecUserId: uid, seller: { branchId } },
+      where: { obExecUserId: uid, seller: { branchId } } as any,
       include: {
         seller: {
           select: {
@@ -148,10 +148,13 @@ export const GET = handler(async (req: Request) => {
             sellerBrands: {
               include: { brand: { select: { id: true, name: true, code: true } } },
             },
+            sellerCategories: {
+              select: { categoryId: true },
+            },
           },
         },
-      },
-    }),
+      } as any,
+    }) as Promise<any[]>,
     prisma.branchProgram.findMany({
       where: { branchId, approvalStatus: "approved" },
       include: { program: { select: { id: true, name: true, code: true } } },
@@ -159,16 +162,17 @@ export const GET = handler(async (req: Request) => {
   ]);
 
   const sellers = assignments
-    .filter((a) => a.seller.status === "active")
+    .filter((a) => a.seller && a.seller.status === "active")
     .map((a) => ({
       id: a.seller.id.toString(),
       name: a.seller.name,
       sellerCode: a.seller.sellerCode,
-      brands: a.seller.sellerBrands.map((sb) => ({
+      brands: a.seller.sellerBrands.map((sb: any) => ({
         id: sb.brand.id.toString(),
         name: sb.brand.name,
         code: sb.brand.code,
       })),
+      categoryIds: a.seller.sellerCategories.map((sc: any) => sc.categoryId.toString()),
     }));
 
   const programs = branchPrograms.map((bp) => ({

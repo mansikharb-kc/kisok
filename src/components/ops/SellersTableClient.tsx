@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
 
 type SellerRow = {
@@ -20,6 +21,8 @@ type SellerRow = {
 type SortField = "name" | "membershipId" | "status" | "createdAt" | "fitout";
 
 export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
+  const router = useRouter();
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -167,15 +170,39 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
           <div className="text-xs text-slate-400 font-semibold select-none border-l border-slate-200 pl-3">
             {filteredAndSortedRows.length} of {rows.length}
           </div>
+          <div className="flex items-center gap-1 border border-slate-200 rounded-xl p-0.5 bg-slate-50 shadow-sm select-none">
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === "table"
+                  ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("card")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === "card"
+                  ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Cards
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Table view */}
+      {/* Main Table/Card view */}
       {filteredAndSortedRows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-250 bg-white p-12 text-center text-slate-450 text-sm shadow-sm">
           No matching sellers found for &ldquo;{searchQuery}&rdquo;.
         </div>
-      ) : (
+      ) : viewMode === "table" ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
@@ -332,6 +359,138 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
               ))}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredAndSortedRows.map((s) => (
+            <div
+              key={s.id}
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("a") || target.closest("button")) return;
+                router.push(`/ops/sellers/${s.id}`);
+              }}
+              className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow hover:border-slate-350 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                s.status !== "active" ? "opacity-60" : ""
+              }`}
+            >
+              <div className="space-y-3">
+                {/* Header: Name, Code, and Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-800 text-sm leading-snug hover:text-brand-600 transition-colors truncate">
+                      {s.name}
+                    </div>
+                    <div className="font-mono text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider truncate">
+                      {s.sellerCode}
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold shrink-0 uppercase tracking-wider ${
+                      s.status === "active"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        : "bg-slate-100 text-slate-500 border border-slate-200"
+                    }`}
+                  >
+                    {s.status}
+                  </span>
+                </div>
+
+                {/* Membership ID & Fitout Period */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100/60 text-xs">
+                  <div className="min-w-0">
+                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Membership ID</div>
+                    <div className="font-mono text-slate-700 mt-0.5 truncate text-[11px]">
+                      {s.membershipId ?? <span className="text-slate-300">—</span>}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Fitout Period</div>
+                    <div className="font-medium text-slate-700 mt-0.5 truncate text-[11px]">
+                      {s.contracts.map((c) => `${c.program.name}: ${c.fitoutPeriod || "N/A"}`).join(", ") || <span className="text-slate-300">—</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brands Mapped */}
+                <div>
+                  <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] mb-1.5">Authorized Brands</div>
+                  <div className="flex flex-wrap gap-1">
+                    {s.sellerBrands.length === 0 ? (
+                      <span className="text-slate-300 text-xs">—</span>
+                    ) : (
+                      s.sellerBrands.map((sb) => (
+                        <span
+                          key={sb.brand.code}
+                          className="text-[9px] px-2 py-0.5 rounded-full bg-brand-50 border border-brand-100 text-brand-700 font-medium"
+                        >
+                          {sb.brand.name}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Programs / Contracts */}
+                <div>
+                  <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] mb-1.5">Active Programs</div>
+                  <div className="flex flex-wrap gap-1">
+                    {s.contracts.length === 0 ? (
+                      <span className="text-slate-300 text-xs">—</span>
+                    ) : (
+                      s.contracts.map((c) => (
+                        <span
+                          key={c.id}
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-medium border ${
+                            c.verified
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              : "bg-amber-50 text-amber-700 border-amber-100"
+                          }`}
+                        >
+                          {c.program.name} {c.verified ? "✓" : "⏳"}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Assigned Exec */}
+                <div className="pt-2 border-t border-slate-100/60 flex items-center justify-between text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Assigned Exec</div>
+                    <div className="text-slate-700 font-medium mt-0.5 flex items-center gap-1.5">
+                      <span className="w-1 h-1 rounded-full bg-brand-400 inline-block shrink-0" />
+                      <span className="truncate text-[11px]">
+                        {s.assignments.length === 0 ? (
+                          <span className="text-amber-600 font-medium">Unassigned</span>
+                        ) : (
+                          s.assignments.map((a) => a.exec.fullName).join(", ")
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions footer */}
+              <div className="pt-2 border-t border-slate-100/60 flex items-center justify-end gap-1.5">
+                <Link
+                  href={`/ops/sellers/${s.id}/edit`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm font-semibold"
+                >
+                  Edit
+                </Link>
+                <Link
+                  href={`/ops/sellers/${s.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm font-semibold"
+                >
+                  View
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
