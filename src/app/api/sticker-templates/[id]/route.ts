@@ -16,10 +16,30 @@ const elementsSchema = z.object({
   qr: z.boolean(),
 });
 
+const fieldSchema = z.object({
+  id: z.string().trim().min(1).max(60),
+  label: z.string().trim().min(1).max(80),
+  source: z.enum(["attribute", "productName", "sku", "brandName", "instanceCode", "static"]),
+  attributeId: z.string().trim().nullable().optional(),
+  attributeCode: z.string().trim().nullable().optional(),
+  staticText: z.string().trim().max(200).nullable().optional(),
+});
+
+const layoutSchema = z.object({
+  base: z.enum(["laminate", "pioneer"]),
+  size: z.object({ w: z.number().positive(), h: z.number().positive() }),
+  fields: z.array(fieldSchema).max(20),
+  showBrandLogo: z.boolean().optional().default(true),
+  showQr: z.boolean().optional().default(true),
+  showBarcode: z.boolean().optional().default(true),
+  qrLink: z.string().trim().max(500).optional().default(""),
+});
+
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   categoryId: z.coerce.bigint().optional(),
   elements: elementsSchema.partial().optional(),
+  layout: layoutSchema.optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
 
@@ -38,7 +58,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
-  const { name, categoryId, elements, status } = parsed.data;
+  const { name, categoryId, elements, layout, status } = parsed.data;
 
   const existing = await prisma.stickerTemplate.findUnique({ where: { id } });
   if (!existing) return fail("Sticker template not found", 404);
@@ -60,6 +80,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       ...(name !== undefined ? { name } : {}),
       ...(categoryId !== undefined ? { categoryId } : {}),
       ...(mergedElements !== undefined ? { elements: mergedElements } : {}),
+      ...(layout !== undefined ? { layout } : {}),
       ...(status !== undefined ? { status } : {}),
     },
   });

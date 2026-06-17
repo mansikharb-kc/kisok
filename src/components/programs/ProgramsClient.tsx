@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import IconButton from "@/components/ui/IconButton";
 
 export type AttributeRow = {
   id: string;
@@ -63,6 +65,7 @@ export default function ProgramsClient({
   attributes: AttributeRow[];
   readOnly?: boolean;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
 
   const rows = useMemo(() => {
@@ -83,106 +86,90 @@ export default function ProgramsClient({
   }, [initialPrograms, query]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative max-w-2xl flex-1">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative max-w-md flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search programs, codes, or bound attributes…"
-            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md py-3 pl-12 pr-4 text-sm placeholder-slate-400 shadow-sm transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            placeholder="Search programs..."
+            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
-        <div className="inline-flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 border border-slate-200">
-          <div className="h-2 w-2 rounded-full bg-brand-500"></div>
-          {rows.length} {rows.length === 1 ? "program" : "programs"} shown
+
+        <div className="flex items-center gap-3 lg:ml-auto">
+          <span className="text-sm text-slate-500">{initialPrograms.length} total</span>
+          {!readOnly && (
+            <button type="button" onClick={() => router.push("/masters/programs/new")} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+              + New Program
+            </button>
+          )}
         </div>
-        {!readOnly && (
-          <Link
-            href="/masters/programs/new"
-            className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Program
-          </Link>
-        )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Program Master List</h3>
-          <p className="mt-1 text-xs text-slate-500">Open details or edit on separate pages.</p>
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 backdrop-blur-md px-6 py-16 text-center">
+          <h4 className="text-base font-semibold text-slate-800">No programs created yet</h4>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">Create a program first. Then open its detail or edit page separately.</p>
         </div>
-
-        {rows.length === 0 ? (
-          <div className="px-6 py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-              <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-semibold text-slate-900">No programs created yet</h4>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600">Create a program first. Then open its detail, edit, or attribute-binding page separately.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1060px] text-sm">
-              <thead className="bg-white/60 backdrop-blur-md text-xs uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Program</th>
-                  <th className="px-4 py-3 text-left font-medium">Code</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Usage</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
+          <table className="w-full table-fixed text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium w-[26%]">Program</th>
+                <th className="px-4 py-3 text-left font-medium w-[16%]">Code</th>
+                <th className="px-4 py-3 text-left font-medium w-[14%]">Status</th>
+                <th className="px-4 py-3 text-left font-medium w-[32%]">Usage</th>
+                <th className="px-4 py-3 text-right font-medium w-[12%]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.map((program) => (
+                <tr
+                  key={program.id}
+                  onClick={() => router.push(`/masters/programs/${program.id}`)}
+                  className={`cursor-pointer hover:bg-slate-50 ${program.status === "inactive" ? "opacity-70" : ""}`}
+                >
+                  <td className="px-4 py-3 align-middle">
+                    <div className="font-semibold text-slate-900 truncate">{program.name}</div>
+                    <div className="text-[11px] text-slate-400">ID {program.id}</div>
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white">{program.code}</span>
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${program.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${program.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      {program.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 align-middle text-[11px] text-slate-500 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span><span className="font-semibold text-slate-700">{program.branchCount}</span> branches</span>
+                      <span className="text-slate-300">·</span>
+                      <span><span className="font-semibold text-slate-700">{program.contractCount}</span> contracts</span>
+                      <span className="text-slate-300">·</span>
+                      <span><span className="font-semibold text-slate-700">{program.localCount}</span> local records</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex justify-end gap-2">
+                      <IconButton kind="view" title="View" onClick={() => router.push(`/masters/programs/${program.id}`)} />
+                      {!readOnly && (
+                        <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/masters/programs/${program.id}/edit`)} />
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((program) => (
-                  <tr key={program.id} className={`${program.status === "inactive" ? "opacity-70" : ""}`}>
-                    <td className="px-4 py-3 align-middle">
-                      <Link href={`/masters/programs/${program.id}`} className="block">
-                        <div className="font-semibold text-slate-900 transition-colors hover:text-brand-700">{program.name}</div>
-                        <div className="text-[11px] text-slate-400">ID {program.id}</div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 align-middle font-mono text-[11px] text-slate-600">{program.code}</td>
-                    <td className="px-4 py-3 align-middle">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${program.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${program.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
-                        {program.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-middle text-xs text-slate-500">
-                      <div>{program.branchCount} branches</div>
-                      <div>{program.contractCount} contracts</div>
-                      <div>{program.localCount} local records</div>
-                    </td>
-                    <td className="px-4 py-3 align-middle text-right whitespace-nowrap min-w-[320px]">
-                      <div className="inline-flex flex-nowrap justify-end gap-2">
-                        <Link href={`/masters/programs/${program.id}`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50">
-                          View
-                        </Link>
-                        {!readOnly && (
-                          <Link href={`/masters/programs/${program.id}/edit`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50">
-                            Edit
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

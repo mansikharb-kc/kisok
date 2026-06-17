@@ -41,6 +41,7 @@ export default async function StickerTemplatesPage() {
     categoryName: t.category?.name ?? "—",
     categoryCode: t.category?.code ?? null,
     elements: { ...DEFAULT_ELEMENTS, ...(t.elements ?? {}) },
+    layout: t.layout ?? null,
     status: t.status,
   }));
 
@@ -55,8 +56,8 @@ export default async function StickerTemplatesPage() {
       <div>
         <h1 className="text-2xl font-bold">Sticker Templates</h1>
         <p className="text-sm text-slate-500 mt-1">
-          HO master: category-wise label templates. Each template picks a category and toggles which elements appear on
-          the printed label. Branch name auto-fills per branch at render time. Inherited read-only by every branch.
+          HO master: pick a base design (Laminate or Pioneer), map the field rows to the category's attributes, and save.
+          Duplicate a template to create new ones. Field values fill in from the product at print time.
         </p>
       </div>
       <StickerTemplatesClient initial={rows} categories={categoryOptions} readOnly={readOnly} />
