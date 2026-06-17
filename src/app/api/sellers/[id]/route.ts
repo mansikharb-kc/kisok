@@ -142,6 +142,30 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       }
     }
 
+    const finalBrandIds = brandIds 
+      ? brandIds 
+      : (await tx.sellerBrand.findMany({ where: { sellerId: id }, select: { brandId: true } })).map((b) => b.brandId);
+
+    const finalCategoryIds = categoryIds
+      ? categoryIds
+      : (await tx.sellerCategory.findMany({ where: { sellerId: id }, select: { categoryId: true } })).map((c) => c.categoryId);
+
+    if (finalBrandIds.length > 0 && finalCategoryIds.length > 0) {
+      const brandCategoriesToCreate = [];
+      for (const bid of finalBrandIds) {
+        for (const cid of finalCategoryIds) {
+          brandCategoriesToCreate.push({
+            brandId: bid,
+            categoryId: cid,
+          });
+        }
+      }
+      await tx.brandCategory.createMany({
+        data: brandCategoriesToCreate,
+        skipDuplicates: true,
+      });
+    }
+
     return updated;
   });
 

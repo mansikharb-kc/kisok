@@ -5,6 +5,7 @@ import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import { buildParentOptions } from "@/lib/categoryTree";
 import { levelMeta } from "@/lib/categoryLevels";
+import SellerBrandsList from "@/components/ops/SellerBrandsList";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     prisma.seller.findUnique({
       where: { id: sellerId },
       include: {
-        sellerBrands: { include: { brand: { select: { name: true, code: true } } } },
+        sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
         sellerCategories: { select: { categoryId: true } },
         contracts: { include: { program: { select: { name: true } } } },
         assignments: { include: { exec: { select: { fullName: true, email: true } } } },
@@ -167,25 +168,7 @@ export default async function Page({ params }: { params: { id: string } }) {
           </div>
 
           {/* Brands Associated */}
-          <div className={card}>
-            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-              Associated Brands
-            </h3>
-            {s.sellerBrands.length === 0 ? (
-              <p className="text-sm text-slate-400">No brands associated with this seller.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {s.sellerBrands.map((sb: any) => (
-                  <span
-                    key={sb.brand.code}
-                    className="text-xs px-2.5 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 font-semibold"
-                  >
-                    {sb.brand.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          <SellerBrandsList sellerBrands={s.sellerBrands} />
         </div>
 
         {/* Right Column: Contracts and Assignments */}

@@ -129,6 +129,22 @@ export const POST = handler(async (req: Request) => {
       });
     }
 
+    if (brandIds.length > 0 && categoryIds.length > 0) {
+      const brandCategoriesToCreate = [];
+      for (const bid of brandIds) {
+        for (const cid of categoryIds) {
+          brandCategoriesToCreate.push({
+            brandId: bid,
+            categoryId: cid,
+          });
+        }
+      }
+      await tx.brandCategory.createMany({
+        data: brandCategoriesToCreate,
+        skipDuplicates: true,
+      });
+    }
+
     return created;
   });
 

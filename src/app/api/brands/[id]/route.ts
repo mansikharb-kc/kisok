@@ -40,13 +40,26 @@ function parseId(id: string): bigint | null {
 }
 
 export const GET = handler(async (_req: Request, ctx: { params: { id: string } }) => {
-  await requireRole("HO_ADMIN");
+  await requireRole("HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER");
   const id = parseId(ctx.params.id);
   if (id === null) return fail("Invalid id", 400);
 
   const b = await prisma.brand.findUnique({
     where: { id },
-    include: { logo: { select: { url: true } }, brandCategories: { select: { categoryId: true } } },
+    include: {
+      logo: { select: { url: true } },
+      brandCategories: {
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!b) return fail("Brand not found", 404);
   return ok({ brand: b });

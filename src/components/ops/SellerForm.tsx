@@ -7,6 +7,7 @@ import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY,
 import { isNonEmptyString } from "@/lib/validation";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
+import BrandDetailsModal from "@/components/brands/BrandDetailsModal";
 
 function parseTenureToPeriod(tenureStr: string): { years: number; months: number; days: number } {
   const clean = tenureStr.trim().toLowerCase();
@@ -312,6 +313,7 @@ export default function SellerForm({
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedBrandDetailsId, setSelectedBrandDetailsId] = useState<string | null>(null);
 
   const [localBrands, setLocalBrands] = useState<BrandOption[]>(brands);
   const [brandSearch, setBrandSearch] = useState("");
@@ -762,14 +764,29 @@ export default function SellerForm({
                       key={b.id}
                       type="button"
                       onClick={() => toggleBrand(b.id)}
-                      className={`flex items-center justify-between py-3.5 px-5 rounded-xl text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] ${
+                      className={`relative flex items-center justify-between py-3.5 px-5 rounded-xl text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] ${
                         checked
                           ? "border-2 border-black bg-brand-50/80 text-brand-950 shadow-sm font-semibold"
                           : "border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-slate-700"
                       }`}
                     >
-                      <div className="min-w-0 pr-2">
-                        <div className="truncate font-semibold">{b.name}</div>
+                      <div className="min-w-0 pr-6">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-semibold">{b.name}</span>
+                          <button
+                            type="button"
+                            title="View Brand Details"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBrandDetailsId(b.id);
+                            }}
+                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 transition-colors rounded p-0.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        </div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate uppercase tracking-wider">{b.code}</div>
                       </div>
                       <span
@@ -1095,6 +1112,10 @@ export default function SellerForm({
           {busy ? "Saving…" : editing ? "Update Seller" : "+ Add Seller"}
         </button>
       </div>
+      <BrandDetailsModal
+        brandId={selectedBrandDetailsId}
+        onClose={() => setSelectedBrandDetailsId(null)}
+      />
     </form>
   );
 }
