@@ -136,15 +136,17 @@ async function onbLeadCounts(branchId: bigint) {
     openConsignments,
     sampleSizes,
     programs,
+    warehousesCount,
   ] = await Promise.all([
     prisma.seller.count({ where: { branchId } }),
     prisma.seller.count({ where: { branchId, assignments: { none: {} } } }),
     prisma.consignment.count({ where: { seller: { branchId }, status: { not: "closed" } } }),
     prisma.sampleSize.count({ where: { branchId } }),
     prisma.branchProgram.count({ where: { branchId, approvalStatus: "approved" } }),
+    prisma.locationNode.count({ where: { branchId, nodeType: "WAREHOUSE", status: "active" } }),
   ]);
   const assignedCount = sellersCount - unassignedCount;
-  return { sellersCount, unassignedCount, assignedCount, openConsignments, sampleSizes, programs };
+  return { sellersCount, unassignedCount, assignedCount, openConsignments, sampleSizes, programs, warehousesCount };
 }
 
 async function obExecCounts(branchId: bigint, userId: string) {
@@ -539,15 +541,20 @@ export default async function DashboardPage() {
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
                   <div className="text-xs text-slate-500 mt-1">not yet closed</div>
                 </a>
-                <a href="/ops/sample-sizes" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Sample Sizes</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sampleSizes}</div>
-                  <div className="text-xs text-slate-500 mt-1">defined at branch</div>
+                <a href="/branch/warehouse" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Warehouses</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.warehousesCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">active at branch</div>
                 </a>
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Active Programs</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.programs}</div>
-                  <div className="text-xs text-slate-500 mt-1">approved at branch</div>
+                  <div className="text-xs font-medium text-slate-400">Filled</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{occupancyData?.occupied ?? 0}</div>
+                  <div className="text-xs text-slate-500 mt-1">occupied locations</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Empty</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900 text-emerald-600">{occupancyData?.empty ?? 0}</div>
+                  <div className="text-xs text-slate-500 mt-1">available locations</div>
                 </div>
               </div>
 

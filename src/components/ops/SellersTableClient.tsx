@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
+import { formatDaysToYMD } from "@/lib/brandMeta";
 
 type SellerRow = {
   id: string;
@@ -298,7 +299,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
                 >
                   <div className="flex items-center">
-                    Fitout Period <SortIndicator field="fitout" />
+                    Fitout Period ( In Days ) <SortIndicator field="fitout" />
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left font-semibold">Assigned Exec</th>
@@ -370,14 +371,19 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                       {s.contracts.length === 0 ? (
                         <span className="text-slate-300 text-xs">—</span>
                       ) : (
-                        s.contracts.map((c) => (
-                          <span
-                            key={c.id}
-                            className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200"
-                          >
-                            {c.program.name}: {c.fitoutPeriod || <span className="text-slate-400">N/A</span>}
-                          </span>
-                        ))
+                        s.contracts.map((c) => {
+                          const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+                          const ymd = formatDaysToYMD(c.fitoutPeriod);
+                          return (
+                            <span
+                              key={c.id}
+                              className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200"
+                            >
+                              {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
+                              {ymd && ` (${ymd})`}
+                            </span>
+                          );
+                        })
                       )}
                     </div>
                   </td>
@@ -473,9 +479,13 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Fitout Period</div>
-                    <div className="font-medium text-slate-700 mt-0.5 truncate text-[11px]">
-                      {s.contracts.map((c) => `${c.program.name}: ${c.fitoutPeriod || "N/A"}`).join(", ") || <span className="text-slate-300">—</span>}
+                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Fitout Period ( In Days )</div>
+                    <div className="font-medium text-slate-700 mt-0.5 text-[11px]">
+                      {s.contracts.map((c) => {
+                        const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+                        const ymd = formatDaysToYMD(c.fitoutPeriod);
+                        return `${c.program.name}: ${rawDays ? `${rawDays} Days` : "N/A"}${ymd ? ` (${ymd})` : ""}`;
+                      }).join(", ") || <span className="text-slate-300">—</span>}
                     </div>
                   </div>
                 </div>

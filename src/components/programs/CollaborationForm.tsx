@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { levelMeta } from "@/lib/categoryLevels";
+import { formatDaysToYMD } from "@/lib/brandMeta";
 
 type Branch = { id: string; name: string; branchCode: string };
 type Program = { id: string; name: string; code: string };
@@ -266,21 +267,21 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               </select>
             </div>
             <div>
-              <label className={labelCls}>Salesperson</label>
+              <label className={labelCls}>KC Salesperson</label>
               <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={inputCls} placeholder="KC salesperson" />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className={labelCls}>SPOC name</label>
+              <label className={labelCls}>KC SPOC name</label>
               <input value={spocName} onChange={(e) => setSpocName(e.target.value)} className={inputCls} placeholder="Contact person" />
             </div>
             <div>
-              <label className={labelCls}>SPOC phone</label>
+              <label className={labelCls}>KC SPOC phone</label>
               <input value={spocPhone} onChange={(e) => setSpocPhone(e.target.value)} className={inputCls} placeholder="+91…" />
             </div>
             <div>
-              <label className={labelCls}>SPOC email</label>
+              <label className={labelCls}>KC SPOC email</label>
               <input value={spocEmail} onChange={(e) => setSpocEmail(e.target.value)} type="email" className={inputCls} placeholder="name@company.com" />
             </div>
           </div>
@@ -299,12 +300,22 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               <input value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} type="date" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Fitout period</label>
-              <input value={fitoutPeriod} onChange={(e) => setFitoutPeriod(e.target.value)} className={inputCls} placeholder="e.g. 30 days" />
+              <label className={labelCls}>Fitout Period ( In Days )</label>
+              <input value={fitoutPeriod} onChange={(e) => setFitoutPeriod(e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="e.g. 45" />
+              {fitoutPeriod && formatDaysToYMD(fitoutPeriod) && (
+                <div className="text-[11px] text-slate-500 mt-1 font-semibold">
+                  Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(fitoutPeriod)}</span>
+                </div>
+              )}
             </div>
             <div>
-              <label className={labelCls}>Contract tenure</label>
-              <input value={collaborationTenure} onChange={(e) => setCollaborationTenure(e.target.value)} className={inputCls} placeholder="e.g. 12 months" />
+              <label className={labelCls}>Collaboration Tenure ( In Days )</label>
+              <input value={collaborationTenure} onChange={(e) => setCollaborationTenure(e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="e.g. 365" />
+              {collaborationTenure && formatDaysToYMD(collaborationTenure) && (
+                <div className="text-[11px] text-slate-500 mt-1 font-semibold">
+                  Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(collaborationTenure)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

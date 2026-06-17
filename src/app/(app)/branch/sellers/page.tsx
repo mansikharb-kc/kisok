@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import Link from "next/link";
+import { formatDaysToYMD } from "@/lib/brandMeta";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export default async function Page() {
                 <th className="px-4 py-3 text-left font-medium">Membership ID</th>
                 <th className="px-4 py-3 text-left font-medium">Brands</th>
                 <th className="px-4 py-3 text-left font-medium">Programs / Contracts</th>
-                <th className="px-4 py-3 text-left font-medium">Fitout Period</th>
+                <th className="px-4 py-3 text-left font-medium">Fitout Period ( In Days )</th>
                 <th className="px-4 py-3 text-left font-medium">Assigned Exec</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium">Activity</th>
@@ -97,11 +98,16 @@ export default async function Page() {
                     <div className="flex flex-wrap gap-1">
                       {s.contracts.length === 0
                         ? <span className="text-slate-300 text-xs">—</span>
-                        : s.contracts.map((c: any) => (
-                          <span key={c.id} className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
-                            {c.program.name}: {c.fitoutPeriod || <span className="text-slate-400">N/A</span>}
-                          </span>
-                        ))
+                        : s.contracts.map((c: any) => {
+                          const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+                          const ymd = formatDaysToYMD(c.fitoutPeriod);
+                          return (
+                            <span key={c.id} className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
+                              {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
+                              {ymd && ` (${ymd})`}
+                            </span>
+                          );
+                        })
                       }
                     </div>
                   </td>

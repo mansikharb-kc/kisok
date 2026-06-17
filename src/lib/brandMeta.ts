@@ -62,3 +62,44 @@ export function formatDMY(isoDate: string): string {
   const [y, m, d] = isoDate.split("-");
   return `${d}/${m}/${y}`;
 }
+
+export function parseFitoutDays(fitoutStr: string): number {
+  const num = parseInt(fitoutStr, 10);
+  return isNaN(num) ? 0 : num;
+}
+
+export function subtractDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr || !fitoutStr) return "";
+  const days = parseInt(fitoutStr, 10);
+  if (isNaN(days) || days <= 0) return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatDaysToYMD(daysInput: string | number | null | undefined): string {
+  if (daysInput == null) return "";
+  const daysStr = String(daysInput).replace(/\D/g, "");
+  const totalDays = parseInt(daysStr, 10);
+  if (isNaN(totalDays) || totalDays <= 0) return "";
+
+  const years = Math.floor(totalDays / 365);
+  const remaining = totalDays % 365;
+  const months = Math.floor(remaining / 30);
+  const days = remaining % 30;
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} Year${years > 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} Month${months > 1 ? "s" : ""}`);
+  if (days > 0) parts.push(`${days} Day${days > 1 ? "s" : ""}`);
+
+  if (parts.length === 0) return "0 Days";
+  return parts.join(", ");
+}
+

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import PrintButton from "@/components/ops/PrintButton";
+import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
 
 export const dynamic = "force-dynamic";
 
@@ -122,40 +123,77 @@ export default async function PrintSellerPage({ params }: { params: { id: string
             <p className="text-sm text-slate-400 italic">No active program contracts established.</p>
           ) : (
             <div className="space-y-4">
-              {s.contracts.map((c: any) => (
-                <div key={c.id} className="border border-slate-200 rounded p-4 space-y-3 bg-slate-50/50">
-                  <div className="flex items-center justify-between border-b border-slate-150 pb-2">
-                    <div className="font-bold text-slate-800">{c.program.name}</div>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded border border-slate-300 bg-slate-100">
-                      {c.verified ? "VERIFIED" : "VERIFICATION PENDING"}
-                    </span>
+              {s.contracts.map((c: any) => {
+                const fitoutStr = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+                const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
+                const baseStartDate = startStr && fitoutStr ? subtractDays(startStr, fitoutStr) : "";
+                const fitoutEnd = baseStartDate && fitoutStr ? subtractDays(startStr, "1") : "";
+
+                return (
+                  <div key={c.id} className="border border-slate-200 rounded p-4 space-y-3 bg-slate-50/50">
+                    <div className="flex items-center justify-between border-b border-slate-150 pb-2">
+                      <div className="font-bold text-slate-800">{c.program.name}</div>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded border border-slate-300 bg-slate-100">
+                        {c.verified ? "VERIFIED" : "VERIFICATION PENDING"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Collaboration Tenure ( In Days )</div>
+                        <div className="text-slate-800 font-medium mt-0.5">
+                          {c.collaborationTenure ? (
+                            <>
+                              {c.collaborationTenure.replace(/\D/g, "")} Days
+                              {formatDaysToYMD(c.collaborationTenure) && (
+                                <span className="text-slate-500 text-[11px] block font-semibold mt-0.5">
+                                  ( {formatDaysToYMD(c.collaborationTenure)} )
+                                </span>
+                              )}
+                            </>
+                          ) : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Collaboration Tenure Start Date</div>
+                        <div className="text-slate-800 font-medium mt-0.5">{c.contractStart ? formatDMY(c.contractStart.slice(0, 10)) : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Collaboration Tenure End Date</div>
+                        <div className="text-slate-800 font-medium mt-0.5">{c.contractEnd ? formatDMY(c.contractEnd.slice(0, 10)) : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Fitout Period ( In Days )</div>
+                        <div className="text-slate-800 font-medium mt-0.5">
+                          {fitoutStr ? (
+                            <>
+                              {fitoutStr} Days
+                              {formatDaysToYMD(fitoutStr) && (
+                                <span className="text-slate-500 text-[11px] block font-semibold mt-0.5">
+                                  ( {formatDaysToYMD(fitoutStr)} )
+                                </span>
+                              )}
+                            </>
+                          ) : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Fitout Period Start Date</div>
+                        <div className="text-slate-800 font-medium mt-0.5">{baseStartDate ? formatDMY(baseStartDate) : "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider">Fitout Period End Date</div>
+                        <div className="text-slate-800 font-medium mt-0.5">{fitoutEnd ? formatDMY(fitoutEnd) : "—"}</div>
+                      </div>
+                    </div>
+                    {c.remarks && (
+                      <div className="text-xs pt-2 border-t border-slate-100">
+                        <div className="text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Remarks</div>
+                        <p className="text-slate-700">{c.remarks}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-4 gap-4 text-xs">
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">Tenure</div>
-                      <div className="text-slate-800 font-medium mt-0.5">{c.collaborationTenure ?? "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">Fitout Period</div>
-                      <div className="text-slate-800 font-medium mt-0.5">{c.fitoutPeriod ?? "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">Start Date</div>
-                      <div className="text-slate-800 font-medium mt-0.5">{c.contractStart ? c.contractStart.slice(0, 10) : "—"}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">End Date</div>
-                      <div className="text-slate-800 font-medium mt-0.5">{c.contractEnd ? c.contractEnd.slice(0, 10) : "—"}</div>
-                    </div>
-                  </div>
-                  {c.remarks && (
-                    <div className="text-xs pt-2 border-t border-slate-100">
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Remarks</div>
-                      <p className="text-slate-700">{c.remarks}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
