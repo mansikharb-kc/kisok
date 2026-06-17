@@ -52,14 +52,14 @@ export default async function AttributesPage() {
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">Attributes</h1>
         <span className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">
-          Global Library
+          General
         </span>
       </div>
 
       <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 flex gap-3">
         <span className="text-lg leading-none"></span>
         <div>
-          <strong>These are global attributes</strong> — defined once here and reusable everywhere.
+          <strong>These are general attributes</strong> — defined once here and reusable everywhere.
           An attribute is <em>not</em> tied to one category; you <strong>map</strong> it to categories from the{" "}
           <a href="/masters/categories" className="underline">Category Master</a>, and it then{" "}
           <strong>inherits down to all sub-categories</strong>. The category names show where each is currently mapped.

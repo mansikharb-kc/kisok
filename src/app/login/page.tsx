@@ -47,6 +47,8 @@ export default function LoginPage() {
             backgroundSize: "40px 40px",
           }}
         />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.jpeg" alt="KC IMS" className="relative z-10 h-16 w-auto max-w-[160px] object-contain mt-10 ml-10" />
         <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
           <p className="text-brand-400 text-xs font-semibold uppercase tracking-[0.2em]">
             Inventory Management System
@@ -58,11 +60,6 @@ export default function LoginPage() {
             <br />
             <span className="text-brand-400">Full visibility.</span>
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed mt-6 max-w-sm">
-            From HO master setup through seller onboarding and consignment QC to
-            product placement and QR labeling — with role-based access and a full
-            audit trail.
-          </p>
         </div>
         <p className="relative z-10 px-10 pb-8 text-slate-600 text-xs">
           © 2026 Knowledge Center. All rights reserved.
