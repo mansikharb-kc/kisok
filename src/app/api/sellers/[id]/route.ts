@@ -150,19 +150,14 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
       await tx.sellerAssignment.deleteMany({ where: { sellerId: id } });
       const assignmentsToCreate = [];
-      const seenExecIds = new Set<string>();
       for (const c of contracts) {
         if (c.obExecUserId) {
-          const execIdStr = String(c.obExecUserId);
-          if (!seenExecIds.has(execIdStr)) {
-            seenExecIds.add(execIdStr);
-            assignmentsToCreate.push({
-              sellerId: id,
-              programId: c.programId,
-              obExecUserId: c.obExecUserId,
-              assignedBy: BigInt(session.uid),
-            });
-          }
+          assignmentsToCreate.push({
+            sellerId: id,
+            programId: c.programId,
+            obExecUserId: c.obExecUserId,
+            assignedBy: BigInt(session.uid),
+          });
         }
       }
       if (assignmentsToCreate.length > 0) {

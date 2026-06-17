@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TICKET_TYPES } from "@/lib/ticketMeta";
 
 type OnboardingRecord = {
@@ -33,6 +33,7 @@ export default function OnboardingList({
   isExec?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [raisingForRecord, setRaisingForRecord] = useState<OnboardingRecord | null>(null);
   const [ticketType, setTicketType] = useState("SAMPLE_REQUEST");
   const [title, setTitle] = useState("");
@@ -46,6 +47,15 @@ export default function OnboardingList({
   const [selectedSeller, setSelectedSeller] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedProgram, setSelectedProgram] = useState("");
+
+  useEffect(() => {
+    const sellerParam = searchParams.get("seller");
+    const brandParam = searchParams.get("brand");
+    const programParam = searchParams.get("program");
+    if (sellerParam) setSelectedSeller(sellerParam);
+    if (brandParam) setSelectedBrand(brandParam);
+    if (programParam) setSelectedProgram(programParam);
+  }, [searchParams]);
 
   // Unique lists computed from all records
   const sellersList = useMemo(() => {

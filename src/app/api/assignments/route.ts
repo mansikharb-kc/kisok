@@ -48,13 +48,13 @@ export const POST = handler(async (req: Request) => {
   });
   if (!contract) return fail("Program is not one the seller is contracted under.", 422);
 
-  // Check if assignment already exists
+  // Check if assignment already exists for this program contract
   const existing = await prisma.sellerAssignment.findUnique({
     where: {
-      sellerId_obExecUserId: { sellerId, obExecUserId },
+      sellerId_programId: { sellerId, programId },
     },
   });
-  if (existing) return fail("Seller is already assigned to this executive.", 409);
+  if (existing) return fail("This program contract is already assigned to an executive.", 409);
 
   // Create assignment
   const assignment = await prisma.sellerAssignment.create({

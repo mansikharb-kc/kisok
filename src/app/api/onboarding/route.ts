@@ -68,12 +68,12 @@ export const POST = handler(async (req: Request) => {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   const { brandProductId, sellerId, programId } = parsed.data;
 
-  // Seller must be assigned to this exec.
+  // Seller must be assigned to this exec for this program.
   const assignment = await prisma.sellerAssignment.findUnique({
-    where: { sellerId_obExecUserId: { sellerId, obExecUserId: uid } },
+    where: { sellerId_programId: { sellerId, programId } },
     include: { seller: { select: { branchId: true } } },
   });
-  if (!assignment) return fail("Seller is not assigned to you", 403);
+  if (!assignment || assignment.obExecUserId !== uid) return fail("Seller is not assigned to you for this program", 403);
 
   const sellerBranchId = assignment.seller.branchId;
   if (sellerBranchId !== branchId) return fail("Seller belongs to a different branch", 403);

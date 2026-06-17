@@ -159,7 +159,35 @@ async function onbLeadCounts(branchId: bigint) {
     prisma.locationNode.count({ where: { branchId, nodeType: "WAREHOUSE", status: "active" } }),
   ]);
   const assignedCount = sellersCount - unassignedCount;
-  return { sellersCount, unassignedCount, assignedCount, openConsignments, sampleSizes, programs, warehousesCount };
+
+  // Branch-wide onboarding progress
+  const sellerBrands = await prisma.sellerBrand.findMany({
+    where: { seller: { branchId } },
+    select: { brandId: true },
+  });
+  const brandIds = [...new Set(sellerBrands.map((sb: any) => sb.brandId))];
+  const totalRecords = brandIds.length > 0
+    ? await prisma.brandProduct.count({
+        where: { brandId: { in: brandIds }, status: "active" },
+      })
+    : 0;
+  const productsOnboarded = await prisma.localOnboardingRecord.count({
+    where: { branchId },
+  });
+  const notOnboardedRecords = Math.max(0, totalRecords - productsOnboarded);
+
+  return {
+    sellersCount,
+    unassignedCount,
+    assignedCount,
+    openConsignments,
+    sampleSizes,
+    programs,
+    warehousesCount,
+    totalRecords,
+    productsOnboarded,
+    notOnboardedRecords,
+  };
 }
 
 async function obExecCounts(branchId: bigint, userId: string) {
@@ -385,9 +413,16 @@ export default async function DashboardPage() {
               ...(a.programId ? { programId: a.programId } : {}),
             },
           });
+          const brandIds = a.seller.sellerBrands.map((sb: any) => sb.brandId);
+          const totalSKUs = brandIds.length > 0
+            ? await prisma.brandProduct.count({
+                where: { brandId: { in: brandIds }, status: "active" },
+              })
+            : 0;
           return {
             ...a,
             onboardedCount,
+            totalSKUs,
           };
         })
       );
@@ -529,14 +564,13 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{opsBranchName}</span>
           </div>
-
           {/* ONB_LEAD dashboard */}
           {isOnbLead && onbLeadData && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <a href="/ops/sellers" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Sellers</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
@@ -561,18 +595,29 @@ export default async function DashboardPage() {
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.warehousesCount}</div>
                   <div className="text-xs text-slate-500 mt-1">active at branch</div>
                 </a>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Filled</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{occupancyData?.occupied ?? 0}</div>
-                  <div className="text-xs text-slate-500 mt-1">occupied locations</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Empty</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900 text-emerald-600">{occupancyData?.empty ?? 0}</div>
-                  <div className="text-xs text-slate-500 mt-1">available locations</div>
-                </div>
               </div>
 
+              {/* Branch Onboarding Progress */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Onboarding Progress</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                    <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
+                    <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
+                    <div className="text-xs text-slate-500 mt-1">active products in branch sellers' brands</div>
+                  </div>
+                  <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                     <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarded SKUs</div>
+                     <div className="text-3xl font-bold mt-1 text-emerald-600">{onbLeadData.productsOnboarded}</div>
+                     <div className="text-xs text-slate-500 mt-1">onboarding records created branch-wide</div>
+                  </a>
+                  <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                     <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Pending Onboarding</div>
+                     <div className="text-3xl font-bold mt-1 text-amber-600">{onbLeadData.notOnboardedRecords}</div>
+                     <div className="text-xs text-slate-500 mt-1">remaining products to onboard</div>
+                  </a>
+                </div>
+              </div>
             </div>
           )}
 

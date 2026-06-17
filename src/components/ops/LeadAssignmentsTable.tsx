@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import BrandDetailsModal from "@/components/brands/BrandDetailsModal";
 
 interface LeadAssignmentsTableProps {
@@ -38,60 +39,81 @@ export default function LeadAssignmentsTable({ assignments }: LeadAssignmentsTab
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {assignments.map((a: any) => (
-                <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">
-                        {a.exec.fullName.slice(0, 2).toUpperCase()}
+              {assignments.map((a: any) => {
+                const completionPercentage = a.totalSKUs > 0 
+                  ? Math.min(100, Math.round((a.onboardedCount / a.totalSKUs) * 100))
+                  : 0;
+
+                return (
+                  <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">
+                          {a.exec.fullName.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">{a.exec.fullName}</div>
+                          <div className="text-[10px] text-slate-400">{a.exec.email}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-slate-800">{a.exec.fullName}</div>
-                        <div className="text-[10px] text-slate-400">{a.exec.email}</div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Link
+                        href={`/ops/onboarding?seller=${encodeURIComponent(a.seller.name)}`}
+                        className="font-semibold text-brand-600 hover:text-brand-850 hover:underline block"
+                      >
+                        {a.seller.name}
+                      </Link>
+                      <div className="text-xs text-slate-400 font-mono">
+                        {a.seller.sellerCode} {a.program ? `· ${a.program.name}` : ""}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="font-medium text-slate-800">{a.seller.name}</div>
-                    <div className="text-xs text-slate-400 font-mono">
-                      {a.seller.sellerCode} {a.program ? `· ${a.program.name}` : ""}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex flex-wrap gap-1">
-                      {a.seller.sellerBrands.map((sb: any) => (
-                        <button
-                          key={sb.brand.code}
-                          type="button"
-                          onClick={() => setSelectedBrandDetailsId(sb.brand.id)}
-                          className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 hover:bg-brand-100 text-brand-700 hover:text-brand-800 font-semibold border border-brand-200 transition-all text-left shadow-sm hover:scale-[1.03]"
-                        >
-                          {sb.brand.name}
-                        </button>
-                      ))}
-                      {a.seller.sellerBrands.length === 0 && (
-                        <span className="text-xs text-slate-400">—</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1">
+                        {a.seller.sellerBrands.map((sb: any) => (
+                          <button
+                            key={sb.brand.code}
+                            type="button"
+                            onClick={() => setSelectedBrandDetailsId(sb.brand.id)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 hover:bg-brand-100 text-brand-700 hover:text-brand-8-00 font-semibold border border-brand-200 transition-all text-left shadow-sm hover:scale-[1.03]"
+                          >
+                            {sb.brand.name}
+                          </button>
+                        ))}
+                        {a.seller.sellerBrands.length === 0 && (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="font-semibold text-slate-700">
+                        {a.onboardedCount} / {a.totalSKUs} SKU{a.totalSKUs !== 1 ? "s" : ""}
+                      </div>
+                      {a.totalSKUs > 0 && (
+                        <div className="w-24 bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden">
+                          <div
+                            className="bg-brand-600 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${completionPercentage}%` }}
+                          />
+                        </div>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="font-medium text-slate-700">{a.onboardedCount} SKU{a.onboardedCount !== 1 ? "s" : ""} onboarded</div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    {a.onboardedCount > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        Pending Onboarding
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {a.onboardedCount > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          Pending Onboarding
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

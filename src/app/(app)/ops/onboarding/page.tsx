@@ -144,7 +144,12 @@ export default async function OnboardingPage() {
                   {obExecAssignmentsList.map((a: any) => (
                     <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <div className="font-semibold text-slate-800">{a.seller.name}</div>
+                        <Link
+                          href={`/ops/onboarding/task/${a.id}`}
+                          className="font-bold text-brand-600 hover:text-brand-850 hover:underline block"
+                        >
+                          {a.seller.name}
+                        </Link>
                         <div className="text-[11px] text-slate-400 font-mono">
                           {a.seller.sellerCode} {a.seller.membershipId ? `· ${a.seller.membershipId}` : ""}
                         </div>
