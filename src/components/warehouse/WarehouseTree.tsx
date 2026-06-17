@@ -135,12 +135,25 @@ export default function WarehouseTree({
   const [parentNode, setParentNode] = useState<TreeNode | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
 
-  // Filter and sort L1 (Domain) categories only
-  const l1Categories = useMemo(() => {
-    return categories
-      .filter((c) => !c.parentId)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [categories]);
+  // Cascading category picker (Domain → Group → Family, up to L3)
+  const CAT_LEVELS = ["Domain", "Group", "Family", "Category", "Sub-Category"];
+  const catById = useMemo(() => new Map<string, CategoryOption>(categories.map((c) => [String(c.id), c])), [categories]);
+  const childrenOf = (pid: string | null) =>
+    categories.filter((c) => String(c.parentId ?? "") === String(pid ?? "")).sort((a, b) => a.name.localeCompare(b.name));
+  const selChain = useMemo(() => {
+    const out: CategoryOption[] = [];
+    let cur: string | null = form.categoryId ? String(form.categoryId) : null;
+    let guard = 0;
+    while (cur && catById.has(cur) && guard++ < 10) {
+      const c = catById.get(cur)!;
+      out.unshift(c);
+      cur = c.parentId ? String(c.parentId) : null;
+    }
+    return out;
+  }, [form.categoryId, catById]);
+  const l1Sel = selChain[0] ? String(selChain[0].id) : "";
+  const l2Sel = selChain[1] ? String(selChain[1].id) : "";
+  const l3Sel = selChain[2] ? String(selChain[2].id) : "";
 
   // Build tree from flat list
   const roots = useMemo<TreeNode[]>(() => {
@@ -631,21 +644,57 @@ export default function WarehouseTree({
               <label className="text-sm font-medium">
                 Category <span className="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
               </label>
-              <select
-                value={form.categoryId}
-                onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/60 backdrop-blur-md"
-              >
-                <option value="">— None / Select Category —</option>
-                {l1Categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <select
+                  value={l1Sel}
+                  onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm bg-white/60 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="">— Domain —</option>
+                  {childrenOf(null).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <select
+                  value={l2Sel}
+                  disabled={!l1Sel}
+                  onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value || l1Sel }))}
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm bg-white/60 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                >
+                  <option value="">{l1Sel ? "— Group (optional) —" : "—"}</option>
+                  {l1Sel && childrenOf(l1Sel).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <select
+                  value={l3Sel}
+                  disabled={!l2Sel}
+                  onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value || l2Sel }))}
+                  className="w-full rounded-md border border-slate-300 px-2 py-2 text-sm bg-white/60 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                >
+                  <option value="">{l2Sel ? "— Family (optional) —" : "—"}</option>
+                  {l2Sel && childrenOf(l2Sel).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
               <p className="text-[11px] text-slate-400">
-                Tag this node with a product category — e.g. Rack A1 holds Faucets. Used by OB Exec during placement.
+                Pick Domain → Group → Family (up to L3). Used by OB Exec during placement.
               </p>
+              {selChain.length > 0 && (
+                <table className="mt-2 w-full text-xs border border-slate-200 rounded overflow-hidden">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500">
+                      <th className="px-2 py-1 text-left font-medium">Level</th>
+                      <th className="px-2 py-1 text-left font-medium">Category</th>
+                      <th className="px-2 py-1 text-left font-medium">Code</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selChain.map((c, i) => (
+                      <tr key={c.id}>
+                        <td className="px-2 py-1 text-slate-500">{CAT_LEVELS[i] ?? `L${i + 1}`}</td>
+                        <td className="px-2 py-1 font-medium text-slate-800">{c.name}</td>
+                        <td className="px-2 py-1 font-mono text-slate-400">{c.code}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
               {(() => {
                 const selectedCat = categories.find((c) => String(c.id) === String(form.categoryId));
                 const attrs = selectedCat?.categoryAttributes?.map((ca) => ca.attribute) || [];
