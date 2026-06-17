@@ -45,7 +45,7 @@ async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
     id: l.id.toString(),
     label: actionLabel(l.action),
     tone: actionTone(l.action),
-    target: auditTarget(l.afterJson as never, l.beforeJson as never),
+    target: auditTarget(l.afterJson as never, l.beforeJson as never) ?? undefined,
     actor: l.actorUserId ? nameById.get(l.actorUserId.toString()) ?? "Someone" : "System",
     when: timeAgo(l.createdAt),
   }));
@@ -177,6 +177,7 @@ async function obExecCounts(branchId: bigint, userId: string) {
     copiesPlaced,
     copiesUnplaced,
     placementLocations,
+    sellerBrands,
   ] = await Promise.all([
     sellerIds.length > 0
       ? prisma.consignment.count({ where: { sellerId: { in: sellerIds }, status: "passed_back" } })
@@ -205,7 +206,22 @@ async function obExecCounts(branchId: bigint, userId: string) {
       },
     }),
     prisma.locationNode.count({ where: { branchId, isPlacementEligible: true } }),
+    sellerIds.length > 0
+      ? prisma.sellerBrand.findMany({
+          where: { sellerId: { in: sellerIds } },
+          select: { brandId: true },
+        })
+      : Promise.resolve([]),
   ]);
+
+  const brandIds = [...new Set(sellerBrands.map((sb) => sb.brandId))];
+  const totalRecords = brandIds.length > 0
+    ? await prisma.brandProduct.count({
+        where: { brandId: { in: brandIds }, status: "active" },
+      })
+    : 0;
+
+  const notOnboardedRecords = Math.max(0, totalRecords - productsOnboarded);
 
   return {
     assignedSellersCount,
@@ -214,6 +230,8 @@ async function obExecCounts(branchId: bigint, userId: string) {
     copiesPlaced,
     copiesUnplaced,
     placementLocations,
+    totalRecords,
+    notOnboardedRecords,
   };
 }
 
@@ -566,31 +584,22 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assigned Sellers</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.assignedSellersCount}</div>
-                  <div className={`text-xs mt-1 ${obExecData.pendingConsignments > 0 ? "text-emerald-600 font-medium" : "text-slate-500"}`}>
-                    {obExecData.pendingConsignments} consignments ready for you
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total Records</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.totalRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">products in assigned brands</div>
+                </div>
+                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarded Records</div>
+                  <div className="text-3xl font-bold mt-1 text-emerald-600">{obExecData.productsOnboarded}</div>
+                  <div className="text-xs text-slate-500 mt-1">local records created</div>
                 </a>
                 <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Products Onboarded</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.productsOnboarded}</div>
-                  <div className="text-xs text-slate-500 mt-1">local records</div>
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Not Onboarded Records</div>
+                  <div className="text-3xl font-bold mt-1 text-amber-600">{obExecData.notOnboardedRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">pending onboarding</div>
                 </a>
-                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Copies Placed</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.copiesPlaced}</div>
-                  <div className={`text-xs mt-1 ${obExecData.copiesUnplaced > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
-                    {obExecData.copiesUnplaced} unplaced
-                  </div>
-                </a>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Placement Locations</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.placementLocations}</div>
-                  <div className="text-xs text-slate-500 mt-1">eligible nodes at branch</div>
-                </div>
               </div>
             </div>
           )}
@@ -660,75 +669,90 @@ export default async function DashboardPage() {
       )}
 
       {occupancyData && (
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        isOBExec && !isOnbLead ? (
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Warehouse Location Occupancy</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Real-time status of eligible nodes in {displayBranchName}</p>
+              <h2 className="text-lg font-bold text-slate-900">Warehouse Tree</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Navigate and view the warehouse location layout for {displayBranchName}.</p>
             </div>
             <a
               href="/branch/warehouse"
-              className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors shrink-0"
             >
-              View Warehouse Tree -&gt;
+              View Warehouse Tree →
             </a>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            {/* Occupancy Rate */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-semibold text-slate-600">Occupancy Rate</span>
-                <span className="text-2xl font-extrabold text-slate-950">{occupancyData.occupancyRate}%</span>
+        ) : (
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Warehouse Location Occupancy</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Real-time status of eligible nodes in {displayBranchName}</p>
               </div>
-              <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                <div
-                  className="h-full bg-brand-600 rounded-full transition-all duration-500"
-                  style={{ width: `${occupancyData.occupancyRate}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-slate-400 font-medium">
-                <span>{occupancyData.occupied} Occupied</span>
-                <span>{occupancyData.empty} Empty</span>
-              </div>
+              <a
+                href="/branch/warehouse"
+                className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
+              >
+                View Warehouse Tree -&gt;
+              </a>
             </div>
 
-            {/* Counts Grid */}
-            <div className="grid grid-cols-2 gap-4 col-span-2">
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Placement Eligible Nodes</span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900">{occupancyData.total}</span>
-                  <span className="text-xs font-medium text-slate-500">total locations</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+              {/* Occupancy Rate */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-semibold text-slate-600">Occupancy Rate</span>
+                  <span className="text-2xl font-extrabold text-slate-950">{occupancyData.occupancyRate}%</span>
+                </div>
+                <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                  <div
+                    className="h-full bg-brand-600 rounded-full transition-all duration-500"
+                    style={{ width: `${occupancyData.occupancyRate}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 font-medium">
+                  <span>{occupancyData.occupied} Occupied</span>
+                  <span>{occupancyData.empty} Empty</span>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Available (Empty)</span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-emerald-600">{occupancyData.empty}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">Free</span>
+              {/* Counts Grid */}
+              <div className="grid grid-cols-2 gap-4 col-span-2">
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Placement Eligible Nodes</span>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-2xl font-bold text-slate-900">{occupancyData.total}</span>
+                    <span className="text-xs font-medium text-slate-500">total locations</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Master Copy Locations</span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-amber-700">{occupancyData.masterLocations}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200"> Master</span>
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Available (Empty)</span>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-2xl font-bold text-emerald-600">{occupancyData.empty}</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">Free</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Slave Copy Only Locations</span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-indigo-700">{occupancyData.slaveOnlyLocations}</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200"> Slave Only</span>
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Master Copy Locations</span>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-2xl font-bold text-amber-700">{occupancyData.masterLocations}</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200"> Master</span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Slave Copy Only Locations</span>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-2xl font-bold text-indigo-700">{occupancyData.slaveOnlyLocations}</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200"> Slave Only</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       <RecentActivityClient

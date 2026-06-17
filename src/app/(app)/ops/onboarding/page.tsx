@@ -107,14 +107,6 @@ export default async function OnboardingPage() {
               : `Onboarded products at ${branch?.name ?? "your branch"} (view only).`}
           </p>
         </div>
-        {isExec && (
-          <Link
-            href="/ops/onboarding/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-          >
-            + Onboard Product
-          </Link>
-        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -129,7 +121,7 @@ export default async function OnboardingPage() {
       {isExec && (
         <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-800">My Assigned Onboarding Tasks</h2>
+            <h2 className="text-sm font-bold text-slate-800">Open Onboarding Tickets</h2>
             <p className="text-xs text-slate-500 mt-0.5">Sellers assigned to you for product onboarding</p>
           </div>
           {obExecAssignmentsList.length === 0 ? (
