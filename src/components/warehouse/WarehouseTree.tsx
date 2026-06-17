@@ -458,13 +458,13 @@ export default function WarehouseTree({
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Nodes</div>
           <div className="mt-1 text-3xl font-bold text-slate-900">{totalNodes}</div>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-emerald-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Placement Eligible</div>
-          <div className="mt-1 text-3xl font-bold text-emerald-700">{placementNodes}</div>
+          <div className="mt-1 text-3xl font-bold text-emerald-600">{placementNodes}</div>
         </div>
-        <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-purple-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-purple-600">Warehouses</div>
-          <div className="mt-1 text-3xl font-bold text-purple-700">{warehouseCount}</div>
+          <div className="mt-1 text-3xl font-bold text-purple-500">{warehouseCount}</div>
         </div>
       </div>
 
