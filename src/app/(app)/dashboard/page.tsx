@@ -408,6 +408,17 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* Status colour legend */}
+      <div className="bg-white/60 backdrop-blur-md rounded border border-slate-200 px-4 py-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Status colour legend</div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600">
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
+          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
+        </div>
+      </div>
+
       {isHo || (!branchId && !opsBranchId) ? (
         // HO Admin Global Dashboard
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -28,11 +28,16 @@ body {
 }
 
 .glass-dark {
-  background-color: rgba(17, 17, 19, 0.6);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%);
+  /* Light theme: solid black sidebar */
+  background-color: rgba(10, 10, 12, 0.97);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 40%);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+/* Dark theme: keep it glassy/translucent over the dark body */
+html.dark .glass-dark {
+  background-color: rgba(20, 20, 22, 0.55);
 }
 
 /* Make the common Tailwind card pattern glassy automatically */
@@ -54,6 +59,19 @@ html.dark .glass {
 /* glassy cards from the sweep */
 html.dark .bg-white\/60 { background-color: rgba(28, 28, 30, 0.55) !important; }
 html.dark .bg-white\/70 { background-color: rgba(28, 28, 30, 0.6) !important; }
+/* solid + translucent white surfaces (stat cards, modals) → dark */
+html.dark .bg-white { background-color: rgba(24, 24, 27, 0.9) !important; }
+html.dark .bg-white\/95 { background-color: rgba(24, 24, 27, 0.95) !important; }
+html.dark .bg-white\/90 { background-color: rgba(24, 24, 27, 0.9) !important; }
+html.dark .bg-white\/80 { background-color: rgba(24, 24, 27, 0.85) !important; }
+html.dark .bg-white\/50 { background-color: rgba(24, 24, 27, 0.7) !important; }
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/60 { background-color: rgba(255, 255, 255, 0.03) !important; }
+/* gradient cards (from-white / from-*-50) → flat dark */
+html.dark [class*="bg-gradient-to-"] {
+  background-image: none !important;
+  background-color: rgba(28, 28, 30, 0.6) !important;
+}
 /* light surfaces → dark */
 html.dark .bg-slate-50,
 html.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.04) !important; }
@@ -70,7 +88,9 @@ html.dark .text-slate-900,
 html.dark .text-slate-800,
 html.dark .text-slate-700,
 html.dark .text-brand-900,
-html.dark .text-brand-700 { color: #ededed !important; }
+html.dark .text-brand-700,
+html.dark .text-brand-600,
+html.dark .text-brand-500 { color: #ededed !important; }
 html.dark .text-slate-600,
 html.dark .text-slate-500 { color: #b6b6bb !important; }
 html.dark .text-slate-400,

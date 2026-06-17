@@ -30,7 +30,7 @@ const createSchema = z.object({
   spocPhone: z.string().trim().max(30).optional().nullable(),
   spocEmail: z.string().trim().max(150).optional().nullable(),
   customFields: z.record(z.string(), z.any()).optional().nullable(),
-  status: z.enum(["active", "retired"]).optional().default("active"),
+  status: z.enum(["active", "retired", "archived"]).optional().default("active"),
   brandIds: z.array(z.coerce.bigint()).optional().default([]),
   categoryIds: z.array(z.coerce.bigint()).optional().default([]),
   contracts: z.array(z.object({

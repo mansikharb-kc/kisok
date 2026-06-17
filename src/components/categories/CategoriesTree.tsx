@@ -166,7 +166,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
       return (
         <div key={n.id}>
           <div
-            className={`group flex items-center gap-2 py-2.5 pr-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${
+            className={`group flex items-center gap-2 py-2.5 pr-3 border-b border-slate-100 cursor-pointer ${
               n.status === "retired" ? "opacity-50" : ""
             } ${selected?.id === n.id ? "bg-brand-50" : ""}`}
             style={{ paddingLeft: `${(n.level - 1) * 28 + 8}px` }}
@@ -210,7 +210,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
 
             <div className="ml-auto flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
               {(canCreate || !readOnly) && (
-                <div className="hidden group-hover:flex items-center gap-2">
+                <div className="flex items-center gap-2 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto">
                   {canCreate && n.level < MAX_LEVEL && (
                     <IconButton kind="add" tone="primary" title={requestMode ? "Request sub-category" : "Add sub-category"} onClick={() => openCreateChild(n)} />
                   )}

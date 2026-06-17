@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Apply saved theme before paint to avoid a flash of the wrong theme. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem('kc_theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}`,
+            __html: `try{if(localStorage.getItem('kc_theme')!=='light'){document.documentElement.classList.add('dark')}}catch(e){}`,
           }}
         />
       </head>
