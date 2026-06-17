@@ -47,12 +47,13 @@ export default async function PlacementPage() {
         status: true,
         product: { select: { name: true, sku: true, category: { select: { name: true } } } },
         seller: { select: { name: true, sellerCode: true } },
+        programId: true,
       },
     }),
     prisma.locationNode.findMany({
       where: { branchId, isPlacementEligible: true, status: "active" },
       orderBy: [{ path: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, locationId: true, path: true },
+      select: { id: true, name: true, locationId: true, path: true, programId: true },
     }),
     prisma.sampleSize.findMany({
       where: { branchId, status: "active" },

@@ -40,7 +40,7 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "card">("card");
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();

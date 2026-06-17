@@ -30,7 +30,7 @@ export default async function ConsignmentsPage({
   const isOverseer = hasRole(session.roles, "CONSIGNMENT_USER", "ONB_LEAD");
   const uid = BigInt(session.uid);
 
-  const ticketWhere = isOverseer ? { branchId } : { branchId, raisedBy: uid };
+  const ticketWhere = { branchId };
 
   const [ticketRows, assignments, obExecs, consignmentRows] = await Promise.all([
     prisma.ticket.findMany({
@@ -120,7 +120,7 @@ export default async function ConsignmentsPage({
         sellers={sellers as never[]}
         execs={execs as never[]}
         consignments={consignments as never[]}
-        canRaise={isExec}
+        canRaise={false}
         isExec={isExec}
         isConsign={isConsign}
         isLead={isLead}

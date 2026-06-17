@@ -53,9 +53,9 @@ type NodeType = (typeof NODE_TYPES)[number];
 
 const NODE_META: Record<NodeType, { badge: string; icon: string; desc: string }> = {
   WAREHOUSE: { badge: "bg-purple-100 text-purple-700", icon: "", desc: "Top-level warehouse / zone" },
-  BLOCK:     { badge: "bg-indigo-100 text-indigo-700", icon: "", desc: "Block (docket) â€” carries the RMS screen" },
-  RACK:      { badge: "bg-amber-100 text-amber-700",   icon: "", desc: "Rack â€” placement eligible" },
-  TRAY:      { badge: "bg-green-100 text-green-700",   icon: "", desc: "Tray â€” placement eligible" },
+  BLOCK:     { badge: "bg-indigo-100 text-indigo-700", icon: "", desc: "Block (docket) — carries the RMS screen" },
+  RACK:      { badge: "bg-amber-100 text-amber-700",   icon: "", desc: "Rack — placement eligible" },
+  TRAY:      { badge: "bg-green-100 text-green-700",   icon: "", desc: "Tray — placement eligible" },
   CUSTOM:    { badge: "bg-slate-100 text-slate-600",   icon: "", desc: "Custom node type" },
 };
 
@@ -80,8 +80,8 @@ function combineCode(parentCode: string, segment: string): string {
   return `${parent}-${child}`;
 }
 
-// Allowed child types per parent â€” warehouse hierarchy:
-// WAREHOUSE â†’ BLOCK â†’ RACK â†’ TRAY â†’ CUSTOM
+// Allowed child types per parent — warehouse hierarchy:
+// WAREHOUSE -> BLOCK -> RACK -> TRAY -> CUSTOM
 // A BLOCK (docket) is screen-mountable; RACK and TRAY are placement-eligible.
 const ALLOWED_CHILDREN: Record<string, NodeType[]> = {
   WAREHOUSE: ["BLOCK", "RACK", "CUSTOM"],
@@ -285,7 +285,7 @@ export default function WarehouseTree({
   async function remove(node: LocationNode) {
     if (node._count.copies > 0) {
       alert(
-        `Cannot delete "${node.name}" â€” it has ${node._count.copies} product copies placed here.\n\nPer policy (PRD Â§B5), all copies must be relocated to another location before this node can be removed.`
+        `Cannot delete "${node.name}" — it has ${node._count.copies} product copies placed here.\n\nPer policy (PRD §B5), all copies must be relocated to another location before this node can be removed.`
       );
       return;
     }
@@ -322,7 +322,7 @@ export default function WarehouseTree({
                 onClick={() => toggle(n.id)}
                 className="w-5 h-5 shrink-0 flex items-center justify-center text-slate-400 hover:text-slate-700"
               >
-                <span className={`text-[10px] transition-transform inline-block ${isOpen ? "rotate-90" : ""}`}>â–¶</span>
+                <span className={`text-[10px] transition-transform inline-block ${isOpen ? "rotate-90" : ""}`}>▶</span>
               </button>
             ) : (
               <span className="w-5 shrink-0" />
@@ -373,7 +373,7 @@ export default function WarehouseTree({
                     )
                   ) : (
                     <span title="Empty location" className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-250 font-medium">
-                      â—Œ Empty
+                      ○ Empty
                     </span>
                   )}
                 </>
@@ -475,7 +475,7 @@ export default function WarehouseTree({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search nodesâ€¦"
+            placeholder="Search nodes..."
             className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
@@ -494,7 +494,7 @@ export default function WarehouseTree({
             {meta.icon} {type}
           </span>
         ))}
-        <span className="ml-2 text-slate-400">Â· Hover rows for actions Â· BLOCK =  screen Â· RACK/TRAY =  placement</span>
+        <span className="ml-2 text-slate-400">· Hover rows for actions · BLOCK = screen · RACK/TRAY = placement</span>
       </div>
 
       {/* Tree */}
@@ -519,7 +519,7 @@ export default function WarehouseTree({
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold">
                 {editingNode
-                  ? `Edit â€” ${editingNode.name}`
+                  ? `Edit — ${editingNode.name}`
                   : parentNode
                   ? `Add sub-node under "${parentNode.name}"`
                   : "Add Warehouse"}
@@ -636,7 +636,7 @@ export default function WarehouseTree({
                 onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white/60 backdrop-blur-md"
               >
-                <option value="">â€” None / Select Category â€”</option>
+                <option value="">— None / Select Category —</option>
                 {l1Categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -644,7 +644,7 @@ export default function WarehouseTree({
                 ))}
               </select>
               <p className="text-[11px] text-slate-400">
-                Tag this node with a product category â€” e.g. Rack A1 holds Faucets. Used by OB Exec during placement.
+                Tag this node with a product category — e.g. Rack A1 holds Faucets. Used by OB Exec during placement.
               </p>
               {(() => {
                 const selectedCat = categories.find((c) => String(c.id) === String(form.categoryId));
@@ -713,7 +713,7 @@ export default function WarehouseTree({
                 disabled={busy}
                 className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-60"
               >
-                {busy ? "Savingâ€¦" : editingNode ? "Save changes" : "Add node"}
+                {busy ? "Saving..." : editingNode ? "Save changes" : "Add node"}
               </button>
             </div>
           </form>

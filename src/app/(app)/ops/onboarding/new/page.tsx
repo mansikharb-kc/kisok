@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
+import { prisma, serialize } from "@/lib/prisma";
 import OnboardingForm from "@/components/ops/OnboardingForm";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,12 @@ export default async function NewOnboardingPage() {
 
   const roleEntry = session.roles.find((r) => r.code === "OB_EXEC" && r.branchId);
   if (!roleEntry?.branchId) redirect("/dashboard");
+
+  const categoryRows = await prisma.category.findMany({
+    where: { status: "active" },
+    select: { id: true, name: true, parentId: true },
+  });
+  const flatCategories = serialize(categoryRows);
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -27,7 +34,7 @@ export default async function NewOnboardingPage() {
         </p>
       </div>
 
-      <OnboardingForm />
+      <OnboardingForm flatCategories={flatCategories} />
     </div>
   );
 }

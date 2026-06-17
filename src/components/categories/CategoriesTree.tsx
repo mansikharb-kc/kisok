@@ -218,7 +218,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
                   {!readOnly && (
                     <>
                       <IconButton kind="edit" title="Edit" onClick={() => startEdit(n)} />
-                      <IconButton kind={n.status === "active" ? "retire" : "activate"} title={n.status === "active" ? "Retire" : "Activate"} onClick={() => patchStatus(n)} />
+                      <IconButton kind={n.status === "active" ? "retire" : "activate"} title={n.status === "active" ? "Deactivate" : "Activate"} onClick={() => patchStatus(n)} />
                       <IconButton kind="archive" title="Archive" onClick={() => remove(n)} />
                     </>
                   )}

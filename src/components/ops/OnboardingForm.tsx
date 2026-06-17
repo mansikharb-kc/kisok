@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
+import { LEVELS } from "@/lib/categoryLevels";
 
 type Brand = { id: string; name: string; code: string };
-type Seller = { id: string; name: string; sellerCode: string; brands: Brand[] };
+type Seller = { id: string; name: string; sellerCode: string; brands: Brand[]; categoryIds: string[] };
 type Program = { id: string; name: string; code: string };
 type Category = { id: string; name: string; code: string };
 type AttrOption = { id: string; value: string };
@@ -46,7 +48,11 @@ async function postJSON(url: string, body: unknown) {
   return data;
 }
 
-export default function OnboardingForm() {
+export default function OnboardingForm({
+  flatCategories = [],
+}: {
+  flatCategories?: FlatCat[];
+}) {
   const router = useRouter();
 
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -61,10 +67,26 @@ export default function OnboardingForm() {
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
 
-  // Category search
-  const [catQuery, setCatQuery] = useState("");
-  const [catResults, setCatResults] = useState<Category[]>([]);
-  const [catOpen, setCatOpen] = useState(false);
+  // Category cascade selection
+  const parents = useMemo(() => buildParentOptions(flatCategories), [flatCategories]);
+  const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
+  const [sel, setSel] = useState<Record<number, string>>({});
+
+  function optionsForLevel(k: number) {
+    if (k === 1) return parents.filter((p) => p.level === 1);
+    const parentSel = sel[k - 1];
+    if (!parentSel) return [];
+    return parents.filter((p) => p.level === k && p.parentId === parentSel);
+  }
+
+  function selectAt(k: number, id: string) {
+    setSel((prev) => {
+      const next: Record<number, string> = {};
+      for (let i = 1; i < k; i++) if (prev[i]) next[i] = prev[i];
+      if (id) next[k] = id;
+      return next;
+    });
+  }
 
   // SKU lookup result
   const [existing, setExisting] = useState<ExistingMaster | null>(null);
@@ -107,19 +129,7 @@ export default function OnboardingForm() {
       .catch((e) => setBootErr(e.message));
   }, []);
 
-  // Debounced category search.
-  const catTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (catTimer.current) clearTimeout(catTimer.current);
-    catTimer.current = setTimeout(() => {
-      getJSON(`/api/onboarding/options?q=${encodeURIComponent(catQuery)}`)
-        .then((d) => setCatResults(d.categories ?? []))
-        .catch(() => setCatResults([]));
-    }, 250);
-    return () => {
-      if (catTimer.current) clearTimeout(catTimer.current);
-    };
-  }, [catQuery]);
+  // Debounced category search is removed in favor of cascading selector
 
   // When the seller changes, auto-select their first associated brand.
   useEffect(() => {
@@ -135,6 +145,43 @@ export default function OnboardingForm() {
     }
     resetSkuState();
   }, [sellerId, selectedSeller]);
+
+  // When the seller changes, auto-select their first category or the one from URL parameters.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlCategoryId = params.get("categoryId");
+
+    let targetCatId = "";
+    if (isBootingRef.current && urlCategoryId) {
+      targetCatId = urlCategoryId;
+    } else if (selectedSeller && selectedSeller.categoryIds && selectedSeller.categoryIds.length > 0) {
+      targetCatId = selectedSeller.categoryIds[0];
+    }
+
+    if (targetCatId) {
+      const path: string[] = [];
+      let currentId: string | null = targetCatId;
+      while (currentId) {
+        const node = byId.get(currentId);
+        if (!node) break;
+        path.unshift(currentId);
+        currentId = node.parentId;
+      }
+      const initialSel: Record<number, string> = {};
+      path.forEach((id, idx) => {
+        initialSel[idx + 1] = id;
+      });
+      setSel(initialSel);
+
+      const leafNode = byId.get(targetCatId);
+      if (leafNode) {
+        setCategory({ id: leafNode.id, name: leafNode.name, code: leafNode.number });
+      }
+    } else {
+      setSel({});
+      setCategory(null);
+    }
+  }, [sellerId, selectedSeller, byId]);
 
   // Reset downstream SKU state whenever the master's identity inputs change.
   useEffect(() => {
@@ -335,52 +382,132 @@ export default function OnboardingForm() {
       {/* Step 4: Category */}
       <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-800 mb-4">2. Category</h2>
-        {category ? (
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-            <div>
-              <div className="text-sm font-medium text-slate-800">{category.name}</div>
-              <div className="font-mono text-xs text-slate-500">{category.code}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setCategory(null)}
-              className="text-xs text-brand-600 hover:underline"
-            >
-              Change
-            </button>
-          </div>
-        ) : (
-          <div className="relative">
-            <input
-              value={catQuery}
-              onChange={(e) => setCatQuery(e.target.value)}
-              onFocus={() => setCatOpen(true)}
-              placeholder="Search categories by name or code…"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            {catOpen && catResults.length > 0 && (
-              <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-lg">
-                {catResults.map((c) => (
-                  <li key={c.id}>
+        <div className="space-y-3">
+          {selectedSeller && selectedSeller.categoryIds && selectedSeller.categoryIds.length > 0 && (
+            <div className="mb-4 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Seller's Operating Categories
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {selectedSeller.categoryIds.map((catId) => {
+                  const node = byId.get(catId);
+                  if (!node) return null;
+                  const isCurrent = category?.id === catId;
+                  return (
                     <button
+                      key={catId}
                       type="button"
                       onClick={() => {
-                        setCategory(c);
-                        setCatOpen(false);
-                        setCatQuery("");
+                        const path: string[] = [];
+                        let currentId: string | null = catId;
+                        while (currentId) {
+                          const n = byId.get(currentId);
+                          if (!n) break;
+                          path.unshift(currentId);
+                          currentId = n.parentId;
+                        }
+                        const newSel: Record<number, string> = {};
+                        path.forEach((id, idx) => {
+                          newSel[idx + 1] = id;
+                        });
+                        setSel(newSel);
+                        setCategory({ id: node.id, name: node.name, code: node.number });
                       }}
-                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all hover:scale-[1.005] duration-150 ${
+                        isCurrent
+                          ? "border-brand-600 bg-brand-50/40 text-brand-950 shadow-sm"
+                          : "border-slate-200 bg-white hover:border-slate-300 text-slate-700 hover:bg-slate-50"
+                      }`}
                     >
-                      <span className="text-slate-800">{c.name}</span>
-                      <span className="font-mono text-xs text-slate-400">{c.code}</span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5 ${
+                          isCurrent
+                            ? "bg-brand-100 text-brand-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        L{node.level}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold truncate">{node.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Code: {node.number}
+                        </div>
+                      </div>
+                      {isCurrent && (
+                        <span className="text-brand-600 font-bold shrink-0">✓</span>
+                      )}
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-1 text-xs text-slate-400">Showing up to 50 matches.</p>
-          </div>
-        )}
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {LEVELS.map((lvl, idx) => {
+            const k = idx + 1;
+            if (k > 1 && !sel[k - 1]) return null;
+            const opts = optionsForLevel(k);
+            return (
+              <div key={k} className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center shrink-0 ${lvl.badge}`}>
+                  {lvl.label}
+                </span>
+                <select
+                  value={sel[k] ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      selectAt(k, val);
+                      const node = byId.get(val);
+                      if (node) {
+                        setCategory({ id: node.id, name: node.name, code: node.number });
+                      }
+                    } else {
+                      selectAt(k, "");
+                      const parentVal = sel[k - 1];
+                      if (parentVal) {
+                        const node = byId.get(parentVal);
+                        if (node) {
+                          setCategory({ id: node.id, name: node.name, code: node.number });
+                        }
+                      } else {
+                        setCategory(null);
+                      }
+                    }
+                  }}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
+                  {opts.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.number} · {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+          {category && (
+            <div className="rounded-lg border border-brand-200 bg-brand-50/30 px-4 py-2.5 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-brand-700">Selected Category:</span>
+                <div className="text-sm font-bold text-slate-800 mt-0.5">{category.name}</div>
+                <div className="font-mono text-xs text-slate-500">{category.code}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSel({});
+                  setCategory(null);
+                }}
+                className="text-xs text-brand-600 font-bold hover:underline"
+              >
+                Reset Selection
+              </button>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Step 5: SKU */}
