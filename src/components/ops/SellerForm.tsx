@@ -953,7 +953,7 @@ export default function SellerForm({
                             }
                             className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                           />
-                          Contract Verified
+                          Contract Verified ( In Future We Will Be Verified It Legally )
                         </label>
                       </div>
 
