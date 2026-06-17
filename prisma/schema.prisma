@@ -346,6 +346,7 @@ model LocationNode {
   path                String?  @db.VarChar(255)
   depth               Int      @default(0)
   isPlacementEligible Boolean  @default(false) @map("is_placement_eligible")
+  quantity            Int      @default(1)
   isScreenMountable   Boolean  @default(false) @map("is_screen_mountable")
   locationId          String?  @unique @map("location_id") @db.VarChar(64)
   status              String   @default("active") @db.VarChar(20)

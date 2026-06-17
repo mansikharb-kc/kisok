@@ -48,6 +48,7 @@ export default function WarehouseNodeForm({
     nodeType: initialType,
     categoryId: editNode?.categoryId ?? "",
     isPlacementEligible: initialFlags.isPlacementEligible,
+    quantity: editNode?.quantity ?? 1,
     isScreenMountable: initialFlags.isScreenMountable,
   });
   const [isCodeManual, setIsCodeManual] = useState(!!editNode);
@@ -90,6 +91,7 @@ export default function WarehouseNodeForm({
         nodeType: form.nodeType,
         categoryId: form.categoryId || null,
         isPlacementEligible: form.isPlacementEligible,
+        quantity: form.isPlacementEligible ? Math.max(1, Number(form.quantity) || 1) : 1,
         isScreenMountable: form.isScreenMountable,
       };
       const res = editNode
@@ -254,6 +256,19 @@ export default function WarehouseNodeForm({
               <div className="text-xs text-slate-500">Products / samples can be physically placed here. A location ID will be generated.</div>
             </div>
           </label>
+          {form.isPlacementEligible && (
+            <div className="ml-3 pl-6 border-l-2 border-slate-200 space-y-1">
+              <label className="text-sm font-medium">Quantity <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                min={1}
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value === "" ? 1 : Math.max(1, Number(e.target.value)) }))}
+                className={`${I} max-w-[160px]`}
+              />
+              <p className="text-[11px] text-slate-400">How many can be placed at this location. Default 1.</p>
+            </div>
+          )}
           <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 cursor-pointer hover:bg-slate-50">
             <input type="checkbox" checked={form.isScreenMountable} onChange={(e) => setForm((f) => ({ ...f, isScreenMountable: e.target.checked }))} className="mt-0.5" />
             <div>

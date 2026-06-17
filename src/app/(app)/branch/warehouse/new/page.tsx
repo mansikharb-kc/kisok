@@ -17,6 +17,7 @@ const NODE_SELECT = {
   path: true,
   depth: true,
   isPlacementEligible: true,
+  quantity: true,
   isScreenMountable: true,
   locationId: true,
   status: true,

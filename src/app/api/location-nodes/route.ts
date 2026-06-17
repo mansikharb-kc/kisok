@@ -15,6 +15,7 @@ const createSchema = z.object({
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/, "code: letters, numbers, - and _ only").optional().nullable(),
   categoryId: z.coerce.bigint().optional().nullable(),
   isPlacementEligible: z.boolean().optional(),
+  quantity: z.coerce.number().int().min(1).optional(),
   isScreenMountable: z.boolean().optional(),
 });
 
@@ -99,7 +100,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { branchId, programId, parentId, nodeType, name, code, categoryId, isPlacementEligible, isScreenMountable } = parsed.data;
+  const { branchId, programId, parentId, nodeType, name, code, categoryId, isPlacementEligible, quantity, isScreenMountable } = parsed.data;
 
   // Confirm branch admin owns this branch
   const ownsThisBranch = session.roles.some(
@@ -140,6 +141,7 @@ export const POST = handler(async (req: Request) => {
       depth,
       path: "",
       isPlacementEligible: isPlacementEligible ?? false,
+      quantity: isPlacementEligible ? (quantity ?? 1) : 1,
       isScreenMountable: isScreenMountable ?? false,
       status: "active",
     },

@@ -16,6 +16,7 @@ export type LocationNode = {
   path: string | null;
   depth: number;
   isPlacementEligible: boolean;
+  quantity: number;
   isScreenMountable: boolean;
   locationId: string | null;
   status: string;

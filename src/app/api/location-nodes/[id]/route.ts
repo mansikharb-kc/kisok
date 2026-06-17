@@ -12,6 +12,7 @@ const updateSchema = z.object({
   nodeType: z.enum(NODE_TYPES).optional(),
   categoryId: z.coerce.bigint().optional().nullable(),
   isPlacementEligible: z.boolean().optional(),
+  quantity: z.coerce.number().int().min(1).optional(),
   isScreenMountable: z.boolean().optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
@@ -49,7 +50,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const node = await prisma.locationNode.update({
     where: { id },
-    data: { ...data, locationId },
+    data: { ...data, locationId, ...(data.isPlacementEligible === false ? { quantity: 1 } : {}) },
   });
 
   await writeAudit({
