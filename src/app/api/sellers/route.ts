@@ -43,6 +43,7 @@ const createSchema = z.object({
     remarks: z.string().trim().max(500).optional().nullable(),
     obExecUserId: z.coerce.bigint().optional().nullable(),
     contractMediaId: z.coerce.bigint().optional().nullable(),
+    customFields: z.record(z.string(), z.any()).optional().nullable(),
   })).optional().default([]),
 });
 
@@ -116,6 +117,7 @@ export const POST = handler(async (req: Request) => {
             verified: c.verified,
             remarks: c.remarks,
             contractMediaId: c.contractMediaId,
+            customFields: c.customFields ?? undefined,
           })),
         },
       },

@@ -30,7 +30,12 @@ export default async function Page({ params }: { params: { id: string } }) {
     }),
     prisma.brand.findMany({
       where: { status: "active", approvalStatus: "approved" },
-      select: { id: true, name: true, code: true },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        brandCategories: { select: { categoryId: true } },
+      },
       orderBy: { name: "asc" },
     }),
     prisma.branchProgram.findMany({
@@ -47,7 +52,14 @@ export default async function Page({ params }: { params: { id: string } }) {
           },
         },
       },
-      select: { id: true, fullName: true, email: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        _count: {
+          select: { assignments: true },
+        },
+      },
       orderBy: { fullName: "asc" },
     }),
     prisma.category.findMany({
