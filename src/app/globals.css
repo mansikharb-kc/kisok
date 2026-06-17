@@ -54,6 +54,19 @@ html.dark .glass {
 /* glassy cards from the sweep */
 html.dark .bg-white\/60 { background-color: rgba(28, 28, 30, 0.55) !important; }
 html.dark .bg-white\/70 { background-color: rgba(28, 28, 30, 0.6) !important; }
+/* solid + translucent white surfaces (stat cards, modals) → dark */
+html.dark .bg-white { background-color: rgba(24, 24, 27, 0.9) !important; }
+html.dark .bg-white\/95 { background-color: rgba(24, 24, 27, 0.95) !important; }
+html.dark .bg-white\/90 { background-color: rgba(24, 24, 27, 0.9) !important; }
+html.dark .bg-white\/80 { background-color: rgba(24, 24, 27, 0.85) !important; }
+html.dark .bg-white\/50 { background-color: rgba(24, 24, 27, 0.7) !important; }
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/60 { background-color: rgba(255, 255, 255, 0.03) !important; }
+/* gradient cards (from-white / from-*-50) → flat dark */
+html.dark [class*="bg-gradient-to-"] {
+  background-image: none !important;
+  background-color: rgba(28, 28, 30, 0.6) !important;
+}
 /* light surfaces → dark */
 html.dark .bg-slate-50,
 html.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.04) !important; }
