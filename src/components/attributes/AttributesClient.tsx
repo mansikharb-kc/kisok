@@ -344,7 +344,7 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
                       ) : (
                         <div className="inline-flex items-center gap-2">
                           <IconButton kind="edit" tone="primary" title="Edit" onClick={() => startEdit(a)} />
-                          <IconButton kind={a.status === "active" ? "retire" : "activate"} title={a.status === "active" ? "Retire" : "Activate"} onClick={() => toggleStatus(a)} disabled={busy} />
+                          <IconButton kind={a.status === "active" ? "retire" : "activate"} title={a.status === "active" ? "Deactivate" : "Activate"} onClick={() => toggleStatus(a)} disabled={busy} />
                           <IconButton kind="archive" title="Archive" onClick={() => remove(a)} disabled={busy} />
                         </div>
                       )}
