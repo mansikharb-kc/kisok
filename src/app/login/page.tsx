@@ -49,7 +49,7 @@ export default function LoginPage() {
         />
         <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpeg" alt="KC IMS" className="h-16 w-auto mb-8 rounded bg-white/95 p-2" />
+          <img src="/logo.jpeg" alt="KC IMS" className="h-20 w-auto max-w-[200px] object-contain mb-8" />
           <p className="text-brand-400 text-xs font-semibold uppercase tracking-[0.2em]">
             Inventory Management System
           </p>
