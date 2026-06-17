@@ -10,7 +10,7 @@ const PATHS: Record<Kind, React.ReactNode> = {
   delete: (<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>),
   archive: (<><rect x="1" y="3" width="22" height="5" rx="1" /><path d="M3 8v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8" /><line x1="10" y1="13" x2="14" y2="13" /></>),
   restore: (<><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></>),
-  retire: (<><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><line x1="10" y1="12" x2="14" y2="12" /></>),
+  retire: (<><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></>),
   activate: (<><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></>),
   approve: (<polyline points="20 6 9 17 4 12" />),
   reject: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
