@@ -398,6 +398,7 @@ model Seller {
   spocName     String?  @map("spoc_name") @db.VarChar(120)
   spocPhone    String?  @map("spoc_phone") @db.VarChar(30)
   spocEmail    String?  @map("spoc_email") @db.VarChar(150)
+  customFields Json?    @map("custom_fields")
   status       String   @default("active") @db.VarChar(20)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

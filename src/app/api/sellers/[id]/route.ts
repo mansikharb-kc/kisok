@@ -10,6 +10,12 @@ const updateSchema = z.object({
   name: z.string().trim().min(1).max(150).optional(),
   sellerCode: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/).optional(),
   membershipId: z.string().trim().max(60).optional().nullable(),
+  memberType: z.string().trim().max(40).optional().nullable(),
+  salesperson: z.string().trim().max(120).optional().nullable(),
+  spocName: z.string().trim().max(120).optional().nullable(),
+  spocPhone: z.string().trim().max(30).optional().nullable(),
+  spocEmail: z.string().trim().max(150).optional().nullable(),
+  customFields: z.record(z.string(), z.any()).optional().nullable(),
   status: z.enum(["active", "retired"]).optional(),
   brandIds: z.array(z.coerce.bigint()).optional(),
   categoryIds: z.array(z.coerce.bigint()).optional(),
@@ -62,7 +68,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandIds, categoryIds, contracts, ...data } = parsed.data;
+  const { brandIds, categoryIds, contracts, customFields, ...data } = parsed.data;
 
   // Check unique code
   if (data.sellerCode) {
@@ -85,6 +91,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       where: { id },
       data: {
         ...data,
+        customFields: customFields ?? undefined,
       },
     });
 
