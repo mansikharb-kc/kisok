@@ -186,7 +186,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   return (
     <div className="space-y-4">
       {/* Search and Quick Filters bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="relative z-20 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Dropdown Filters */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="relative w-full sm:w-48 md:w-56">
