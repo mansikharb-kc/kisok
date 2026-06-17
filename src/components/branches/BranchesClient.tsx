@@ -27,13 +27,13 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Active</div>
-          <div className="mt-2 text-4xl font-bold text-emerald-700">{activeCount}</div>
+          <div className="mt-2 text-4xl font-bold text-emerald-600">{activeCount}</div>
         </div>
-        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Master records</div>
-          <div className="mt-2 text-4xl font-bold text-indigo-700">{initial.length}</div>
+          <div className="mt-2 text-4xl font-bold text-indigo-600">{initial.length}</div>
         </div>
       </div>
 

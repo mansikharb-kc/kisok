@@ -133,7 +133,7 @@ export default function OnboardingList({
   return (
     <div className="space-y-4">
       {/* Search and Filters Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-sm">
         {/* Filters Group */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <SearchableSelect
