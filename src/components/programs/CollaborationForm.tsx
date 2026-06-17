@@ -400,7 +400,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               </button>
             </div>
             <p className="text-[11px] text-slate-400">
-              Pehle domain choose karo, phir andar sub-categories. Har colour ek level dikhata hai. Jis level tak jaana hai jaake “Add” dabao.
+              Choose a domain first, then drill into sub-categories. Each colour marks a level. Go as deep as you want, then click “Add”.
             </p>
           </div>
         </div>
