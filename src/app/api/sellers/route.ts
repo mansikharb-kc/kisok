@@ -24,6 +24,12 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(150),
   sellerCode: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - and _ only"),
   membershipId: z.string().trim().max(60).optional().nullable(),
+  memberType: z.string().trim().max(40).optional().nullable(),
+  salesperson: z.string().trim().max(120).optional().nullable(),
+  spocName: z.string().trim().max(120).optional().nullable(),
+  spocPhone: z.string().trim().max(30).optional().nullable(),
+  spocEmail: z.string().trim().max(150).optional().nullable(),
+  customFields: z.record(z.string(), z.any()).optional().nullable(),
   status: z.enum(["active", "retired"]).optional().default("active"),
   brandIds: z.array(z.coerce.bigint()).optional().default([]),
   categoryIds: z.array(z.coerce.bigint()).optional().default([]),
@@ -69,7 +75,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandIds, categoryIds, contracts, ...rest } = parsed.data;
+  const { brandIds, categoryIds, contracts, customFields, ...rest } = parsed.data;
 
   // Verify unique sellerCode globally
   const existingCode = await prisma.seller.findUnique({
@@ -93,6 +99,7 @@ export const POST = handler(async (req: Request) => {
       data: {
         ...rest,
         branchId,
+        customFields: customFields ?? undefined,
         sellerBrands: {
           create: brandIds.map((bid) => ({ brandId: bid })),
         },

@@ -144,39 +144,20 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!branchId) return setError("Select a branch for this collaboration");
+    if (!branchId) return setError("Select a branch for this program");
     if (programMode === "existing" && !programId) return setError("Select a program");
     if (programMode === "new" && (!programName.trim() || !programCode.trim()))
       return setError("Enter a program name and code");
-    if (!collaboration.trim()) return setError("Collaboration (company) name is required");
-
-    // Required custom fields
-    for (const f of customFields) {
-      if (f.isRequired && !customValues[f.code]?.toString().trim()) {
-        return setError(`"${f.label}" is required`);
-      }
-    }
 
     setBusy(true);
     try {
+      // HO creates only the program master (+ branch link). Member/contract/category
+      // data is entered later by the Onboarding Lead on the Add Seller page.
       const payload = {
         branchId,
         programId: programMode === "existing" ? programId : undefined,
         programName: programMode === "new" ? programName.trim() : undefined,
         programCode: programMode === "new" ? programCode.trim() : undefined,
-        collaboration: collaboration.trim(),
-        membershipId: membershipId.trim() || undefined,
-        memberType: memberType || undefined,
-        salesperson: salesperson.trim() || undefined,
-        spocName: spocName.trim() || undefined,
-        spocPhone: spocPhone.trim() || undefined,
-        spocEmail: spocEmail.trim() || undefined,
-        categoryIds: categories.map((c) => c.id),
-        contractStart: contractStart || undefined,
-        contractEnd: contractEnd || undefined,
-        fitoutPeriod: fitoutPeriod.trim() || undefined,
-        collaborationTenure: collaborationTenure.trim() || undefined,
-        customFields: customValues,
       };
       const res = await fetch("/api/collaborations", {
         method: "POST",
@@ -256,6 +237,11 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
         </div>
 
+        {/* View-only preview — Onboarding Lead fills these on the Add Seller page */}
+        <fieldset disabled className="space-y-5 opacity-70 m-0 p-0 border-0 min-w-0">
+          <p className="text-xs text-slate-500 italic">
+            Member, contract &amp; category details are filled by the Onboarding Lead during seller onboarding — shown here for reference only.
+          </p>
         {/* Member / Collaboration */}
         <div className={cardCls}>
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Member</h2>
@@ -414,10 +400,12 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               </button>
             </div>
             <p className="text-[11px] text-slate-400">
-              Pehle domain choose karo, phir andar sub-categories. Har colour ek level dikhata hai. Jis level tak jaana hai jaake “Add” dabao.
+              Choose a domain first, then drill into sub-categories. Each colour marks a level. Go as deep as you want, then click “Add”.
             </p>
           </div>
         </div>
+
+        </fieldset>
 
         {/* Custom fields */}
         <div className={cardCls}>

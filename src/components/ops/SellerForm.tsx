@@ -204,11 +204,29 @@ type ExecOption = {
   email: string;
 };
 
+type CustomField = {
+  id: string;
+  label: string;
+  code: string;
+  fieldType: "text" | "number" | "date" | "enum";
+  options: string[] | null;
+  isRequired: boolean;
+};
+
+const MEMBER_TYPES = ["Paid", "Sponsor", "Barter"];
+
 type SellerEdit = {
   id: string;
   name: string;
   sellerCode: string;
   membershipId: string | null;
+  memberType?: string | null;
+  salesperson?: string | null;
+  spocName?: string | null;
+  spocPhone?: string | null;
+  spocEmail?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  customFields?: any;
   status: string;
   sellerBrands: { brandId: string }[];
   sellerCategories?: { categoryId: string }[];
@@ -251,6 +269,30 @@ export default function SellerForm({
   const [codeTouched, setCodeTouched] = useState(editing);
   const [membershipId, setMembershipId] = useState(seller?.membershipId ?? "");
   const [status, setStatus] = useState(seller?.status ?? "active");
+
+  // Member / SPOC details
+  const [memberType, setMemberType] = useState(seller?.memberType ?? "");
+  const [salesperson, setSalesperson] = useState(seller?.salesperson ?? "");
+  const [spocName, setSpocName] = useState(seller?.spocName ?? "");
+  const [spocPhone, setSpocPhone] = useState(seller?.spocPhone ?? "");
+  const [spocEmail, setSpocEmail] = useState(seller?.spocEmail ?? "");
+
+  // HO-defined custom fields
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomField[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cf = (seller?.customFields ?? {}) as Record<string, any>;
+    const init: Record<string, string> = {};
+    for (const k of Object.keys(cf)) init[k] = cf[k] == null ? "" : String(cf[k]);
+    return init;
+  });
+
+  useEffect(() => {
+    fetch("/api/custom-fields?entity=collaboration")
+      .then((r) => r.json())
+      .then((d) => setCustomFieldDefs(d.fields ?? []))
+      .catch(() => {});
+  }, []);
 
   // Brands Mapped
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(
@@ -540,6 +582,12 @@ export default function SellerForm({
         sellerCode,
         membershipId: membershipId.trim() || null,
         status,
+        memberType: memberType || null,
+        salesperson: salesperson.trim() || null,
+        spocName: spocName.trim() || null,
+        spocPhone: spocPhone.trim() || null,
+        spocEmail: spocEmail.trim() || null,
+        customFields: customValues,
         brandIds: selectedBrandIds,
         categoryIds: pickedCategoryIds,
         contracts: contractPayload,
@@ -676,6 +724,29 @@ export default function SellerForm({
               <option value="active">Active</option>
               <option value="retired">Retired</option>
             </select>
+          </div>
+          <div>
+            <label className={L}>Type of member</label>
+            <select value={memberType} onChange={(e) => setMemberType(e.target.value)} className={I}>
+              <option value="">— Select —</option>
+              {MEMBER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={L}>Salesperson</label>
+            <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={I} placeholder="KC salesperson" />
+          </div>
+          <div>
+            <label className={L}>SPOC name</label>
+            <input value={spocName} onChange={(e) => setSpocName(e.target.value)} className={I} placeholder="Contact person" />
+          </div>
+          <div>
+            <label className={L}>SPOC phone</label>
+            <input value={spocPhone} onChange={(e) => setSpocPhone(e.target.value)} className={I} placeholder="+91…" />
+          </div>
+          <div className="col-span-2">
+            <label className={L}>SPOC email</label>
+            <input type="email" value={spocEmail} onChange={(e) => setSpocEmail(e.target.value)} className={I} placeholder="name@company.com" />
           </div>
         </div>
       </div>
@@ -912,51 +983,114 @@ export default function SellerForm({
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className={L}>Collaboration Tenure</label>
-                          <input
-                            value={details.collaborationTenure}
-                            onChange={(e) =>
-                              updateContract(p.id, "collaborationTenure", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 12 months"
-                          />
+                      <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
+                        {/* Left Column: Collaboration Tenure Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Collaboration Tenure</label>
+                            <input
+                              value={details.collaborationTenure}
+                              onChange={(e) =>
+                                updateContract(p.id, "collaborationTenure", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatTenure(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "collaborationTenure", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 12 months"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure Start Date</label>
+                            <input
+                              type="date"
+                              value={details.contractStart}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure End Date</label>
+                            <input
+                              type="date"
+                              value={details.contractEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Fitout Period</label>
-                          <input
-                            value={details.fitoutPeriod}
-                            onChange={(e) =>
-                              updateContract(p.id, "fitoutPeriod", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 30 days"
-                          />
+
+                        {/* Right Column: Fitout Period Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Fitout Period</label>
+                            <input
+                              value={details.fitoutPeriod}
+                              onChange={(e) =>
+                                updateContract(p.id, "fitoutPeriod", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatFitoutPeriod(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "fitoutPeriod", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 45 Days"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period Start Date</label>
+                            <input
+                              type="date"
+                              value={details.baseStartDate}
+                              onChange={(e) =>
+                                updateContract(p.id, "baseStartDate", e.target.value)
+                              }
+                              className={I}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period End Date</label>
+                            <input
+                              type="date"
+                              value={details.fitoutEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Contract Start Date</label>
-                          <input
-                            type="date"
-                            value={details.contractStart}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractStart", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
-                        <div>
-                          <label className={L}>Contract End Date</label>
-                          <input
-                            type="date"
-                            value={details.contractEnd}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractEnd", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
+
+                        {details.baseStartDate && (
+                          <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
+                            <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout Start:</span>
+                              <strong className="text-slate-800">{formatDMY(details.baseStartDate)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout End:</span>
+                              <strong className="text-slate-800">{details.fitoutEnd ? formatDMY(details.fitoutEnd) : "—"}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab Start:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractStart)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab End:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractEnd)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">
@@ -1092,6 +1226,36 @@ export default function SellerForm({
                   </div>
                 );
               })}
+          </div>
+        </div>
+      )}
+
+      {/* Additional (HO-defined) fields */}
+      {customFieldDefs.length > 0 && (
+        <div className={card}>
+          <StepHeader n={6} title="Additional Fields" sub="Extra fields defined by HO for this onboarding" />
+          <div className="grid grid-cols-2 gap-4">
+            {customFieldDefs.map((f) => (
+              <div key={f.id}>
+                <label className={L}>
+                  {f.label}
+                  {f.isRequired && <span className="text-red-500"> *</span>}
+                </label>
+                {f.fieldType === "enum" ? (
+                  <select value={customValues[f.code] ?? ""} onChange={(e) => setCustomValues((v) => ({ ...v, [f.code]: e.target.value }))} className={I}>
+                    <option value="">— Select —</option>
+                    {(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type={f.fieldType === "number" ? "number" : f.fieldType === "date" ? "date" : "text"}
+                    value={customValues[f.code] ?? ""}
+                    onChange={(e) => setCustomValues((v) => ({ ...v, [f.code]: e.target.value }))}
+                    className={I}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
