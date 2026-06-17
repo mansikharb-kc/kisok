@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 
 export type SelectedProgramRow = {
   id: string;
@@ -45,6 +46,9 @@ export default function BranchProgramsClient({
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [targetProgram, setTargetProgram] = useState<AvailableProgramRow | null>(null);
+  const [remarks, setRemarks] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,14 +56,14 @@ export default function BranchProgramsClient({
     return available.filter((p) => `${p.name} ${p.code}`.toLowerCase().includes(q));
   }, [available, query]);
 
-  async function request(programId: string) {
+  async function request(programId: string, remarksText: string) {
     setBusyId(programId);
     setError("");
     try {
       const res = await fetch("/api/branch-programs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programId }),
+        body: JSON.stringify({ programId, remarks: remarksText }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -67,6 +71,9 @@ export default function BranchProgramsClient({
         return;
       }
       router.refresh();
+      setRequestModalOpen(false);
+      setTargetProgram(null);
+      setRemarks("");
     } catch {
       setError("Request failed. Check your session or network connection.");
     } finally {
@@ -178,7 +185,12 @@ export default function BranchProgramsClient({
                   <div className="font-mono text-[11px] text-slate-500">{p.code}</div>
                 </div>
                 <button
-                  onClick={() => request(p.id)}
+                  onClick={() => {
+                    setTargetProgram(p);
+                    setRemarks("");
+                    setError("");
+                    setRequestModalOpen(true);
+                  }}
                   disabled={busyId === p.id}
                   className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
                 >
@@ -189,6 +201,81 @@ export default function BranchProgramsClient({
           </ul>
         )}
       </div>
+
+      {/* Request Remarks Modal */}
+      {requestModalOpen && targetProgram && (
+        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-10 overflow-y-auto">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!remarks.trim()) {
+                setError("Remarks / Description is required");
+                return;
+              }
+              request(targetProgram.id, remarks);
+            }}
+            className="bg-white/80 backdrop-blur-md rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">
+                Request Program
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestModalOpen(false);
+                  setTargetProgram(null);
+                  setRemarks("");
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-sm text-slate-600">
+              You are requesting the program <span className="font-semibold text-slate-800">{targetProgram.name}</span> ({targetProgram.code}) for your branch.
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="remarks" className="text-sm font-medium text-slate-700 block">
+                Remarks / Description <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                id="remarks"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Please enter a description or reason for this request..."
+                rows={4}
+                required
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestModalOpen(false);
+                  setTargetProgram(null);
+                  setRemarks("");
+                }}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busyId === targetProgram.id || !remarks.trim()}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
+              >
+                {busyId === targetProgram.id ? "Requesting…" : "Submit Request"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

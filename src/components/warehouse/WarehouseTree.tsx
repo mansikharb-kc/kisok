@@ -185,9 +185,7 @@ export default function WarehouseTree({
               {n.isScreenMountable && (
                 <span title="Screen mountable" className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium"> Screen</span>
               )}
-              {n.locationId && (
-                <span className="font-mono text-[10px] text-slate-400">{n.locationId}</span>
-              )}
+
             </div>
 
             {/* Status badge */}

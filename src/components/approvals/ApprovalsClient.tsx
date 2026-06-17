@@ -88,7 +88,8 @@ export default function ApprovalsClient({ initialRequests }: { initialRequests: 
           summaryStr.includes(q) ||
           requesterStr.includes(q) ||
           branchStr.includes(q) ||
-          reasonStr.includes(q);
+          reasonStr.includes(q) ||
+          (r.payload?.remarks || "").toLowerCase().includes(q);
           
         if (!matchesQuery) return false;
       }
@@ -223,6 +224,12 @@ export default function ApprovalsClient({ initialRequests }: { initialRequests: 
                     </td>
                     <td className="px-4 py-3 text-slate-800">
                       <div className="font-medium">{summarize(req)}</div>
+                      {req.payload?.remarks && (
+                        <div className="mt-1 text-xs text-slate-500 bg-slate-50/50 border border-slate-100 rounded p-1.5 font-normal max-w-md break-words">
+                          <span className="font-semibold text-slate-600 block text-[10px] uppercase tracking-wider mb-0.5">Remarks:</span>
+                          {req.payload.remarks}
+                        </div>
+                      )}
                       {req.status !== "pending" && req.reason && (
                         <div className="mt-0.5 text-xs text-slate-400">Reason: {req.reason}</div>
                       )}

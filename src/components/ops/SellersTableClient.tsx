@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
 import { formatDaysToYMD } from "@/lib/brandMeta";
+import { formatDate } from "@/lib/format";
 
 type SellerRow = {
   id: string;
@@ -187,6 +188,33 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Dropdown Filters */}
         <div className="flex flex-wrap items-end gap-2 text-xs">
+          <div className="flex flex-col gap-1 w-full sm:w-48 md:w-56 text-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Search</span>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, code, brand..."
+                className="w-full rounded-lg border border-slate-200 py-1 pl-8 pr-6 font-medium text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-450 focus:bg-white transition-all text-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold p-0.5 text-[10px]"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
           <SearchableSelect
             label="Seller"
             value={selectedSeller}
@@ -219,13 +247,14 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
             placeholder="All Executives"
           />
 
-          {(selectedSeller || selectedBrand || selectedProgram || selectedExec) && (
+          {(selectedSeller || selectedBrand || selectedProgram || selectedExec || searchQuery) && (
             <button
               onClick={() => {
                 setSelectedSeller("");
                 setSelectedBrand("");
                 setSelectedProgram("");
                 setSelectedExec("");
+                setSearchQuery("");
               }}
               className="pb-1.5 text-xs text-brand-600 hover:text-brand-800 font-semibold cursor-pointer underline"
             >
@@ -292,6 +321,14 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     Membership ID <SortIndicator field="membershipId" />
                   </div>
                 </th>
+                <th
+                  onClick={() => handleSort("createdAt")}
+                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                >
+                  <div className="flex items-center">
+                    Date Created <SortIndicator field="createdAt" />
+                  </div>
+                </th>
                 <th className="px-4 py-3 text-left font-semibold">Brands</th>
                 <th className="px-4 py-3 text-left font-semibold">Programs / Contracts</th>
                 <th
@@ -329,6 +366,9 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   </td>
                   <td className="px-4 py-3 align-middle font-mono text-xs text-slate-600">
                     {s.membershipId ?? <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 align-middle text-xs text-slate-600 font-medium">
+                    {formatDate(s.createdAt)}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <div className="flex flex-wrap gap-1">
@@ -470,7 +510,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   </span>
                 </div>
 
-                {/* Membership ID & Fitout Period */}
+                {/* Membership ID & Date Created */}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100/60 text-xs">
                   <div className="min-w-0">
                     <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Membership ID</div>
@@ -478,6 +518,16 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                       {s.membershipId ?? <span className="text-slate-300">—</span>}
                     </div>
                   </div>
+                  <div className="min-w-0">
+                    <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Date Created</div>
+                    <div className="text-slate-700 mt-0.5 truncate text-[11px]">
+                      {formatDate(s.createdAt)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fitout Period ( In Days ) */}
+                <div className="pt-2 border-t border-slate-100/60 text-xs">
                   <div className="min-w-0">
                     <div className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Fitout Period ( In Days )</div>
                     <div className="font-medium text-slate-700 mt-0.5 text-[11px]">

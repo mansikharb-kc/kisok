@@ -17,6 +17,7 @@ function branchIdFor(session: { roles: { code: string; branchId: string | null }
 
 const addSchema = z.object({
   programId: z.coerce.bigint(),
+  remarks: z.string().trim().min(1, "Remarks/Description is mandatory"),
 });
 
 export const GET = handler(async () => {
@@ -41,7 +42,7 @@ export const POST = handler(async (req: Request) => {
 
   const parsed = addSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
-  const { programId } = parsed.data;
+  const { programId, remarks } = parsed.data;
 
   const program = await prisma.program.findUnique({ where: { id: programId } });
   if (!program) return fail("Program not found", 404);
@@ -69,6 +70,7 @@ export const POST = handler(async (req: Request) => {
             branchId: branchId.toString(),
             programId: programId.toString(),
             programName: program.name,
+            remarks: remarks,
           },
         },
       });
@@ -92,6 +94,7 @@ export const POST = handler(async (req: Request) => {
       programId: programId.toString(),
       program: program.name,
       approvalStatus: branchProgram.approvalStatus,
+      remarks: remarks,
     },
   });
 

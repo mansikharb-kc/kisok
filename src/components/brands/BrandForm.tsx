@@ -449,51 +449,28 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
               <input value={city} onChange={(e) => setCity(e.target.value)} className={I} placeholder="e.g. New Delhi" />
             </div>
           </div>
-          <div>
-            <label className={L}>State</label>
-            <input value={stateName} onChange={(e) => setStateName(e.target.value)} className={I} placeholder="e.g. Delhi" />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={L}>State</label>
+              <input value={stateName} onChange={(e) => setStateName(e.target.value)} className={I} placeholder="e.g. Delhi" />
+            </div>
+            <div>
+              <label className={L}>GST Number</label>
+              <input
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                maxLength={15}
+                className={`${I} font-mono ${gstNumber && !isValidGstin(gstNumber) ? "border-red-400" : ""}`}
+                placeholder="07ABCDE1234F1Z5"
+              />
+              {gstNumber && !isValidGstin(gstNumber) && (
+                <p className="text-[11px] text-red-500 mt-1">Invalid GSTIN — must be 15 chars (e.g. 07ABCDE1234F1Z5)</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 4. Membership & Contract */}
-      <div className={card}>
-        <StepHeader n={4} title="Membership & Contract" sub="Agreement duration, terms, and tax records" />
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={L}>GST Number</label>
-            <input
-              value={gstNumber}
-              onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-              maxLength={15}
-              className={`${I} font-mono ${gstNumber && !isValidGstin(gstNumber) ? "border-red-400" : ""}`}
-              placeholder="07ABCDE1234F1Z5"
-            />
-            {gstNumber && !isValidGstin(gstNumber) && (
-              <p className="text-[11px] text-red-500 mt-1">Invalid GSTIN — must be 15 chars (e.g. 07ABCDE1234F1Z5)</p>
-            )}
-          </div>
-          <div>
-            <label className={L}>Agreement Duration</label>
-            <select value={agreementDuration} onChange={(e) => setAgreementDuration(e.target.value)} className={I}>
-              <option value="">Select duration</option>
-              {AGREEMENT_DURATIONS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={L}>Start Date</label>
-            <input type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} className={I} />
-          </div>
-          <div>
-            <label className={L}>End Date <span className="text-brand-500 normal-case font-normal">auto-calculated</span></label>
-            <input value={formatDMY(contractEnd)} readOnly className={`${I} bg-slate-50 text-slate-500`} placeholder="Select start date & duration" />
-          </div>
-          <div className="col-span-2">
-            <label className={L}>Description / Notes</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={I} placeholder="Additional terms, instructions, or notes…" />
-          </div>
-        </div>
-      </div>
 
       <div className="flex justify-end gap-2">
         <button type="button" onClick={() => router.push("/masters/brands")} className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm hover:bg-slate-50">Cancel</button>
