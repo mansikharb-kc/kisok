@@ -3,6 +3,7 @@ import { ROLE_LABELS, RoleCode, hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 import LeadAssignmentsTable from "@/components/ops/LeadAssignmentsTable";
+import RecentActivityClient from "@/components/dashboard/RecentActivityClient";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   let whereClause = {};
@@ -730,36 +731,18 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div>
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h2>
-        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md divide-y divide-slate-100">
-          {activity.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">
-              No activity yet.{" "}
-              {isOnbLead
-                ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
-                : isOBExec
-                  ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
-                  : isConsignment
-                    ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
-                    : "Actions you take (create, edit, retire...) will appear here."}
-            </div>
-          ) : (
-            activity.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${a.tone}`} />
-                <div className="text-sm min-w-0">
-                  <span className="font-medium text-slate-800">{a.label}</span>
-                  {a.target && <span className="text-slate-600"> {a.target}</span>}
-                </div>
-                <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-                  {a.actor} · {a.when}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      <RecentActivityClient
+        items={activity}
+        emptyHint={
+          isOnbLead
+            ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
+            : isOBExec
+            ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
+            : isConsignment
+            ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
+            : "Actions you take (create, edit, retire...) will appear here."
+        }
+      />
     </div>
   );
 }
