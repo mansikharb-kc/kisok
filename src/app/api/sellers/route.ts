@@ -137,18 +137,27 @@ export const POST = handler(async (req: Request) => {
       },
     });
 
-    const assignmentsToCreate = contracts
-      .filter((c) => c.obExecUserId)
-      .map((c) => ({
-        sellerId: created.id,
-        programId: c.programId,
-        obExecUserId: c.obExecUserId!,
-        assignedBy: BigInt(session.uid),
-      }));
+    const assignmentsToCreate = [];
+    const seenExecIds = new Set<string>();
+    for (const c of contracts) {
+      if (c.obExecUserId) {
+        const execIdStr = String(c.obExecUserId);
+        if (!seenExecIds.has(execIdStr)) {
+          seenExecIds.add(execIdStr);
+          assignmentsToCreate.push({
+            sellerId: created.id,
+            programId: c.programId,
+            obExecUserId: c.obExecUserId,
+            assignedBy: BigInt(session.uid),
+          });
+        }
+      }
+    }
 
     if (assignmentsToCreate.length > 0) {
       await tx.sellerAssignment.createMany({
         data: assignmentsToCreate,
+        skipDuplicates: true,
       });
     }
 

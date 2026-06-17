@@ -252,6 +252,17 @@ export default function SellerForm({
     return initial;
   });
 
+  const [activeContractTab, setActiveContractTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    const activeIds = Object.keys(activeContracts);
+    if (activeIds.length === 0) {
+      setActiveContractTab(null);
+    } else if (!activeContractTab || !activeContracts[activeContractTab]) {
+      setActiveContractTab(activeIds[0]);
+    }
+  }, [activeContracts, activeContractTab]);
+
   useEffect(() => {
     const addedBrands = selectedBrandIds.filter((id) => !prevSelectedBrandIds.includes(id));
     const removedBrands = prevSelectedBrandIds.filter((id) => !selectedBrandIds.includes(id));
@@ -406,6 +417,7 @@ export default function SellerForm({
 
   // Toggle program contract selection
   function toggleProgram(programId: string) {
+    let added = false;
     setActiveContracts((prev) => {
       const next = { ...prev };
       if (next[programId]) {
@@ -425,9 +437,14 @@ export default function SellerForm({
           contractMediaUrl: null,
           categoryIds: [],
         };
+        added = true;
       }
       return next;
     });
+
+    if (added) {
+      setActiveContractTab(programId);
+    }
   }
 
   function toggleContractCategory(programId: string, categoryId: string) {
@@ -1013,9 +1030,36 @@ export default function SellerForm({
               })}
             </div>
 
+            {Object.keys(activeContracts).length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-250/60 pb-3.5 mb-4">
+                {programs
+                  .filter((p) => !!activeContracts[p.id])
+                  .map((p) => {
+                    const details = activeContracts[p.id];
+                    const active = activeContractTab === p.id;
+                    const isComplete = details.collaborationTenure && details.fitoutPeriod && details.baseStartDate;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setActiveContractTab(p.id)}
+                        className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition duration-150 active:scale-[0.98] border ${
+                          active
+                            ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isComplete ? "bg-emerald-500" : "bg-amber-400"}`}></span>
+                        <span>{p.name} Contract</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            )}
+
             <div className="space-y-4">
               {programs
-                .filter((p) => !!activeContracts[p.id])
+                .filter((p) => p.id === activeContractTab && !!activeContracts[p.id])
                 .map((p) => {
                   const details = activeContracts[p.id];
                   return (
