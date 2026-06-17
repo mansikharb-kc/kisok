@@ -79,6 +79,9 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       where: { id },
       data: {
         ...data,
+        // Approving a brand also makes it active (e.g. an Onboarding Lead's brand
+        // created as pending_approval becomes usable once HO approves).
+        ...(data.approvalStatus === "approved" && data.status === undefined ? { status: "active" } : {}),
         ...(contractStart !== undefined ? { contractStart: contractStart ? new Date(contractStart) : null } : {}),
         ...(contractEnd !== undefined ? { contractEnd: contractEnd ? new Date(contractEnd) : null } : {}),
       },
