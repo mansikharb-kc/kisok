@@ -168,25 +168,8 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
     return result;
   }, [rows, searchQuery, sortField, sortOrder, selectedSeller, selectedBrand, selectedProgram, selectedExec]);
 
-  const SortIndicator = ({ field }: { field: SortField }) => {
-    const active = sortField === field;
-    return (
-      <span className={`ml-1 inline-flex shrink-0 transition-opacity ${active ? "text-brand-600" : "text-slate-400 opacity-50 group-hover:opacity-90"}`}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          {!active ? (
-            <>
-              <polyline points="8 9 12 5 16 9" />
-              <polyline points="8 15 12 19 16 15" />
-            </>
-          ) : sortOrder === "asc" ? (
-            <polyline points="6 14 12 8 18 14" />
-          ) : (
-            <polyline points="6 10 12 16 18 10" />
-          )}
-        </svg>
-      </span>
-    );
-  };
+  // Sort indicators removed for a clean header — columns still sort on click.
+  const SortIndicator = (_props: { field: SortField }) => null;
 
   return (
     <div className="space-y-4">
@@ -281,53 +264,43 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
         </div>
       ) : viewMode === "table" ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
+          <table className="w-full table-fixed text-sm">
+            <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-200">
               <tr>
                 <th
                   onClick={() => handleSort("name")}
-                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[16%]"
                 >
-                  <div className="flex items-center">
-                    Seller <SortIndicator field="name" />
-                  </div>
+                  Seller <SortIndicator field="name" />
                 </th>
                 <th
                   onClick={() => handleSort("membershipId")}
-                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[11%]"
                 >
-                  <div className="flex items-center">
-                    Membership ID <SortIndicator field="membershipId" />
-                  </div>
+                  Membership ID <SortIndicator field="membershipId" />
                 </th>
                 <th
                   onClick={() => handleSort("createdAt")}
-                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[10%]"
                 >
-                  <div className="flex items-center">
-                    Date Created <SortIndicator field="createdAt" />
-                  </div>
+                  Date Created <SortIndicator field="createdAt" />
                 </th>
-                <th className="px-4 py-3 text-left font-semibold">Brands</th>
-                <th className="px-4 py-3 text-left font-semibold">Programs / Contracts</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[11%]">Brands</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[12%]">Programs</th>
                 <th
                   onClick={() => handleSort("fitout")}
-                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[10%]"
                 >
-                  <div className="flex items-center">
-                    Fitout Period ( In Days ) <SortIndicator field="fitout" />
-                  </div>
+                  Fitout <SortIndicator field="fitout" />
                 </th>
-                <th className="px-4 py-3 text-left font-semibold">Assigned Exec</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[10%]">Assigned Exec</th>
                 <th
                   onClick={() => handleSort("status")}
-                  className="px-4 py-3 text-left font-semibold group cursor-pointer hover:bg-slate-100/70 transition-colors select-none"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[8%]"
                 >
-                  <div className="flex items-center">
-                    Status <SortIndicator field="status" />
-                  </div>
+                  Status <SortIndicator field="status" />
                 </th>
-                <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                <th className="px-3 py-3 text-right whitespace-nowrap w-[12%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -340,8 +313,8 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   }`}
                 >
                   <td className="px-4 py-3 align-middle">
-                    <div className="font-semibold text-slate-800">{s.name}</div>
-                    <div className="font-mono text-[11px] text-slate-400">{s.sellerCode}</div>
+                    <div className="font-semibold text-slate-800 truncate">{s.name}</div>
+                    <div className="font-mono text-[11px] text-slate-400 truncate">{s.sellerCode}</div>
                   </td>
                   <td className="px-4 py-3 align-middle font-mono text-xs text-slate-600">
                     {s.membershipId ?? <span className="text-slate-300">—</span>}
@@ -350,88 +323,65 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     {formatDate(s.createdAt)}
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.sellerBrands.length === 0 ? (
-                        <span className="text-slate-300 text-xs">—</span>
-                      ) : (
-                        s.sellerBrands.map((sb) => (
-                          <span
-                            key={sb.brand.code}
-                            className="text-[11px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-medium shadow-sm"
-                          >
-                            {sb.brand.name}
-                          </span>
-                        ))
-                      )}
-                    </div>
+                    {s.sellerBrands.length === 0 ? (
+                      <span className="text-slate-300 text-xs">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                        {s.sellerBrands.map((sb) => <span key={sb.brand.code} className="truncate">{sb.brand.name}</span>)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.contracts.length === 0 ? (
-                        <span className="text-slate-300 text-xs">—</span>
-                      ) : (
-                        s.contracts.map((c) => (
-                          <span
-                            key={c.id}
-                            className={`text-[11px] px-2 py-0.5 rounded-md font-medium border shadow-sm ${
-                              c.verified
-                                ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
-                                : "bg-amber-50/70 text-amber-700 border-amber-100"
-                            }`}
-                          >
-                            {c.program.name} {c.verified ? "✓" : "⏳"}
+                    {s.contracts.length === 0 ? (
+                      <span className="text-slate-300 text-xs">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5 text-xs">
+                        {s.contracts.map((c) => (
+                          <span key={c.id} className={c.verified ? "text-emerald-600" : "text-amber-600"}>
+                            {c.program.name}{c.verified ? " ✓" : ""}
                           </span>
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.contracts.length === 0 ? (
-                        <span className="text-slate-300 text-xs">—</span>
-                      ) : (
-                        s.contracts.map((c) => {
+                    {s.contracts.length === 0 ? (
+                      <span className="text-slate-300 text-xs">—</span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                        {s.contracts.map((c) => {
                           const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
                           return (
-                            <span
-                              key={c.id}
-                              className="text-[11px] px-2.5 py-1 rounded-md bg-slate-50 text-slate-655 font-medium border border-slate-200/80 shadow-sm leading-relaxed"
-                            >
-                              {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
+                            <span key={c.id}>
+                              <span className="font-medium text-slate-700">{rawDays ? `${rawDays} days` : "N/A"}</span>
                             </span>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-3 align-middle text-xs text-slate-600">
+                  <td className="px-4 py-3 align-middle text-xs">
                     {s.assignments.length === 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50/50 border border-amber-100/60 px-2 py-0.5 rounded-md text-[11px] shadow-sm">
+                      <span className="inline-flex items-center gap-1.5 text-amber-600 font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
                         Unassigned
                       </span>
                     ) : (
-                      s.assignments.map((a) => a.exec.fullName).join(", ")
+                      <span className="text-slate-600">{s.assignments.map((a) => a.exec.fullName).join(", ")}</span>
                     )}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border shadow-sm ${
-                        s.status === "active"
-                          ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
-                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-white ${
+                        s.status === "active" ? "bg-emerald-600" : "bg-slate-500"
                       }`}
                     >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          s.status === "active" ? "bg-emerald-500" : "bg-slate-400"
-                        }`}
-                      />
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                       <span className="capitalize">{s.status}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
+                  <td className="px-3 py-3 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="inline-flex items-center justify-end gap-1.5">
                       <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/ops/sellers/${s.id}/edit`)} />
                       <IconButton kind="view" title="View" onClick={() => router.push(`/ops/sellers/${s.id}`)} />
                     </div>

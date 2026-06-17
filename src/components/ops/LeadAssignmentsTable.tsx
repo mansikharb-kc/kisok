@@ -79,13 +79,13 @@ export default function LeadAssignmentsTable({ assignments }: LeadAssignmentsTab
                   </td>
                   <td className="px-5 py-3.5">
                     {a.onboardedCount > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-emerald-600 text-white px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-amber-600 text-white px-2.5 py-1 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
                         Pending Onboarding
                       </span>
                     )}

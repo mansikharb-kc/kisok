@@ -37,11 +37,11 @@ export const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as co
 export type NodeType = (typeof NODE_TYPES)[number];
 
 export const NODE_META: Record<NodeType, { badge: string; icon: string; desc: string }> = {
-  WAREHOUSE: { badge: "bg-purple-100 text-purple-700", icon: "", desc: "Top-level warehouse / zone" },
-  BLOCK:     { badge: "bg-indigo-100 text-indigo-700", icon: "", desc: "Block (docket) — carries the RMS screen" },
-  RACK:      { badge: "bg-amber-100 text-amber-700",   icon: "", desc: "Rack — placement eligible" },
-  TRAY:      { badge: "bg-green-100 text-green-700",   icon: "", desc: "Tray — placement eligible" },
-  CUSTOM:    { badge: "bg-slate-100 text-slate-600",   icon: "", desc: "Custom node type" },
+  WAREHOUSE: { badge: "bg-purple-600 text-white", icon: "", desc: "Top-level warehouse / zone" },
+  BLOCK:     { badge: "bg-indigo-600 text-white", icon: "", desc: "Block (docket) — carries the RMS screen" },
+  RACK:      { badge: "bg-amber-600 text-white",  icon: "", desc: "Rack — placement eligible" },
+  TRAY:      { badge: "bg-green-600 text-white",  icon: "", desc: "Tray — placement eligible" },
+  CUSTOM:    { badge: "bg-slate-600 text-white",  icon: "", desc: "Custom node type" },
 };
 
 export function nodeMeta(type: string) {
