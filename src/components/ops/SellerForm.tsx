@@ -895,51 +895,114 @@ export default function SellerForm({
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className={L}>Collaboration Tenure</label>
-                          <input
-                            value={details.collaborationTenure}
-                            onChange={(e) =>
-                              updateContract(p.id, "collaborationTenure", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 12 months"
-                          />
+                      <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
+                        {/* Left Column: Collaboration Tenure Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Collaboration Tenure</label>
+                            <input
+                              value={details.collaborationTenure}
+                              onChange={(e) =>
+                                updateContract(p.id, "collaborationTenure", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatTenure(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "collaborationTenure", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 12 months"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure Start Date</label>
+                            <input
+                              type="date"
+                              value={details.contractStart}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Collaboration Tenure End Date</label>
+                            <input
+                              type="date"
+                              value={details.contractEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Fitout Period</label>
-                          <input
-                            value={details.fitoutPeriod}
-                            onChange={(e) =>
-                              updateContract(p.id, "fitoutPeriod", e.target.value)
-                            }
-                            className={I}
-                            placeholder="e.g. 30 days"
-                          />
+
+                        {/* Right Column: Fitout Period Dates */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={L}>Fitout Period</label>
+                            <input
+                              value={details.fitoutPeriod}
+                              onChange={(e) =>
+                                updateContract(p.id, "fitoutPeriod", e.target.value)
+                              }
+                              onBlur={(e) => {
+                                const formatted = formatFitoutPeriod(e.target.value);
+                                if (formatted !== e.target.value) {
+                                  updateContract(p.id, "fitoutPeriod", formatted);
+                                }
+                              }}
+                              className={I}
+                              placeholder="e.g. 45 Days"
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period Start Date</label>
+                            <input
+                              type="date"
+                              value={details.baseStartDate}
+                              onChange={(e) =>
+                                updateContract(p.id, "baseStartDate", e.target.value)
+                              }
+                              className={I}
+                            />
+                          </div>
+                          <div>
+                            <label className={L}>Fitout Period End Date</label>
+                            <input
+                              type="date"
+                              value={details.fitoutEnd}
+                              readOnly
+                              disabled
+                              className={`${I} bg-slate-50 cursor-not-allowed`}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className={L}>Contract Start Date</label>
-                          <input
-                            type="date"
-                            value={details.contractStart}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractStart", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
-                        <div>
-                          <label className={L}>Contract End Date</label>
-                          <input
-                            type="date"
-                            value={details.contractEnd}
-                            onChange={(e) =>
-                              updateContract(p.id, "contractEnd", e.target.value)
-                            }
-                            className={I}
-                          />
-                        </div>
+
+                        {details.baseStartDate && (
+                          <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
+                            <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout Start:</span>
+                              <strong className="text-slate-800">{formatDMY(details.baseStartDate)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Fitout End:</span>
+                              <strong className="text-slate-800">{details.fitoutEnd ? formatDMY(details.fitoutEnd) : "—"}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab Start:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractStart)}</strong>
+                            </div>
+                            <span className="text-slate-300 font-bold">➔</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Collab End:</span>
+                              <strong className="text-brand-600">{formatDMY(details.contractEnd)}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-2 flex items-center justify-between">
