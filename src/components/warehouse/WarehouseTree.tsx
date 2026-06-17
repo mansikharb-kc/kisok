@@ -448,7 +448,7 @@ export default function WarehouseTree({
         <p className="text-sm text-slate-500 mt-1">
           Building the location tree for program{" "}
           <span className="font-semibold text-slate-700">{programName}</span>. Hierarchy:
-          Warehouse â†’ Block â†’ Rack â†’ Tray. Each node can be flagged for product placement and/or screen mounting.
+          Warehouse → Block → Rack → Tray. Each node can be flagged for product placement and/or screen mounting.
         </p>
       </div>
 

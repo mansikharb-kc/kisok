@@ -382,7 +382,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Signed in as {roleLabels.join(", ")} {displayBranchName && `Â· ${displayBranchName}`}
+          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
         </p>
       </div>
 
@@ -428,7 +428,7 @@ export default async function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">HO Masters</span>
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue Â· view only</span>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue · view only</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
@@ -444,7 +444,7 @@ export default async function DashboardPage() {
               <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Brands</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved Â· {countsData.branchBrands as number} at this branch</div>
+                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved · {countsData.branchBrands as number} at this branch</div>
               </a>
               <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
                 <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Programs</div>
@@ -474,7 +474,7 @@ export default async function DashboardPage() {
                 <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
                 <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies as number}</div>
                 <div className="text-xs text-slate-500 mt-1">
-                  {countsData.labeledCopies as number} labeled Â· {countsData.pendingCopies as number} pending
+                  {countsData.labeledCopies as number} labeled · {countsData.pendingCopies as number} pending
                 </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
@@ -513,7 +513,7 @@ export default async function DashboardPage() {
                   <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Sellers</div>
                   <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
                   <div className="text-xs text-slate-500 mt-1">
-                    {onbLeadData.assignedCount} assigned Â· {onbLeadData.unassignedCount} unassigned
+                    {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
                   </div>
                 </a>
                 <a href="/ops/assignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
@@ -625,7 +625,7 @@ export default async function DashboardPage() {
               </div>
               <div className="mt-4">
                 <a href="/ops/consignments?tab=consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
-                  View all consignments â†’
+                  View all consignments →
                 </a>
               </div>
             </div>

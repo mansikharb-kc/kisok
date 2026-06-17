@@ -320,13 +320,13 @@ export default function TicketsClient({
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${TICKET_STATUS_BADGE[t.status]}`}>
                             {TICKET_STATUS_LABEL[t.status]}
                           </span>
-                          {active && <span className="text-[10px] text-slate-400">Â· in {owner}'s court</span>}
+                          {active && <span className="text-[10px] text-slate-400">· in {owner}'s court</span>}
                         </div>
                         <div className="font-semibold text-slate-800 mt-1">{t.title}</div>
                         <div className="text-xs text-slate-500 mt-0.5">
                           {t.seller?.name}
-                          {t.brand ? ` Â· ${t.brand.name}` : ""}
-                          {t.record ? ` Â· ${t.record.product.name} (${t.record.product.sku})` : ""}
+                          {t.brand ? ` · ${t.brand.name}` : ""}
+                          {t.record ? ` · ${t.record.product.name} (${t.record.product.sku})` : ""}
                         </div>
                       </div>
                       <button onClick={() => setOpenThread(open ? null : t.id)} className="text-xs text-brand-600 hover:underline shrink-0">
