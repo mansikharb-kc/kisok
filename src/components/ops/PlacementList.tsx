@@ -74,6 +74,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                 <th className="px-5 py-3.5">Copy Role & Size</th>
                 <th className="px-5 py-3.5">Physical Location</th>
                 <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5 text-right">Sticker</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-600">
@@ -160,6 +161,18 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                       </div>
                       <div className="text-[10px] text-slate-400">Status: {c.status}</div>
                     </div>
+                  </td>
+                  <td className="px-5 py-4 align-top text-right">
+                    <a
+                      href={`/print/sticker/${c.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Print sticker"
+                      aria-label="Print sticker"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-brand-600 hover:bg-slate-50"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+                    </a>
                   </td>
                 </tr>
               ))}
@@ -279,6 +292,15 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                     <span className="text-amber-700 font-bold text-[10px]">Unplaced / Stage Buffer</span>
                   </div>
                 )}
+                <a
+                  href={`/print/sticker/${c.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-1.5 text-[11px] font-semibold text-brand-600 hover:bg-slate-50"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+                  Print sticker
+                </a>
               </div>
             </div>
           ))}

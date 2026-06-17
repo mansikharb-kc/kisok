@@ -700,7 +700,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm font-semibold text-slate-600">Occupancy Rate</span>
-                  <span className="text-2xl font-extrabold text-slate-950">{occupancyData.occupancyRate}%</span>
+                  <span className="text-2xl font-extrabold text-brand-600">{occupancyData.occupancyRate}%</span>
                 </div>
                 <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
                   <div

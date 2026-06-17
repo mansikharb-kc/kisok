@@ -4,7 +4,7 @@ export const LEVELS = [
   { label: "Group", short: "L2", badge: "bg-green-100 text-green-700", dot: "bg-green-500" },
   { label: "Family", short: "L3", badge: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
   { label: "Category", short: "L4", badge: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
-  { label: "Sub-Category", short: "L5", badge: "bg-slate-200 text-slate-600", dot: "bg-slate-500" },
+  { label: "Sub-Category", short: "L5", badge: "bg-rose-100 text-rose-700", dot: "bg-rose-500" },
 ];
 
 export const MAX_LEVEL = LEVELS.length;

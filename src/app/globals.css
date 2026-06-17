@@ -118,6 +118,9 @@ html.dark .hover\:bg-brand-50:hover,
 html.dark .hover\:bg-brand-50\/40:hover,
 html.dark .hover\:bg-brand-50\/50:hover,
 html.dark .hover\:bg-brand-100:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
+/* Native <select> / dropdown options — readable in dark mode (no faint grey) */
+html.dark select { background-color: #1c1c1e; color: #ededed; }
+html.dark option { background-color: #1c1c1e; color: #ededed; }
 /* borders */
 html.dark .border-slate-100,
 html.dark .border-slate-200,
