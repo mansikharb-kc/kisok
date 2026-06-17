@@ -3,6 +3,7 @@ import { ROLE_LABELS, RoleCode, hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 import LeadAssignmentsTable from "@/components/ops/LeadAssignmentsTable";
+import RecentActivityClient from "@/components/dashboard/RecentActivityClient";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   let whereClause = {};
@@ -386,41 +387,42 @@ export default async function DashboardPage() {
     occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
   }
 
-  const ROLE_TO_VISIBLE_ACTOR_ROLE: Record<string, string> = {
-    HO_ADMIN: "BRANCH_ADMIN",
-    BRANCH_ADMIN: "ONB_LEAD",
-    ONB_LEAD: "OB_EXEC",
-    OB_EXEC: "CONSIGNMENT_USER",
-  };
-  const targetRoles = session.roles
-    .map((r) => ROLE_TO_VISIBLE_ACTOR_ROLE[r.code])
-    .filter(Boolean);
-
-  const activity = await recentActivity(isHo ? null : targetBranchId, targetRoles);
+  // Recent-activity visibility:
+  //  - HO Admin       → everything (all branches, all roles)
+  //  - Branch Admin   → their branch's Onboarding Lead / Onboarding Exec / Consignment activity
+  //  - Onboarding Lead→ their branch's Onboarding Executives
+  //  - OB Exec / Consignment → their own branch-role activity
+  let activity;
+  if (isHo) {
+    activity = await recentActivity(null, []);
+  } else if (branchId) {
+    activity = await recentActivity(branchId, ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER"]);
+  } else if (isOnbLead) {
+    activity = await recentActivity(opsBranchId, ["OB_EXEC"]);
+  } else {
+    const ownRoles = session.roles.map((r) => r.code).filter((c) => ["OB_EXEC", "CONSIGNMENT_USER"].includes(c));
+    activity = await recentActivity(targetBranchId, ownRoles);
+  }
   const roleLabels = session.roles.map((r) => ROLE_LABELS[r.code as RoleCode] ?? r.code);
 
   const displayBranchName = branchName || opsBranchName;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
+        </p>
+      </div>
 
-        {/* Status colour legend — top right */}
-        <div className="bg-white/60 backdrop-blur-md rounded border border-slate-200 px-4 py-3 shrink-0 lg:max-w-xs">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Status colour legend</div>
-          <div className="flex flex-col gap-1.5 text-xs text-slate-600">
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
-          </div>
-        </div>
+      {/* Status colour legend — single line */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
+        <span className="font-semibold uppercase tracking-wider text-slate-400">Status:</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
       </div>
 
       {isHo || (!branchId && !opsBranchId) ? (
@@ -729,36 +731,18 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div>
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">Recent Activity</h2>
-        <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md divide-y divide-slate-100">
-          {activity.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">
-              No activity yet.{" "}
-              {isOnbLead
-                ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
-                : isOBExec
-                  ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
-                  : isConsignment
-                    ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
-                    : "Actions you take (create, edit, retire...) will appear here."}
-            </div>
-          ) : (
-            activity.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${a.tone}`} />
-                <div className="text-sm min-w-0">
-                  <span className="font-medium text-slate-800">{a.label}</span>
-                  {a.target && <span className="text-slate-600"> {a.target}</span>}
-                </div>
-                <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-                  {a.actor} · {a.when}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      <RecentActivityClient
+        items={activity}
+        emptyHint={
+          isOnbLead
+            ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
+            : isOBExec
+            ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
+            : isConsignment
+            ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
+            : "Actions you take (create, edit, retire...) will appear here."
+        }
+      />
     </div>
   );
 }

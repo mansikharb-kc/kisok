@@ -17,10 +17,12 @@ const NODE_SELECT = {
   path: true,
   depth: true,
   isPlacementEligible: true,
+  quantity: true,
   isScreenMountable: true,
   locationId: true,
   status: true,
   category: { select: { id: true, name: true, code: true, categoryAttributes: { select: { attribute: { select: { name: true, code: true } } } } } },
+  nodeCategories: { select: { categoryId: true, category: { select: { name: true } } } },
   _count: { select: { children: true, copies: true } },
 } as const;
 

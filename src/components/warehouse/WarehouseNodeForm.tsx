@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   ALLOWED_CHILDREN,
   ALLOWED_ROOT_TYPES,
-  CAT_LEVELS,
   CategoryOption,
   combineCode,
   DEFAULT_FLAGS,
@@ -46,32 +45,54 @@ export default function WarehouseNodeForm({
     name: editNode?.name ?? "",
     code: editNode?.code ?? (parentNode?.code ? (parentNode.code.endsWith("-") ? parentNode.code : `${parentNode.code}-`) : ""),
     nodeType: initialType,
-    categoryId: editNode?.categoryId ?? "",
     isPlacementEligible: initialFlags.isPlacementEligible,
+    quantity: editNode?.quantity ?? 1,
     isScreenMountable: initialFlags.isScreenMountable,
   });
   const [isCodeManual, setIsCodeManual] = useState(!!editNode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Cascading category picker (Domain → Group → Family, up to L3)
+  // Categories — pick MULTIPLE (Domain → Group → Family cascade, up to L3)
   const catById = useMemo(() => new Map<string, CategoryOption>(categories.map((c) => [String(c.id), c])), [categories]);
   const childrenOf = (pid: string | null) =>
     categories.filter((c) => String(c.parentId ?? "") === String(pid ?? "")).sort((a, b) => a.name.localeCompare(b.name));
-  const selChain = useMemo(() => {
+  function pathOf(id: string) {
+    const out: string[] = [];
+    let cur: string | null = id;
+    let g = 0;
+    while (cur && catById.has(cur) && g++ < 10) {
+      const c: CategoryOption = catById.get(cur)!;
+      out.unshift(c.name);
+      cur = c.parentId ? String(c.parentId) : null;
+    }
+    return out.join(" › ");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [pickedCats, setPickedCats] = useState<{ id: string; path: string }[]>(
+    (editNode?.nodeCategories ?? []).map((nc: any) => ({ id: String(nc.categoryId), path: pathOf(String(nc.categoryId)) }))
+  );
+  const [pickCatId, setPickCatId] = useState("");
+  const pickChain = useMemo(() => {
     const out: CategoryOption[] = [];
-    let cur: string | null = form.categoryId ? String(form.categoryId) : null;
-    let guard = 0;
-    while (cur && catById.has(cur) && guard++ < 10) {
-      const c = catById.get(cur)!;
+    let cur: string | null = pickCatId || null;
+    let g = 0;
+    while (cur && catById.has(cur) && g++ < 10) {
+      const c: CategoryOption = catById.get(cur)!;
       out.unshift(c);
       cur = c.parentId ? String(c.parentId) : null;
     }
     return out;
-  }, [form.categoryId, catById]);
-  const l1Sel = selChain[0] ? String(selChain[0].id) : "";
-  const l2Sel = selChain[1] ? String(selChain[1].id) : "";
-  const l3Sel = selChain[2] ? String(selChain[2].id) : "";
+  }, [pickCatId, catById]);
+  const l1Sel = pickChain[0] ? String(pickChain[0].id) : "";
+  const l2Sel = pickChain[1] ? String(pickChain[1].id) : "";
+  const l3Sel = pickChain[2] ? String(pickChain[2].id) : "";
+
+  function addPicked() {
+    if (!pickCatId || pickedCats.some((c) => c.id === pickCatId)) return;
+    setPickedCats((prev) => [...prev, { id: pickCatId, path: pathOf(pickCatId) }]);
+    setPickCatId("");
+  }
 
   const typeChoices: NodeType[] = editNode
     ? [...NODE_TYPES]
@@ -88,8 +109,9 @@ export default function WarehouseNodeForm({
         name: form.name,
         code: form.code || null,
         nodeType: form.nodeType,
-        categoryId: form.categoryId || null,
+        categoryIds: pickedCats.map((c) => c.id),
         isPlacementEligible: form.isPlacementEligible,
+        quantity: form.isPlacementEligible ? Math.max(1, Number(form.quantity) || 1) : 1,
         isScreenMountable: form.isScreenMountable,
       };
       const res = editNode
@@ -204,44 +226,37 @@ export default function WarehouseNodeForm({
           <p className="text-[11px] text-slate-400">Letters, numbers, - and _ only</p>
         </div>
 
-        {/* Category — cascading up to L3 */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Category <span className="text-slate-400 font-normal text-xs ml-1">(Optional, up to Family / L3)</span></label>
+        {/* Categories — pick MULTIPLE (cascade up to L3) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Categories <span className="text-slate-400 font-normal text-xs ml-1">(Optional, up to Family / L3 — add multiple)</span></label>
+          {pickedCats.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {pickedCats.map((c) => (
+                <span key={c.id} className="inline-flex items-center gap-1.5 rounded bg-slate-100 text-slate-700 text-xs px-2 py-1">
+                  {c.path}
+                  <button type="button" onClick={() => setPickedCats((p) => p.filter((x) => x.id !== c.id))} className="text-slate-400 hover:text-red-600">✕</button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <select value={l1Sel} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))} className={I}>
+            <select value={l1Sel} onChange={(e) => setPickCatId(e.target.value)} className={I}>
               <option value="">— Domain —</option>
               {childrenOf(null).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <select value={l2Sel} disabled={!l1Sel} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value || l1Sel }))} className={`${I} disabled:opacity-50`}>
+            <select value={l2Sel} disabled={!l1Sel} onChange={(e) => setPickCatId(e.target.value || l1Sel)} className={`${I} disabled:opacity-50`}>
               <option value="">{l1Sel ? "— Group (optional) —" : "—"}</option>
               {l1Sel && childrenOf(l1Sel).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <select value={l3Sel} disabled={!l2Sel} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value || l2Sel }))} className={`${I} disabled:opacity-50`}>
+            <select value={l3Sel} disabled={!l2Sel} onChange={(e) => setPickCatId(e.target.value || l2Sel)} className={`${I} disabled:opacity-50`}>
               <option value="">{l2Sel ? "— Family (optional) —" : "—"}</option>
               {l2Sel && childrenOf(l2Sel).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <p className="text-[11px] text-slate-400">Pick Domain → Group → Family (up to L3). Used by OB Exec during placement.</p>
-          {selChain.length > 0 && (
-            <table className="mt-2 w-full text-xs border border-slate-200 rounded overflow-hidden">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500">
-                  <th className="px-2 py-1 text-left font-medium">Level</th>
-                  <th className="px-2 py-1 text-left font-medium">Category</th>
-                  <th className="px-2 py-1 text-left font-medium">Code</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {selChain.map((c, i) => (
-                  <tr key={c.id}>
-                    <td className="px-2 py-1 text-slate-500">{CAT_LEVELS[i] ?? `L${i + 1}`}</td>
-                    <td className="px-2 py-1 font-medium text-slate-800">{c.name}</td>
-                    <td className="px-2 py-1 font-mono text-slate-400">{c.code}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={addPicked} disabled={!pickCatId} className="rounded-md bg-slate-800 text-white px-3 py-1.5 text-xs font-medium disabled:opacity-40">+ Add category</button>
+            <span className="text-[11px] text-slate-400">Pick Domain → Group → Family, then Add. Repeat for multiple.</span>
+          </div>
         </div>
 
         {/* Flags */}
@@ -254,6 +269,19 @@ export default function WarehouseNodeForm({
               <div className="text-xs text-slate-500">Products / samples can be physically placed here. A location ID will be generated.</div>
             </div>
           </label>
+          {form.isPlacementEligible && (
+            <div className="ml-3 pl-6 border-l-2 border-slate-200 space-y-1">
+              <label className="text-sm font-medium">Quantity <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                min={1}
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value === "" ? 1 : Math.max(1, Number(e.target.value)) }))}
+                className={`${I} max-w-[160px]`}
+              />
+              <p className="text-[11px] text-slate-400">How many can be placed at this location. Default 1.</p>
+            </div>
+          )}
           <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 cursor-pointer hover:bg-slate-50">
             <input type="checkbox" checked={form.isScreenMountable} onChange={(e) => setForm((f) => ({ ...f, isScreenMountable: e.target.checked }))} className="mt-0.5" />
             <div>

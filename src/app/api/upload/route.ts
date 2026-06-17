@@ -32,7 +32,8 @@ export const POST = handler(async (req: Request) => {
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, name), bytes);
 
-  const url = `/uploads/${name}`;
+  // Served via the API route (next start does not serve runtime-written public files).
+  const url = `/api/uploads/${name}`;
   const media = await prisma.media.create({
     data: {
       type: file.type === "application/pdf" ? "pdf" : "logo",

@@ -16,11 +16,13 @@ export type LocationNode = {
   path: string | null;
   depth: number;
   isPlacementEligible: boolean;
+  quantity: number;
   isScreenMountable: boolean;
   locationId: string | null;
   status: string;
   _count: { children: number; copies: number };
   copies?: { copyRole: string }[];
+  nodeCategories?: { categoryId: string; category?: { name: string } | null }[];
 };
 
 export type CategoryOption = {

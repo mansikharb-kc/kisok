@@ -131,8 +131,9 @@ model Category {
   stickerTemplates   StickerTemplate[]
   locationNodes      LocationNode[]
   brandProducts      BrandProduct[]
-  brandCategories    BrandCategory[]
-  sellerCategories   SellerCategory[]
+  brandCategories       BrandCategory[]
+  sellerCategories      SellerCategory[]
+  locationNodeCategories LocationNodeCategory[]
 
   @@index([parentId])
   @@map("categories")
@@ -346,6 +347,7 @@ model LocationNode {
   path                String?  @db.VarChar(255)
   depth               Int      @default(0)
   isPlacementEligible Boolean  @default(false) @map("is_placement_eligible")
+  quantity            Int      @default(1)
   isScreenMountable   Boolean  @default(false) @map("is_screen_mountable")
   locationId          String?  @unique @map("location_id") @db.VarChar(64)
   status              String   @default("active") @db.VarChar(20)
@@ -358,14 +360,28 @@ model LocationNode {
   children LocationNode[] @relation("LocationTree")
   category Category?      @relation(fields: [categoryId], references: [id])
 
-  copies  ProductCopy[]
-  screens Screen[]
+  copies         ProductCopy[]
+  screens        Screen[]
+  nodeCategories LocationNodeCategory[]
 
   @@index([branchId])
   @@index([programId])
   @@index([parentId])
   @@index([path])
   @@map("location_nodes")
+}
+
+model LocationNodeCategory {
+  id             BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  locationNodeId BigInt @map("location_node_id") @db.UnsignedBigInt
+  categoryId     BigInt @map("category_id") @db.UnsignedBigInt
+
+  node     LocationNode @relation(fields: [locationNodeId], references: [id], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id])
+
+  @@unique([locationNodeId, categoryId])
+  @@index([categoryId])
+  @@map("location_node_categories")
 }
 
 model SampleSize {
