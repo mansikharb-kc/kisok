@@ -88,7 +88,9 @@ html.dark .text-slate-900,
 html.dark .text-slate-800,
 html.dark .text-slate-700,
 html.dark .text-brand-900,
-html.dark .text-brand-700 { color: #ededed !important; }
+html.dark .text-brand-700,
+html.dark .text-brand-600,
+html.dark .text-brand-500 { color: #ededed !important; }
 html.dark .text-slate-600,
 html.dark .text-slate-500 { color: #b6b6bb !important; }
 html.dark .text-slate-400,

@@ -210,7 +210,7 @@ export default function CategoriesTree({ initial, readOnly = false, canCreate = 
 
             <div className="ml-auto flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
               {(canCreate || !readOnly) && (
-                <div className="hidden group-hover:flex items-center gap-2">
+                <div className="flex items-center gap-2 opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto">
                   {canCreate && n.level < MAX_LEVEL && (
                     <IconButton kind="add" tone="primary" title={requestMode ? "Request sub-category" : "Add sub-category"} onClick={() => openCreateChild(n)} />
                   )}
