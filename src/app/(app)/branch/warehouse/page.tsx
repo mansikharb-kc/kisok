@@ -18,13 +18,17 @@ export default async function Page({
   const isHo = hasRole(session.roles, "HO_ADMIN");
   const isBranchAdmin = hasRole(session.roles, "BRANCH_ADMIN");
   const isObExec = hasRole(session.roles, "OB_EXEC");
-  // Allow HO, Branch Admin, or Onboarding Exec to access the page.
-  if (!isHo && !isBranchAdmin && !isObExec) redirect("/dashboard");
+  const isOnbLead = hasRole(session.roles, "ONB_LEAD");
+
+  // Allow HO, Branch Admin, Onboarding Exec, or Onboarding Lead to access the page.
+  if (!isHo && !isBranchAdmin && !isObExec && !isOnbLead) redirect("/dashboard");
 
   let branchId: bigint | null = null;
-  if (isBranchAdmin) {
-    const branchRole = session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId);
-    branchId = branchRole?.branchId ? BigInt(branchRole.branchId) : null;
+  const activeRole = session.roles.find(
+    (r) => ["BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"].includes(r.code) && r.branchId
+  );
+  if (activeRole?.branchId) {
+    branchId = BigInt(activeRole.branchId);
   }
   if (!branchId) {
     const first = await prisma.branch.findFirst({ where: { status: "active" }, orderBy: { name: "asc" } });
