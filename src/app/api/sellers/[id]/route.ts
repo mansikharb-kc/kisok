@@ -16,7 +16,7 @@ const updateSchema = z.object({
   spocPhone: z.string().trim().max(30).optional().nullable(),
   spocEmail: z.string().trim().max(150).optional().nullable(),
   customFields: z.record(z.string(), z.any()).optional().nullable(),
-  status: z.enum(["active", "retired"]).optional(),
+  status: z.enum(["active", "retired", "archived"]).optional(),
   brandIds: z.array(z.coerce.bigint()).optional(),
   categoryIds: z.array(z.coerce.bigint()).optional(),
   contracts: z.array(z.object({
