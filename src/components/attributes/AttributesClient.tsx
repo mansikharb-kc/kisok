@@ -259,8 +259,13 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
   async function remove(a: AttrRow) {
     if (!confirm(`Archive attribute "${a.name}"? You can restore it later from Archived.`)) return;
     setBusy(true);
-    await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "attribute", id: a.id, action: "archive" }) });
+    const res = await fetch("/api/archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity: "attribute", id: a.id, action: "archive" }) });
     setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      alert(d?.error || "Could not archive this attribute.");
+      return;
+    }
     router.refresh();
   }
 
