@@ -403,24 +403,20 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
+        </p>
+      </div>
 
-        {/* Status colour legend — top right */}
-        <div className="bg-white/60 backdrop-blur-md rounded border border-slate-200 px-4 py-3 shrink-0 lg:max-w-xs">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Status colour legend</div>
-          <div className="flex flex-col gap-1.5 text-xs text-slate-600">
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
-            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
-          </div>
-        </div>
+      {/* Status colour legend — single line */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
+        <span className="font-semibold uppercase tracking-wider text-slate-400">Status:</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
       </div>
 
       {isHo || (!branchId && !opsBranchId) ? (
