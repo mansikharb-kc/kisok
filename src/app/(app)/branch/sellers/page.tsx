@@ -16,7 +16,7 @@ export default async function Page() {
   if (!branchId) redirect("/dashboard");
 
   const sellers = await prisma.seller.findMany({
-    where: { branchId },
+    where: { branchId, status: { not: "archived" } },
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {
       sellerBrands: { include: { brand: { select: { name: true, code: true } } } },

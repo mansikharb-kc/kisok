@@ -53,7 +53,7 @@ export const GET = handler(async () => {
   if (!branchId) return fail("No active branch role found", 403);
 
   const sellers = await prisma.seller.findMany({
-    where: { branchId },
+    where: { branchId, status: { not: "archived" } },
     orderBy: [{ status: "asc" }, { name: "asc" }],
     include: {
       sellerBrands: { include: { brand: { select: { name: true, code: true } } } },
