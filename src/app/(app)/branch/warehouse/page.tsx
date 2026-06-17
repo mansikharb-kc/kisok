@@ -17,7 +17,9 @@ export default async function Page({
 
   const isHo = hasRole(session.roles, "HO_ADMIN");
   const isBranchAdmin = hasRole(session.roles, "BRANCH_ADMIN");
-  if (!isHo && !isBranchAdmin) redirect("/dashboard");
+  const isObExec = hasRole(session.roles, "OB_EXEC");
+  // Allow HO, Branch Admin, or Onboarding Exec to access the page.
+  if (!isHo && !isBranchAdmin && !isObExec) redirect("/dashboard");
 
   let branchId: bigint | null = null;
   if (isBranchAdmin) {
@@ -153,6 +155,7 @@ export default async function Page({
         programId={String(selectedProgram.id)}
         programName={selectedProgram.name}
         initial={nodes}
+        canEdit={isBranchAdmin}
       />
     </div>
   );

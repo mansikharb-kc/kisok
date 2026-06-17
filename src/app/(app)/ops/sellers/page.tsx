@@ -55,10 +55,12 @@ export default async function Page() {
   const assignedCount = rows.filter((s) => s.assignments.length > 0).length;
   const unassignedCount = totalSellers - assignedCount;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalBrands = new Set(
     rows.flatMap((s: any) => s.sellerBrands.map((sb: any) => sb.brand.code))
   ).size;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalCategories = new Set(
     rows.flatMap((s: any) => s.localRecords.map((lr: any) => lr.product?.category?.id))
   ).size;

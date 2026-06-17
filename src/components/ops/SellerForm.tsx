@@ -839,7 +839,33 @@ export default function SellerForm({
               })}
             </div>
           )}
+        {/* display categories per selected brand */}
+<div className="mt-4">
+  <h3 className="text-sm font-medium mb-2">Categories per Brand</h3>
+  <div className="grid gap-2">
+    {selectedBrandIds.map((bid) => {
+      const brand = brands.find((b) => String(b.id) === String(bid));
+      const catIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
+      const uniqueCatIds = Array.from(new Set(catIds));
+      return (
+        <div key={bid} className="bg-slate-50 border border-slate-200 rounded p-3">
+          <div className="font-semibold">{brand?.name}</div>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {uniqueCatIds.map((cid) => {
+              const cat = flatCategories.find((c) => String(c.id) === cid);
+              return (
+                <span key={cid} className="text-xs bg-brand-100 text-brand-800 px-2 py-0.5 rounded">
+                  {cat?.name ?? cid}
+                </span>
+              );
+            })}
+          </div>
         </div>
+      );
+    })}
+  </div>
+</div>
+</div>
       </div>
 
       {/* 4. Contracts */}

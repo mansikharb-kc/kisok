@@ -13,10 +13,12 @@ export default function WarehouseTree({
   programId,
   programName,
   initial,
+  canEdit = false,
 }: {
   programId: string;
   programName: string;
   initial: LocationNode[];
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -207,26 +209,32 @@ export default function WarehouseTree({
 
             {/* Hover actions */}
             <div className="ml-auto hidden group-hover:flex items-center gap-3 shrink-0">
-              {allowedChildren.length > 0 && (
+              {canEdit && allowedChildren.length > 0 && (
                 <Link href={newHref({ parentId: n.id })} className="text-xs text-brand-600 hover:underline whitespace-nowrap">
                   + Sub
                 </Link>
               )}
-              <Link href={newHref({ editId: n.id })} className="text-xs text-slate-600 hover:underline">Edit</Link>
-              <button
-                onClick={() => toggleStatus(n)}
-                disabled={busy}
-                className="text-xs text-slate-500 hover:underline"
-              >
-                {n.status === "active" ? "Deactivate" : "Activate"}
-              </button>
-              <button
-                onClick={() => remove(n)}
-                disabled={busy}
-                className="text-xs text-red-600 hover:underline"
-              >
-                Delete
-              </button>
+              {canEdit && (
+                <Link href={newHref({ editId: n.id })} className="text-xs text-slate-600 hover:underline">Edit</Link>
+              )}
+              {canEdit && (
+                <button
+                  onClick={() => toggleStatus(n)}
+                  disabled={busy}
+                  className="text-xs text-slate-500 hover:underline"
+                >
+                  {n.status === "active" ? "Deactivate" : "Activate"}
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={() => remove(n)}
+                  disabled={busy}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
 
@@ -280,12 +288,14 @@ export default function WarehouseTree({
             className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
-        <Link
-          href={newHref({})}
-          className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
-        >
-          + Add Warehouse
-        </Link>
+        {canEdit && (
+          <Link
+            href={newHref({})}
+            className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
+          >
+            + Add Warehouse
+          </Link>
+        )}
       </div>
 
       {/* Legend */}

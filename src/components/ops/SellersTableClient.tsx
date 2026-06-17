@@ -24,7 +24,8 @@ type SortField = "name" | "membershipId" | "status" | "createdAt" | "fitout";
 
 export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  // Removed view mode toggle; always render table view
+  const viewMode = "table";
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -263,34 +264,10 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
           )}
         </div>
 
-        {/* View Switcher and Count */}
+        {/* Count */}
         <div className="flex items-center gap-3 text-sm self-end md:self-center shrink-0">
           <div className="text-xs text-slate-400 font-semibold select-none">
             {filteredAndSortedRows.length} of {rows.length}
-          </div>
-          <div className="flex items-center gap-1 border border-slate-200 rounded-xl p-0.5 bg-slate-50 shadow-sm select-none">
-            <button
-              type="button"
-              onClick={() => setViewMode("table")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === "table"
-                  ? "bg-white text-slate-800 shadow-sm border border-slate-100"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Table
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("card")}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                viewMode === "card"
-                  ? "bg-white text-slate-800 shadow-sm border border-slate-100"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              Cards
-            </button>
           </div>
         </div>
       </div>

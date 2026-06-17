@@ -60,10 +60,12 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       },
     });
     if (categoryIds) {
-      await tx.locationNodeCategory.deleteMany({ where: { locationNodeId: id } });
+      
+await tx.locationNodeCategory.deleteMany({ where: { locationNodeId: id } });
       const uniq = [...new Set(categoryIds.map(String))];
       if (uniq.length) {
-        await tx.locationNodeCategory.createMany({ data: uniq.map((cid) => ({ locationNodeId: id, categoryId: BigInt(cid) })) });
+        // @ts-ignore
+await tx.locationNodeCategory.createMany({ data: uniq.map((cid) => ({ locationNodeId: id, categoryId: BigInt(cid) })) });
       }
     }
     return updated;

@@ -152,54 +152,27 @@ export default function BrandDetailsModal({ brandId, onClose }: BrandDetailsModa
                     )}
                   </div>
                 </div>
-
-                {/* Governance / Agreement */}
+                {/* Address Details */}
                 <div className="space-y-3">
-                  <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
-                    Governance &amp; Contract
+                  <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-slate-400 shrink-0" /> Address Details
                   </h5>
-                  <div className="space-y-2.5 text-sm">
-                    {brand.gstNumber && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <span className="text-[10px] font-bold text-slate-400 border border-slate-300 px-1 py-0.2 rounded shrink-0 leading-none">GSTIN</span>
-                        <span className="font-mono text-xs">{brand.gstNumber}</span>
-                      </div>
+                  <div className="space-y-2 text-sm text-slate-700 font-medium">
+                    {brand.address && (
+                      <div className="text-slate-650 leading-relaxed">{brand.address}</div>
                     )}
-                    {brand.agreementDuration && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>Tenure: {brand.agreementDuration}</span>
+                    {(brand.city || brand.state || brand.pincode) ? (
+                      <div className="font-semibold text-slate-800">
+                        {[brand.city, brand.state, brand.pincode].filter(Boolean).join(", ")}
                       </div>
-                    )}
-                    {(brand.contractStart || brand.contractEnd) && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>
-                          {brand.contractStart ? formatDate(brand.contractStart) : "—"} to {brand.contractEnd ? formatDate(brand.contractEnd) : "—"}
-                        </span>
-                      </div>
-                    )}
-                    {!brand.gstNumber && !brand.agreementDuration && !brand.contractStart && !brand.contractEnd && (
-                      <span className="text-slate-400 text-xs italic">No contract details available</span>
+                    ) : (
+                      !brand.address && (
+                        <span className="text-slate-400 text-xs italic">No address details provided</span>
+                      )
                     )}
                   </div>
                 </div>
               </div>
-
-              {/* Address details */}
-              {(brand.address || brand.city || brand.state || brand.pincode) && (
-                <div className="space-y-2 bg-slate-50/40 p-3.5 rounded-xl border border-slate-150 text-sm">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 shrink-0" /> Address Details
-                  </span>
-                  <div className="text-slate-700 font-medium leading-relaxed">
-                    {brand.address && <div className="mb-1 text-slate-650">{brand.address}</div>}
-                    <div className="font-semibold text-slate-800">
-                      {[brand.city, brand.state, brand.pincode].filter(Boolean).join(", ")}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Categories Operated In */}
               <div className="space-y-3">
