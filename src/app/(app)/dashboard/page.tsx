@@ -573,8 +573,6 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Task Assignments & Tracking for Lead */}
-              <LeadAssignmentsTable assignments={onbLeadAssignmentsList} />
             </div>
           )}
 
@@ -753,6 +751,10 @@ export default async function DashboardPage() {
             </div>
           </div>
         )
+      )}
+
+      {isOnbLead && onbLeadAssignmentsList.length > 0 && (
+        <LeadAssignmentsTable assignments={onbLeadAssignmentsList} />
       )}
 
       <RecentActivityClient

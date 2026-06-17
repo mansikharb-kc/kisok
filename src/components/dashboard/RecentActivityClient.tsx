@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type Item = { id: string; label: string; tone: string; target?: string; actor: string; when: string };
+type Item = { id: string; label: string; tone: string; target?: string | null; actor: string; when: string };
 
 export default function RecentActivityClient({ items, emptyHint }: { items: Item[]; emptyHint: string }) {
   const [actor, setActor] = useState("");

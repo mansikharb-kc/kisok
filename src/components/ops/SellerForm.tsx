@@ -651,15 +651,15 @@ export default function SellerForm({
             <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={I} placeholder="KC salesperson" />
           </div>
           <div>
-            <label className={L}>KC SPOC name</label>
+            <label className={L}>Brand SPOC name</label>
             <input value={spocName} onChange={(e) => setSpocName(e.target.value)} className={I} placeholder="Contact person" />
           </div>
           <div>
-            <label className={L}>KC SPOC phone</label>
+            <label className={L}>Brand SPOC phone Number</label>
             <input value={spocPhone} onChange={(e) => setSpocPhone(e.target.value)} className={I} placeholder="+91…" />
           </div>
           <div className="col-span-2">
-            <label className={L}>KC SPOC email</label>
+            <label className={L}>Brand SPOC email</label>
             <input type="email" value={spocEmail} onChange={(e) => setSpocEmail(e.target.value)} className={I} placeholder="name@company.com" />
           </div>
         </div>

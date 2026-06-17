@@ -343,15 +343,15 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <label className={labelCls}>KC SPOC name</label>
+              <label className={labelCls}>Brand SPOC name</label>
               <input value={spocName} onChange={(e) => setSpocName(e.target.value)} className={inputCls} placeholder="Contact person" />
             </div>
             <div>
-              <label className={labelCls}>KC SPOC phone</label>
+              <label className={labelCls}>Brand SPOC phone Number</label>
               <input value={spocPhone} onChange={(e) => setSpocPhone(e.target.value)} className={inputCls} placeholder="+91…" />
             </div>
             <div>
-              <label className={labelCls}>KC SPOC email</label>
+              <label className={labelCls}>Brand SPOC email</label>
               <input value={spocEmail} onChange={(e) => setSpocEmail(e.target.value)} type="email" className={inputCls} placeholder="name@company.com" />
             </div>
           </div>
