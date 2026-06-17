@@ -47,9 +47,9 @@ export default function LoginPage() {
             backgroundSize: "40px 40px",
           }}
         />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.jpeg" alt="KC IMS" className="relative z-10 h-16 w-auto max-w-[160px] object-contain mt-10 ml-10" />
         <div className="relative z-10 flex-1 flex flex-col justify-center px-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpeg" alt="KC IMS" className="h-20 w-auto max-w-[200px] object-contain mb-8" />
           <p className="text-brand-400 text-xs font-semibold uppercase tracking-[0.2em]">
             Inventory Management System
           </p>
