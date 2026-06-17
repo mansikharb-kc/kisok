@@ -8,8 +8,9 @@ type RecordOption = {
   status: string;
   product: { name: string; sku: string; category: { name: string } };
   seller: { name: string; sellerCode: string };
+  programId: string;
 };
-type LocationOption = { id: string; name: string; locationId: string | null; path: string | null };
+type LocationOption = { id: string; name: string; locationId: string | null; path: string | null; programId: string | null };
 type SizeOption = { id: string; label: string };
 
 type CopyRow = { sampleSizeId: string; isMaster: boolean };
@@ -32,6 +33,17 @@ export default function PlacementForm({
   const [busy, setBusy] = useState(false);
 
   const canPlace = records.length > 0 && locations.length > 0;
+
+  const selectedRecord = useMemo(() => {
+    return records.find((r) => String(r.id) === recordId) ?? null;
+  }, [records, recordId]);
+
+  const filteredLocations = useMemo(() => {
+    if (!selectedRecord) return [];
+    return locations.filter(
+      (l) => l.programId === null || String(l.programId) === String(selectedRecord.programId)
+    );
+  }, [locations, selectedRecord]);
 
   function reset() {
     setRecordId("");
@@ -176,10 +188,13 @@ export default function PlacementForm({
                   value={locationNodeId}
                   onChange={(e) => setLocationNodeId(e.target.value)}
                   required
+                  disabled={!recordId}
                   className={I}
                 >
-                  <option value="">— Choose location —</option>
-                  {locations.map((l) => (
+                  <option value="">
+                    {!recordId ? "— Choose product first —" : "— Choose location —"}
+                  </option>
+                  {filteredLocations.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.name} {l.locationId ? `(${l.locationId})` : ""}
                     </option>
@@ -203,13 +218,13 @@ export default function PlacementForm({
               <div className="rounded-lg border border-slate-200 divide-y divide-slate-100">
                 <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   <div className="col-span-1">#</div>
-                  <div className="col-span-7">Sample Size</div>
-                  <div className="col-span-4">Role</div>
+                  <div className="col-span-6">Sample Size</div>
+                  <div className="col-span-5">Role</div>
                 </div>
                 {rows.map((row, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 px-3 py-2.5 items-center">
                     <div className="col-span-1 text-xs font-mono text-slate-500">{idx + 1}</div>
-                    <div className="col-span-7">
+                    <div className="col-span-6">
                       <select
                         value={row.sampleSizeId}
                         onChange={(e) => setSize(idx, e.target.value)}
@@ -223,20 +238,40 @@ export default function PlacementForm({
                         ))}
                       </select>
                     </div>
-                    <div className="col-span-4">
-                      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer">
+                    <div className="col-span-5 flex items-center gap-2 md:gap-3">
+                      <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={row.isMaster}
-                          onChange={() => setMaster(idx)}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          onChange={() => {
+                            if (!row.isMaster) setMaster(idx);
+                          }}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
                         />
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            row.isMaster ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase transition-all duration-150 ${
+                            row.isMaster ? "bg-indigo-100 text-indigo-700 font-extrabold" : "bg-slate-100/50 text-slate-400"
                           }`}
                         >
-                          {row.isMaster ? "MASTER" : "SLAVE"}
+                          MASTER
+                        </span>
+                      </label>
+
+                      <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={!row.isMaster}
+                          onChange={() => {
+                            if (row.isMaster) setMaster(idx);
+                          }}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                        />
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase transition-all duration-150 ${
+                            !row.isMaster ? "bg-slate-200 text-slate-700 font-extrabold" : "bg-slate-100/50 text-slate-400"
+                          }`}
+                        >
+                          SLAVE
                         </span>
                       </label>
                     </div>

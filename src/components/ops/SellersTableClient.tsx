@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
@@ -27,6 +27,50 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Dropdown filter states
+  const [selectedSeller, setSelectedSeller] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState("");
+  const [selectedExec, setSelectedExec] = useState("");
+
+  const sellersList = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      if (r.name) set.add(r.name);
+    });
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const brandsList = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      r.sellerBrands.forEach((sb) => {
+        if (sb.brand?.name) set.add(sb.brand.name);
+      });
+    });
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const programsList = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      r.contracts.forEach((c) => {
+        if (c.program?.name) set.add(c.program.name);
+      });
+    });
+    return Array.from(set).sort();
+  }, [rows]);
+
+  const execsList = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      r.assignments.forEach((a) => {
+        if (a.exec?.fullName) set.add(a.exec.fullName);
+      });
+    });
+    return Array.from(set).sort();
+  }, [rows]);
+
   // Toggle sorting on a header
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -41,7 +85,27 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   const filteredAndSortedRows = useMemo(() => {
     let result = [...rows];
 
-    // 1. Filter
+    // 1. Dropdown Filters
+    if (selectedSeller) {
+      result = result.filter((s) => s.name === selectedSeller);
+    }
+    if (selectedBrand) {
+      result = result.filter((s) =>
+        s.sellerBrands.some((sb) => sb.brand?.name === selectedBrand)
+      );
+    }
+    if (selectedProgram) {
+      result = result.filter((s) =>
+        s.contracts.some((c) => c.program?.name === selectedProgram)
+      );
+    }
+    if (selectedExec) {
+      result = result.filter((s) =>
+        s.assignments.some((a) => a.exec?.fullName === selectedExec)
+      );
+    }
+
+    // 2. Search Query Filter
     const query = searchQuery.trim().toLowerCase();
     if (query) {
       result = result.filter((s) => {
@@ -61,7 +125,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
       });
     }
 
-    // 2. Sort
+    // 3. Sort
     result.sort((a, b) => {
       let valA: any = "";
       let valB: any = "";
@@ -99,7 +163,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
     });
 
     return result;
-  }, [rows, searchQuery, sortField, sortOrder]);
+  }, [rows, searchQuery, sortField, sortOrder, selectedSeller, selectedBrand, selectedProgram, selectedExec]);
 
   const SortIndicator = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
@@ -119,55 +183,59 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   return (
     <div className="space-y-4">
       {/* Search and Quick Filters bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="relative flex-1 max-w-lg">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sellers by name, code, brand, or executive..."
-            className="w-full rounded-xl border border-slate-250 py-2 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white placeholder-slate-400 transition-all"
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Dropdown Filters */}
+        <div className="flex flex-wrap items-end gap-2 text-xs">
+          <SearchableSelect
+            label="Seller"
+            value={selectedSeller}
+            onChange={setSelectedSeller}
+            options={sellersList}
+            placeholder="All Sellers"
           />
-          {searchQuery && (
+
+          <SearchableSelect
+            label="Program"
+            value={selectedProgram}
+            onChange={setSelectedProgram}
+            options={programsList}
+            placeholder="All Programs"
+          />
+
+          <SearchableSelect
+            label="Brand"
+            value={selectedBrand}
+            onChange={setSelectedBrand}
+            options={brandsList}
+            placeholder="All Brands"
+          />
+
+          <SearchableSelect
+            label="Assigned Exec"
+            value={selectedExec}
+            onChange={setSelectedExec}
+            options={execsList}
+            placeholder="All Executives"
+          />
+
+          {(selectedSeller || selectedBrand || selectedProgram || selectedExec) && (
             <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 text-xs font-bold"
+              onClick={() => {
+                setSelectedSeller("");
+                setSelectedBrand("");
+                setSelectedProgram("");
+                setSelectedExec("");
+              }}
+              className="pb-1.5 text-xs text-brand-600 hover:text-brand-800 font-semibold cursor-pointer underline"
             >
-              ✕
+              Clear Filters
             </button>
           )}
         </div>
 
-        {/* Quick Sorting Dropdown Selector */}
-        <div className="flex items-center gap-3 self-end sm:self-auto text-sm">
-          <div className="text-xs text-slate-400 font-semibold tracking-wider uppercase">Sort By</div>
-          <select
-            value={`${sortField}-${sortOrder}`}
-            onChange={(e) => {
-              const [field, order] = e.target.value.split("-") as [SortField, "asc" | "desc"];
-              setSortField(field);
-              setSortOrder(order);
-            }}
-            className="rounded-xl border border-slate-250 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-sm"
-          >
-            <option value="name-asc">Seller Name (A-Z)</option>
-            <option value="name-desc">Seller Name (Z-A)</option>
-            <option value="membershipId-asc">Membership ID (Asc)</option>
-            <option value="membershipId-desc">Membership ID (Desc)</option>
-            <option value="status-asc">Status (Active first)</option>
-            <option value="status-desc">Status (Retired first)</option>
-            <option value="createdAt-desc">Newest Added</option>
-            <option value="createdAt-asc">Oldest Added</option>
-            <option value="fitout-desc">Fitout Period (Longest)</option>
-            <option value="fitout-asc">Fitout Period (Shortest)</option>
-          </select>
-          <div className="text-xs text-slate-400 font-semibold select-none border-l border-slate-200 pl-3">
+        {/* View Switcher and Count */}
+        <div className="flex items-center gap-3 text-sm self-end md:self-center shrink-0">
+          <div className="text-xs text-slate-400 font-semibold select-none">
             {filteredAndSortedRows.length} of {rows.length}
           </div>
           <div className="flex items-center gap-1 border border-slate-200 rounded-xl p-0.5 bg-slate-50 shadow-sm select-none">
@@ -200,7 +268,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
       {/* Main Table/Card view */}
       {filteredAndSortedRows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-250 bg-white p-12 text-center text-slate-450 text-sm shadow-sm">
-          No matching sellers found for &ldquo;{searchQuery}&rdquo;.
+          No matching sellers found for the selected filters.
         </div>
       ) : viewMode === "table" ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -491,6 +559,111 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchableSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredOptions = useMemo(() => {
+    return options.filter((opt) => opt.toLowerCase().includes(search.toLowerCase()));
+  }, [options, search]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.searchable-select-${label.replace(/\s+/g, "-")}`)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [open, label]);
+
+  return (
+    <div className={`relative flex flex-col gap-1 searchable-select-${label.replace(/\s+/g, "-")} w-[115px] text-xs`}>
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+      <div className="relative">
+        <input
+          type="text"
+          value={open ? search : value}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            if (!open) setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+            setSearch("");
+          }}
+          placeholder={value || placeholder}
+          className="w-full rounded-lg border border-slate-200 py-1 pl-2 pr-5 font-medium text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-500 focus:bg-white transition-all cursor-text text-xs text-ellipsis overflow-hidden"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-slate-400">
+          {value ? (
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setSearch("");
+                setOpen(false);
+              }}
+              className="hover:text-slate-600 font-bold p-0.5 text-[10px]"
+            >
+              ✕
+            </button>
+          ) : (
+            <svg
+              className="w-3 h-3 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-45 divide-y divide-slate-50">
+          {filteredOptions.length === 0 ? (
+            <div className="px-3 py-2 text-slate-400 italic">No matches found</div>
+          ) : (
+            filteredOptions.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  onChange(opt);
+                  setSearch("");
+                  setOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors font-medium text-slate-700 ${
+                  value === opt ? "bg-brand-50/50 text-brand-700 font-bold" : ""
+                }`}
+              >
+                {opt}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

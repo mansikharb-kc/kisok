@@ -65,12 +65,6 @@ export default async function Page() {
             Seller-to-exec assignments at {branch?.name ?? "your branch"}.
           </p>
         </div>
-        <Link
-          href="/ops/assignments/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
-        >
-          + Assign Seller
-        </Link>
       </div>
 
       {/* Stats */}
@@ -97,12 +91,6 @@ export default async function Page() {
       {byExec.size === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
           <p className="text-sm text-slate-400">No assignments yet.</p>
-          <Link
-            href="/ops/assignments/new"
-            className="mt-3 inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"
-          >
-            + Assign the first seller
-          </Link>
         </div>
       ) : (
         <div className="space-y-4">
@@ -157,16 +145,14 @@ export default async function Page() {
                       ))}
                     </div>
                     <span
-                      className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                        s.status === "active"
+                      className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${s.status === "active"
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-slate-100 text-slate-500"
-                      }`}
+                        }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
+                          }`}
                       />
                       {s.status}
                     </span>

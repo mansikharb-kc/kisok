@@ -361,39 +361,6 @@ export default async function DashboardPage() {
     }
     if (isOBExec) {
       obExecData = await obExecCounts(opsBranchId, session.uid);
-      const assignments = await prisma.sellerAssignment.findMany({
-        where: { obExecUserId: BigInt(session.uid), seller: { branchId: opsBranchId } },
-        orderBy: { assignedAt: "desc" },
-        include: {
-          seller: {
-            select: {
-              id: true,
-              name: true,
-              sellerCode: true,
-              membershipId: true,
-              status: true,
-              sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
-            },
-          },
-          program: { select: { id: true, name: true, code: true } },
-        },
-      });
-      const detailed = await Promise.all(
-        assignments.map(async (a) => {
-          const onboardedCount = await prisma.localOnboardingRecord.count({
-            where: {
-              sellerId: a.sellerId,
-              branchId: opsBranchId,
-              ...(a.programId ? { programId: a.programId } : {}),
-            },
-          });
-          return {
-            ...a,
-            onboardedCount,
-          };
-        })
-      );
-      obExecAssignmentsList = serialize(detailed);
     }
     if (isConsignment) consignmentData = await consignmentUserCounts(opsBranchId);
   }
@@ -616,7 +583,7 @@ export default async function DashboardPage() {
                             <td className="px-5 py-3.5">
                               <div className="font-medium text-slate-800">{a.seller.name}</div>
                               <div className="text-xs text-slate-400 font-mono">
-                                {a.seller.sellerCode} {a.program ? `Â· ${a.program.name}` : ""}
+                                {a.seller.sellerCode} {a.program ? `· ${a.program.name}` : ""}
                               </div>
                             </td>
                             <td className="px-5 py-3.5">
@@ -627,7 +594,7 @@ export default async function DashboardPage() {
                                   </span>
                                 ))}
                                 {a.seller.sellerBrands.length === 0 && (
-                                  <span className="text-xs text-slate-400">â€”</span>
+                                  <span className="text-xs text-slate-400">—</span>
                                 )}
                               </div>
                             </td>
@@ -688,90 +655,6 @@ export default async function DashboardPage() {
                   <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.placementLocations}</div>
                   <div className="text-xs text-slate-500 mt-1">eligible nodes at branch</div>
                 </div>
-              </div>
-
-              {/* Assigned Onboarding Tasks for Executive */}
-              <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-800">My Assigned Onboarding Tasks</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">Sellers assigned to you for product onboarding</p>
-                  </div>
-                  <a href="/ops/onboarding" className="text-xs font-semibold text-brand-600 hover:underline">
-                    View Onboarding Records â†’
-                  </a>
-                </div>
-                {obExecAssignmentsList.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-slate-400">
-                    No tasks assigned. Please contact your Onboarding Lead.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-semibold uppercase tracking-wider">
-                          <th className="px-5 py-3">Seller Name &amp; Code</th>
-                          <th className="px-5 py-3">Assigned Program</th>
-                          <th className="px-5 py-3">Associated Brands</th>
-                          <th className="px-5 py-3">Progress</th>
-                          <th className="px-5 py-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                        {obExecAssignmentsList.map((a: any) => (
-                          <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-3.5">
-                              <div className="font-semibold text-slate-800">{a.seller.name}</div>
-                              <div className="text-[11px] text-slate-400 font-mono">
-                                {a.seller.sellerCode} {a.seller.membershipId ? `Â· ${a.seller.membershipId}` : ""}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              {a.program ? (
-                                <div>
-                                  <span className="font-medium text-slate-700">{a.program.name}</span>
-                                  <div className="text-[10px] text-slate-400 font-mono">{a.program.code}</div>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-slate-400">â€”</span>
-                              )}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                {a.seller.sellerBrands.map((sb: any) => (
-                                  <span key={sb.brand.code} className="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium">
-                                    {sb.brand.name}
-                                  </span>
-                                ))}
-                                {a.seller.sellerBrands.length === 0 && (
-                                  <span className="text-xs text-slate-400">â€”</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-slate-700">{a.onboardedCount} SKU{a.onboardedCount !== 1 ? "s" : ""}</span>
-                                {a.onboardedCount === 0 && (
-                                  <span className="text-[10px] bg-amber-50 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200">
-                                    Not Started
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5 text-right">
-                              <a
-                                href={`/ops/onboarding/new?sellerId=${a.seller.id}${a.program ? `&programId=${a.program.id}` : ""}`}
-                                className="inline-flex items-center gap-1.5 rounded bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 transition-colors"
-                              >
-                                + Onboard Product
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -835,7 +718,7 @@ export default async function DashboardPage() {
           <a className="underline" href="/masters/categories">
             Categories
           </a>{" "}
-          (e.g. Glass, Wood, Stoneâ€¦), then add Attributes and bind them to each
+          (e.g. Glass, Wood, Stone...), then add Attributes and bind them to each
           category. Everything downstream selects from these masters.
         </div>
       )}
@@ -851,7 +734,7 @@ export default async function DashboardPage() {
               href="/branch/warehouse"
               className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
             >
-              View Warehouse Tree â†’
+              View Warehouse Tree -&gt;
             </a>
           </div>
 
@@ -921,10 +804,10 @@ export default async function DashboardPage() {
               {isOnbLead
                 ? "Actions you take (registering sellers, assigning execs, adding sample sizes) will appear here."
                 : isOBExec
-                ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
-                : isConsignment
-                ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
-                : "Actions you take (create, edit, retireâ€¦) will appear here."}
+                  ? "Actions you take (onboarding products, physical placements, generating labels) will appear here."
+                  : isConsignment
+                    ? "Actions you take (receiving consignments, updating status, running QC) will appear here."
+                    : "Actions you take (create, edit, retire...) will appear here."}
             </div>
           ) : (
             activity.map((a) => (
@@ -935,7 +818,7 @@ export default async function DashboardPage() {
                   {a.target && <span className="text-slate-600"> {a.target}</span>}
                 </div>
                 <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-                  {a.actor} Â· {a.when}
+                  {a.actor} · {a.when}
                 </span>
               </div>
             ))
