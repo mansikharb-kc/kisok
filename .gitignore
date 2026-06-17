@@ -6,3 +6,6 @@ node_modules
 *.log
 .DS_Store
 /dist
+
+# TS incremental build cache (regenerated; was causing merge conflicts)
+tsconfig.tsbuildinfo

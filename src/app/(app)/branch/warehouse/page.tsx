@@ -114,85 +114,45 @@ export default async function Page({
     );
   }
 
-  const [nodeRows, categoryRows] = await Promise.all([
-    prisma.locationNode.findMany({
-      where: { branchId, programId: selectedProgram.id },
-      orderBy: [{ path: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        parentId: true,
-        nodeType: true,
-        name: true,
-        code: true,
-        categoryId: true,
-        path: true,
-        depth: true,
-        isPlacementEligible: true,
-        isScreenMountable: true,
-        locationId: true,
-        status: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            categoryAttributes: {
-              select: {
-                attribute: {
-                  select: {
-                    name: true,
-                    code: true,
-                  }
-                }
-              }
-            }
-          }
-        },
-        _count: { select: { children: true, copies: true } },
-        copies: {
-          where: { status: "active" },
-          select: { copyRole: true },
+  const nodeRows = await prisma.locationNode.findMany({
+    where: { branchId, programId: selectedProgram.id },
+    orderBy: [{ path: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      parentId: true,
+      nodeType: true,
+      name: true,
+      code: true,
+      categoryId: true,
+      path: true,
+      depth: true,
+      isPlacementEligible: true,
+      isScreenMountable: true,
+      locationId: true,
+      status: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          categoryAttributes: { select: { attribute: { select: { name: true, code: true } } } },
         },
       },
-    }),
-
-    // All active categories from HO masters — for the category picker in the modal
-    prisma.category.findMany({
-      where: { status: "active" },
-      orderBy: [{ name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        parentId: true,
-        categoryAttributes: {
-          select: {
-            attribute: {
-              select: {
-                id: true,
-                name: true,
-                code: true,
-              }
-            }
-          }
-        }
-      },
-    }),
-  ]);
+      _count: { select: { children: true, copies: true } },
+      copies: { where: { status: "active" }, select: { copyRole: true } },
+    },
+  });
 
   const nodes: LocationNode[] = serialize(nodeRows) as any;
-  const categories = serialize(categoryRows) as any;
 
   return (
     <div className="space-y-2">
       {branchTag}
       {programSelector}
       <WarehouseTree
-        branchId={String(branchId)}
         programId={String(selectedProgram.id)}
         programName={selectedProgram.name}
         initial={nodes}
-        categories={categories}
       />
     </div>
   );
