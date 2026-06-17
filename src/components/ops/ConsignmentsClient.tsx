@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import NewConsignmentForm, { type SellerOption } from "./NewConsignmentForm";
+import { formatDate } from "@/lib/format";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -321,7 +322,7 @@ function ConsignmentCard({
               <>
                 {" · "}Expected:{" "}
                 <span className="text-slate-700">
-                  {new Date(c.expectedDate).toLocaleDateString()}
+                  {formatDate(c.expectedDate)}
                 </span>
               </>
             )}

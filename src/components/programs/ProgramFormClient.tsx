@@ -52,13 +52,11 @@ export default function ProgramFormClient({
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormValues>(initialValues);
-  const [codeTouched, setCodeTouched] = useState(mode === "edit");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setForm(initialValues);
-    setCodeTouched(mode === "edit");
   }, [initialValues, mode]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -115,7 +113,7 @@ export default function ProgramFormClient({
               value={form.name}
               onChange={(e) => {
                 const value = e.target.value;
-                setForm((current) => ({ ...current, name: value, code: codeTouched ? current.code : slugify(value) }));
+                setForm((current) => ({ ...current, name: value, code: slugify(value) }));
               }}
               required
               autoFocus
@@ -129,7 +127,6 @@ export default function ProgramFormClient({
               value={form.code}
               onChange={(e) => {
                 setForm((current) => ({ ...current, code: e.target.value }));
-                setCodeTouched(true);
               }}
               required
               className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-4 py-3 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"

@@ -7,6 +7,7 @@ import { buildParentOptions } from "@/lib/categoryTree";
 import { levelMeta } from "@/lib/categoryLevels";
 import SellerBrandsList from "@/components/ops/SellerBrandsList";
 import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -367,11 +368,7 @@ export default async function Page({ params }: { params: { id: string } }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle text-xs text-slate-500 font-medium">
-                      {new Date(r.createdAt).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDate(r.createdAt)}
                     </td>
                   </tr>
                 ))}

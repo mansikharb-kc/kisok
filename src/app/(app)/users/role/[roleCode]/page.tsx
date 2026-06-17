@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Plus, Edit2, Trash2, Shield, User as UserIcon, X, Check, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -67,9 +67,11 @@ export default function RoleUsersPage({ params }: PageProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
 
   useEffect(() => {
     fetchUsers();
+    setBranchFilter("");
   }, [roleCode]);
 
   async function fetchUsers() {
@@ -111,9 +113,28 @@ export default function RoleUsersPage({ params }: PageProps) {
     }
   }
 
+  // Extract unique branches matching the current role code
+  const availableBranches = useMemo(() => {
+    const branchesMap = new Map<string, Branch>();
+    users.forEach((u) => {
+      u.roles.forEach((r) => {
+        if (r.role?.code === targetRoleCode && r.branch) {
+          branchesMap.set(r.branch.id, r.branch);
+        }
+      });
+    });
+    return Array.from(branchesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [users, targetRoleCode]);
+
   // Filter users to only include those that have assignments for the current role Code
   const filteredUsers = users
     .filter((u) => u.roles.some((r) => r.role?.code === targetRoleCode))
+    .filter((u) => {
+      if (roleCode !== "ho-admin" && branchFilter) {
+        return u.roles.some((r) => r.role?.code === targetRoleCode && r.branchId === branchFilter);
+      }
+      return true;
+    })
     .filter((u) => {
       const q = searchQuery.toLowerCase();
       return (
@@ -167,15 +188,31 @@ export default function RoleUsersPage({ params }: PageProps) {
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-4 py-3 rounded-lg border border-slate-200 max-w-md">
-        <Search className="w-4 h-4 text-slate-400 shrink-0" />
-        <input
-          type="text"
-          placeholder={`Search ${roleDisplayName.toLowerCase()}...`}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full text-sm outline-none placeholder:text-slate-400"
-        />
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-4 py-3 rounded-lg border border-slate-200 w-full max-w-md">
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder={`Search ${roleDisplayName.toLowerCase()}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full text-sm outline-none placeholder:text-slate-400 bg-transparent"
+          />
+        </div>
+        {roleCode !== "ho-admin" && (
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-3 py-3 text-sm focus:border-brand-500 focus:outline-none min-w-[200px] shadow-sm"
+          >
+            <option value="">All Branches</option>
+            {availableBranches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name} ({b.branchCode})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Users Table */}

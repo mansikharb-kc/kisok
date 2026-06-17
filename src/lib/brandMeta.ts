@@ -56,11 +56,14 @@ export function addMonths(isoDate: string, months: number): string {
   return base.toISOString().slice(0, 10);
 }
 
-/** yyyy-mm-dd -> dd/mm/yyyy (for display). */
+/** yyyy-mm-dd -> DD-MMM-YYYY (for display). */
 export function formatDMY(isoDate: string): string {
   if (!isoDate) return "";
   const [y, m, d] = isoDate.split("-");
-  return `${d}/${m}/${y}`;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const mIdx = parseInt(m, 10) - 1;
+  const mName = months[mIdx] ?? m;
+  return `${d.padStart(2, "0")}-${mName}-${y}`;
 }
 
 export function parseFitoutDays(fitoutStr: string): number {

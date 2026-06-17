@@ -319,7 +319,7 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
                     <td className="px-4 py-2.5 text-xs text-slate-500 space-x-1">
                       {a.isVariant && <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">variant</span>}
                       {a.isPriceable && <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">priceable</span>}
-                      {a.isRequired && <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">required</span>}
+                      {a.isRequired && <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">mandatory</span>}
                     </td>
                     <td className="px-4 py-2.5 text-xs">
                       {a.mappedCount === 0 ? (
@@ -499,7 +499,7 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
             <div className="flex gap-4 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isRequired} onChange={(e) => setForm((f) => ({ ...f, isRequired: e.target.checked }))} />
-                Required (default)
+                Mandatory (default)
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={form.isVariant} onChange={(e) => setForm((f) => ({ ...f, isVariant: e.target.checked }))} />
@@ -512,33 +512,14 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
             </div>
 
             {!requestMode && (
-              <div className="space-y-2 border-t border-slate-100 pt-4">
-                <label className="text-sm font-medium">Mapped categories</label>
-                <p className="text-xs text-slate-500">
-                  {editing
-                    ? "Add or remove which categories this attribute applies to. It inherits down to all sub-categories."
-                    : "Pick which categories this attribute applies to. They'll be mapped when you save. It inherits down to all sub-categories."}
-                </p>
-                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                  {mappings.length === 0 ? (
-                    <span className="text-xs text-slate-400">Not mapped to any category yet.</span>
-                  ) : (
-                    mappings.map((m) => (
-                      <span key={m.mapId} className="inline-flex items-center gap-1.5 rounded border border-slate-200 bg-white/70 text-slate-700 text-xs px-2 py-1">
-                        {m.level ? <span className={`h-2 w-2 rounded-full ${levelMeta(m.level).dot}`} title={levelMeta(m.level).label} /> : null}
-                        {m.name}
-                        <button
-                          type="button"
-                          onClick={() => removeMapping(m)}
-                          disabled={mapBusy}
-                          aria-label={`Remove ${m.name}`}
-                          className="text-slate-400 hover:text-red-600 disabled:opacity-50"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))
-                  )}
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <div>
+                  <label className="text-sm font-medium">Mapped categories</label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {editing
+                      ? "Add or remove which categories this attribute applies to. It inherits down to all sub-categories."
+                      : "Pick which categories this attribute applies to. They'll be mapped when you save. It inherits down to all sub-categories."}
+                  </p>
                 </div>
 
                 {/* Domain-wise cascading picker */}
@@ -603,6 +584,56 @@ export default function AttributesClient({ initial, readOnly = false, canRequest
                       Add
                     </button>
                   </div>
+                </div>
+
+                {/* Tabular Mapped Categories List */}
+                <div className="space-y-1.5">
+                  {mappings.length === 0 ? (
+                    <div className="text-xs text-slate-400 italic p-3 border border-slate-150 rounded-lg bg-slate-50/30">
+                      Not mapped to any category yet.
+                    </div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                      <table className="w-full text-xs text-left text-slate-700">
+                        <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-3 py-2">Category Path</th>
+                            <th className="px-3 py-2 w-28">Level</th>
+                            <th className="px-3 py-2 text-right w-20">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {mappings.map((m) => (
+                            <tr key={m.mapId} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="px-3 py-2 font-medium text-slate-800 break-words leading-relaxed">
+                                {m.name}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {m.level ? (
+                                  <span className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-semibold ${levelMeta(m.level).badge}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${levelMeta(m.level).dot}`} />
+                                    {levelMeta(m.level).label}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => removeMapping(m)}
+                                  disabled={mapBusy}
+                                  className="text-red-650 hover:text-red-805 hover:underline font-semibold"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

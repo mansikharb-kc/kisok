@@ -5,6 +5,7 @@ import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import PrintButton from "@/components/ops/PrintButton";
 import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function PrintSellerPage({ params }: { params: { id: string
             <div className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded">
               CODE: {s.sellerCode}
             </div>
-            <div className="text-xs text-slate-400 mt-1">Generated: {new Date().toLocaleDateString()}</div>
+            <div className="text-xs text-slate-400 mt-1">Generated: {formatDate(new Date())}</div>
           </div>
         </div>
 

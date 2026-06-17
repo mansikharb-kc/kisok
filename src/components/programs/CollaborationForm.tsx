@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { levelMeta } from "@/lib/categoryLevels";
-import { formatDaysToYMD } from "@/lib/brandMeta";
+import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
+import { slugFromName } from "@/lib/attributeMeta";
 
 type Branch = { id: string; name: string; branchCode: string };
 type Program = { id: string; name: string; code: string };
@@ -24,10 +25,42 @@ const inputCls =
 const labelCls = "block text-sm font-semibold text-slate-900 mb-1";
 const cardCls = "rounded border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm space-y-4";
 
+function addDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseInt(fitoutStr, 10) || 0;
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function calculateEndDate(startDateStr: string, tenureDaysStr: string): string {
+  if (!startDateStr || !tenureDaysStr) return "";
+  const days = parseInt(tenureDaysStr, 10);
+  if (isNaN(days) || days <= 0) return "";
+  const parts = startDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days - 1);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function CollaborationForm({ branches, programs }: { branches: Branch[]; programs: Program[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
+  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500";
 
   const [branchId, setBranchId] = useState("");
   const [programMode, setProgramMode] = useState<"existing" | "new">(programs.length ? "existing" : "new");
@@ -43,10 +76,31 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
   const [spocPhone, setSpocPhone] = useState("");
   const [spocEmail, setSpocEmail] = useState("");
 
+  const [collaborationTenure, setCollaborationTenure] = useState("");
+  const [baseStartDate, setBaseStartDate] = useState("");
+  const [fitoutPeriod, setFitoutPeriod] = useState("");
+  
+  // Calculated states
   const [contractStart, setContractStart] = useState("");
   const [contractEnd, setContractEnd] = useState("");
-  const [fitoutPeriod, setFitoutPeriod] = useState("");
-  const [collaborationTenure, setCollaborationTenure] = useState("");
+  const [fitoutEnd, setFitoutEnd] = useState("");
+
+  useEffect(() => {
+    if (baseStartDate) {
+      const cStart = addDays(baseStartDate, fitoutPeriod);
+      setContractStart(cStart);
+      setFitoutEnd(subtractDays(cStart, "1"));
+      if (cStart && collaborationTenure) {
+        setContractEnd(calculateEndDate(cStart, collaborationTenure));
+      } else {
+        setContractEnd("");
+      }
+    } else {
+      setContractStart("");
+      setFitoutEnd("");
+      setContractEnd("");
+    }
+  }, [baseStartDate, fitoutPeriod, collaborationTenure]);
 
   // Categories — domain-wise cascading picker
   const [categories, setCategories] = useState<PickedCategory[]>([]);
@@ -230,8 +284,24 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
                 </select>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={programName} onChange={(e) => setProgramName(e.target.value)} className={inputCls} placeholder="Program name" />
-                  <input value={programCode} onChange={(e) => setProgramCode(e.target.value)} className={`${inputCls} font-mono`} placeholder="program-code" />
+                  <input
+                    value={programName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setProgramName(val);
+                      setProgramCode(slugFromName(val));
+                    }}
+                    className={inputCls}
+                    placeholder="Program name"
+                  />
+                  <input
+                    value={programCode}
+                    onChange={(e) => {
+                      setProgramCode(e.target.value);
+                    }}
+                    className={`${inputCls} font-mono`}
+                    placeholder="program-code"
+                  />
                 </div>
               )}
             </div>
@@ -239,7 +309,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
         </div>
 
         {/* View-only preview — Onboarding Lead fills these on the Add Seller page */}
-        <fieldset disabled className="space-y-5 opacity-70 m-0 p-0 border-0 min-w-0">
+        <div className="space-y-5 m-0 p-0 border-0 min-w-0">
           <p className="text-xs text-slate-500 italic">
             Member, contract &amp; category details are filled by the Onboarding Lead during seller onboarding — shown here for reference only.
           </p>
@@ -289,34 +359,107 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
 
         {/* Contract */}
         <div className={cardCls}>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Contract</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>Start date</label>
-              <input value={contractStart} onChange={(e) => setContractStart(e.target.value)} type="date" className={inputCls} />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2 mb-2">Contract</h2>
+          <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
+            {/* Left Column: Collaboration Tenure Dates */}
+            <div className="space-y-4">
+              <div>
+                <label className={L}>Collaboration Tenure ( In Days )</label>
+                <input
+                  value={collaborationTenure}
+                  onChange={(e) => setCollaborationTenure(e.target.value.replace(/\D/g, ""))}
+                  className={I}
+                  placeholder="e.g. 365"
+                />
+                {collaborationTenure && formatDaysToYMD(collaborationTenure) && (
+                  <div className="text-[11px] text-slate-500 mt-1 font-semibold">
+                    Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(collaborationTenure)}</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className={L}>Collaboration Tenure Start Date</label>
+                <input
+                  type="date"
+                  value={contractStart}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
+              <div>
+                <label className={L}>Collaboration Tenure End Date</label>
+                <input
+                  type="date"
+                  value={contractEnd}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>End date</label>
-              <input value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} type="date" className={inputCls} />
+
+            {/* Right Column: Fitout Period Dates */}
+            <div className="space-y-4">
+              <div>
+                <label className={L}>Fitout Period ( In Days )</label>
+                <input
+                  value={fitoutPeriod}
+                  onChange={(e) => setFitoutPeriod(e.target.value.replace(/\D/g, ""))}
+                  className={I}
+                  placeholder="e.g. 45"
+                />
+                {fitoutPeriod && formatDaysToYMD(fitoutPeriod) && (
+                  <div className="text-[11px] text-slate-500 mt-1 font-semibold">
+                    Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(fitoutPeriod)}</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className={L}>Fitout Period Start Date</label>
+                <input
+                  type="date"
+                  value={baseStartDate}
+                  onChange={(e) => setBaseStartDate(e.target.value)}
+                  className={I}
+                />
+              </div>
+              <div>
+                <label className={L}>Fitout Period End Date</label>
+                <input
+                  type="date"
+                  value={fitoutEnd}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Fitout Period ( In Days )</label>
-              <input value={fitoutPeriod} onChange={(e) => setFitoutPeriod(e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="e.g. 45" />
-              {fitoutPeriod && formatDaysToYMD(fitoutPeriod) && (
-                <div className="text-[11px] text-slate-500 mt-1 font-semibold">
-                  Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(fitoutPeriod)}</span>
+
+            {baseStartDate && (
+              <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
+                <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Fitout Start:</span>
+                  <strong className="text-slate-800">{formatDMY(baseStartDate)}</strong>
                 </div>
-              )}
-            </div>
-            <div>
-              <label className={labelCls}>Collaboration Tenure ( In Days )</label>
-              <input value={collaborationTenure} onChange={(e) => setCollaborationTenure(e.target.value.replace(/\D/g, ""))} className={inputCls} placeholder="e.g. 365" />
-              {collaborationTenure && formatDaysToYMD(collaborationTenure) && (
-                <div className="text-[11px] text-slate-500 mt-1 font-semibold">
-                  Equivalent to: <span className="text-brand-600 font-bold">{formatDaysToYMD(collaborationTenure)}</span>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Fitout End:</span>
+                  <strong className="text-slate-800">{fitoutEnd ? formatDMY(fitoutEnd) : "—"}</strong>
                 </div>
-              )}
-            </div>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Contract Start:</span>
+                  <strong className="text-slate-800">{contractStart ? formatDMY(contractStart) : "—"}</strong>
+                </div>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Contract End:</span>
+                  <strong className="text-slate-800">{contractEnd ? formatDMY(contractEnd) : "—"}</strong>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -416,12 +559,12 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
         </div>
 
-        </fieldset>
+        </div>
 
         {/* Custom fields */}
         <div className={cardCls}>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Additional fields</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Section fields</h2>
             <button type="button" onClick={() => setShowAddField((s) => !s)} className="text-xs font-semibold text-brand-600 hover:text-brand-700">
               {showAddField ? "Cancel" : "+ Add field"}
             </button>
@@ -431,7 +574,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
             <div className="rounded border border-slate-200 bg-slate-50 p-4 space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className={labelCls}>Field label</label>
+                  <label className={labelCls}>Section name</label>
                   <input value={newField.label} onChange={(e) => setNewField((f) => ({ ...f, label: e.target.value }))} className={inputCls} placeholder="e.g. Display Zone" />
                 </div>
                 <div>
@@ -452,7 +595,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               )}
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={newField.isRequired} onChange={(e) => setNewField((f) => ({ ...f, isRequired: e.target.checked }))} />
-                Required
+                Mandatory
               </label>
               <button type="button" onClick={addCustomField} className="rounded bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
                 Save field
@@ -461,7 +604,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           )}
 
           {customFields.length === 0 ? (
-            <p className="text-xs text-slate-400">No additional fields. HO admin can add fields with “+ Add field”.</p>
+            <p className="text-xs text-slate-400">No section fields. HO admin can add fields with “+ Add field”.</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {customFields.map((f) => (

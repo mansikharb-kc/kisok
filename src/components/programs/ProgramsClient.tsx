@@ -57,7 +57,6 @@ function attributeLabel(attribute: AttributeRow) {
 
 export default function ProgramsClient({
   initialPrograms,
-  attributes,
   readOnly = false,
 }: {
   initialPrograms: ProgramRow[];
@@ -83,50 +82,8 @@ export default function ProgramsClient({
     });
   }, [initialPrograms, query]);
 
-  const activeCount = initialPrograms.filter((program) => program.status === "active").length;
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-all hover:shadow-md hover:border-slate-300">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Programs</div>
-              <div className="mt-2 text-4xl font-bold text-slate-900">{initialPrograms.length}</div>
-            </div>
-            <div className="text-3xl opacity-10 group-hover:opacity-15 transition-opacity"></div>
-          </div>
-          {initialPrograms.length === 0 && (
-            <div className="mt-3 text-xs text-slate-400">Start by creating your first program.</div>
-          )}
-        </div>
-
-        <div className="group rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm transition-all hover:shadow-md hover:border-emerald-300">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Active</div>
-              <div className="mt-2 text-4xl font-bold text-emerald-700">{activeCount}</div>
-            </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity">✓</div>
-          </div>
-          <div className="mt-3 h-1 w-full rounded-full bg-emerald-100">
-            <div className="h-full rounded-full bg-emerald-400" style={{ width: `${initialPrograms.length > 0 ? (activeCount / initialPrograms.length) * 100 : 0}%` }} />
-          </div>
-        </div>
-
-        <div className="group rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 shadow-sm transition-all hover:shadow-md hover:border-brand-300">
-          <div className="flex items-baseline justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Attributes</div>
-              <div className="mt-2 text-4xl font-bold text-brand-700">{attributes.length}</div>
-            </div>
-            <div className="text-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500">Available for mapping</div>
-        </div>
-
-      </div>
-
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative max-w-2xl flex-1">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -188,7 +145,7 @@ export default function ProgramsClient({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((program) => (
-                  <tr key={program.id} className={`hover:bg-brand-50/40 ${program.status === "inactive" ? "opacity-70" : ""}`}>
+                  <tr key={program.id} className={`${program.status === "inactive" ? "opacity-70" : ""}`}>
                     <td className="px-4 py-3 align-middle">
                       <Link href={`/masters/programs/${program.id}`} className="block">
                         <div className="font-semibold text-slate-900 transition-colors hover:text-brand-700">{program.name}</div>

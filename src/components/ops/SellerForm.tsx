@@ -1083,7 +1083,7 @@ export default function SellerForm({
       {/* Additional (HO-defined) fields */}
       {customFieldDefs.length > 0 && (
         <div className={card}>
-          <StepHeader n={6} title="Additional Fields" sub="Extra fields defined by HO for this onboarding" />
+          <StepHeader n={6} title="Section Fields" sub="Extra fields defined by HO for this onboarding" />
           <div className="grid grid-cols-2 gap-4">
             {customFieldDefs.map((f) => (
               <div key={f.id}>
