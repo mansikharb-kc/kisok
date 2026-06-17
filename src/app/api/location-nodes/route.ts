@@ -14,6 +14,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/, "code: letters, numbers, - and _ only").optional().nullable(),
   categoryId: z.coerce.bigint().optional().nullable(),
+  categoryIds: z.array(z.coerce.bigint()).optional(),
   isPlacementEligible: z.boolean().optional(),
   quantity: z.coerce.number().int().min(1).optional(),
   isScreenMountable: z.boolean().optional(),
@@ -100,7 +101,9 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { branchId, programId, parentId, nodeType, name, code, categoryId, isPlacementEligible, quantity, isScreenMountable } = parsed.data;
+  const { branchId, programId, parentId, nodeType, name, code, categoryId, categoryIds, isPlacementEligible, quantity, isScreenMountable } = parsed.data;
+  const catIds = categoryIds && categoryIds.length ? [...new Set(categoryIds.map(String))].map((s) => BigInt(s)) : [];
+  const primaryCategoryId = catIds[0] ?? categoryId ?? null;
 
   // Confirm branch admin owns this branch
   const ownsThisBranch = session.roles.some(
@@ -137,7 +140,8 @@ export const POST = handler(async (req: Request) => {
       nodeType,
       name,
       code: code || null,
-      categoryId: categoryId ?? null,
+      categoryId: primaryCategoryId,
+      nodeCategories: { create: catIds.map((cid) => ({ categoryId: cid })) },
       depth,
       path: "",
       isPlacementEligible: isPlacementEligible ?? false,

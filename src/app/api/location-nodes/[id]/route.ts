@@ -11,6 +11,7 @@ const updateSchema = z.object({
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/).optional().nullable(),
   nodeType: z.enum(NODE_TYPES).optional(),
   categoryId: z.coerce.bigint().optional().nullable(),
+  categoryIds: z.array(z.coerce.bigint()).optional(),
   isPlacementEligible: z.boolean().optional(),
   quantity: z.coerce.number().int().min(1).optional(),
   isScreenMountable: z.boolean().optional(),
@@ -38,7 +39,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const data = parsed.data;
+  const { categoryIds, ...data } = parsed.data;
 
   // If toggling isPlacementEligible on, generate locationId; if off, clear it
   let locationId = before.locationId;
@@ -48,9 +49,24 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
     locationId = null;
   }
 
-  const node = await prisma.locationNode.update({
-    where: { id },
-    data: { ...data, locationId, ...(data.isPlacementEligible === false ? { quantity: 1 } : {}) },
+  const node = await prisma.$transaction(async (tx) => {
+    const updated = await tx.locationNode.update({
+      where: { id },
+      data: {
+        ...data,
+        locationId,
+        ...(data.isPlacementEligible === false ? { quantity: 1 } : {}),
+        ...(categoryIds ? { categoryId: categoryIds[0] ?? null } : {}),
+      },
+    });
+    if (categoryIds) {
+      await tx.locationNodeCategory.deleteMany({ where: { locationNodeId: id } });
+      const uniq = [...new Set(categoryIds.map(String))];
+      if (uniq.length) {
+        await tx.locationNodeCategory.createMany({ data: uniq.map((cid) => ({ locationNodeId: id, categoryId: BigInt(cid) })) });
+      }
+    }
+    return updated;
   });
 
   await writeAudit({

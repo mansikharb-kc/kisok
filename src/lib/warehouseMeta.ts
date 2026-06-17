@@ -22,6 +22,7 @@ export type LocationNode = {
   status: string;
   _count: { children: number; copies: number };
   copies?: { copyRole: string }[];
+  nodeCategories?: { categoryId: string; category?: { name: string } | null }[];
 };
 
 export type CategoryOption = {
