@@ -386,17 +386,22 @@ export default async function DashboardPage() {
     occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
   }
 
-  const ROLE_TO_VISIBLE_ACTOR_ROLE: Record<string, string> = {
-    HO_ADMIN: "BRANCH_ADMIN",
-    BRANCH_ADMIN: "ONB_LEAD",
-    ONB_LEAD: "OB_EXEC",
-    OB_EXEC: "CONSIGNMENT_USER",
-  };
-  const targetRoles = session.roles
-    .map((r) => ROLE_TO_VISIBLE_ACTOR_ROLE[r.code])
-    .filter(Boolean);
-
-  const activity = await recentActivity(isHo ? null : targetBranchId, targetRoles);
+  // Recent-activity visibility:
+  //  - HO Admin       → everything (all branches, all roles)
+  //  - Branch Admin   → their branch's Onboarding Lead / Onboarding Exec / Consignment activity
+  //  - Onboarding Lead→ their branch's Onboarding Executives
+  //  - OB Exec / Consignment → their own branch-role activity
+  let activity;
+  if (isHo) {
+    activity = await recentActivity(null, []);
+  } else if (branchId) {
+    activity = await recentActivity(branchId, ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER"]);
+  } else if (isOnbLead) {
+    activity = await recentActivity(opsBranchId, ["OB_EXEC"]);
+  } else {
+    const ownRoles = session.roles.map((r) => r.code).filter((c) => ["OB_EXEC", "CONSIGNMENT_USER"].includes(c));
+    activity = await recentActivity(targetBranchId, ownRoles);
+  }
   const roleLabels = session.roles.map((r) => ROLE_LABELS[r.code as RoleCode] ?? r.code);
 
   const displayBranchName = branchName || opsBranchName;
