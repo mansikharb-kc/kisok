@@ -77,7 +77,17 @@ html.dark .bg-slate-50,
 html.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.04) !important; }
 html.dark .bg-brand-50 { background-color: rgba(255, 255, 255, 0.05) !important; }
 html.dark .bg-brand-100 { background-color: rgba(255, 255, 255, 0.08) !important; }
-html.dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+/* Neutral light hover backgrounds → subtle dark overlay (never white) */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-200:hover,
+html.dark .hover\:bg-slate-50\/50:hover,
+html.dark .hover\:bg-slate-50\/60:hover,
+html.dark .hover\:bg-slate-100\/50:hover,
+html.dark .hover\:bg-white:hover,
+html.dark .hover\:bg-white\/60:hover,
+html.dark .hover\:bg-brand-50:hover,
+html.dark .hover\:bg-brand-100:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
 /* borders */
 html.dark .border-slate-100,
 html.dark .border-slate-200,

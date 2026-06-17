@@ -20,7 +20,7 @@ const PATHS: Record<Kind, React.ReactNode> = {
 
 const TONE: Record<Tone, string> = {
   default: "text-slate-600 hover:bg-slate-50 border-slate-200",
-  primary: "text-brand-600 hover:bg-brand-50 border-slate-200",
+  primary: "text-brand-600 hover:bg-slate-50 border-slate-200",
   danger: "text-rose-600 hover:bg-rose-50 border-rose-200",
   success: "text-emerald-600 hover:bg-emerald-50 border-emerald-200",
 };

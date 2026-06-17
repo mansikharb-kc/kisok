@@ -379,21 +379,23 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
-        </p>
-      </div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
+          </p>
+        </div>
 
-      {/* Status colour legend */}
-      <div className="bg-white/60 backdrop-blur-md rounded border border-slate-200 px-4 py-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Status colour legend</div>
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600">
-          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
-          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
-          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
-          <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
+        {/* Status colour legend — top right */}
+        <div className="bg-white/60 backdrop-blur-md rounded border border-slate-200 px-4 py-3 shrink-0 lg:max-w-xs">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Status colour legend</div>
+          <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Green — Active / Approved / Passed QC</span>
+            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Yellow — Pending / In progress</span>
+            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Red — Rejected / Needs attention</span>
+            <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Blue — New / Informational</span>
+          </div>
         </div>
       </div>
 
@@ -436,35 +438,6 @@ export default async function DashboardPage() {
       ) : branchId ? (
         // Branch Admin Dashboard
         <div className="space-y-5">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">HO Masters</span>
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Global catalogue · view only</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <a href="/masters/categories" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Categories</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalCategories as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.totalAttributeBindings as number} attribute bindings</div>
-              </a>
-              <a href="/masters/attributes" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Attributes</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalAttributes as number}</div>
-                <div className="text-xs text-slate-500 mt-1">global attribute library</div>
-              </a>
-              <a href="/masters/brands" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Brands</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalBrands as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.approvedBrands as number} approved · {countsData.branchBrands as number} at this branch</div>
-              </a>
-              <a href="/masters/programs" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Programs</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.totalProducts as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.programs as number} programs active at branch</div>
-              </a>
-            </div>
-          </div>
-
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Operations</span>

@@ -68,17 +68,6 @@ export default async function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-brand-700">
-          <span className="h-2 w-2 rounded-full bg-brand-600"></span>
-          HO Master
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900">Programs</h1>
-        <p className="max-w-2xl text-sm text-slate-600">
-          Define programs and bind common attributes (shared across products) and definition attributes (contract-specific).
-        </p>
-      </div>
-
       <ProgramsClient initialPrograms={programs} attributes={attributes} readOnly={readOnly} />
     </div>
   );
