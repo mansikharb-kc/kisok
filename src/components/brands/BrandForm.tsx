@@ -37,6 +37,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   const searchParams = useSearchParams();
   const origin = searchParams.get("origin");
   const [success, setSuccess] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const editing = !!brand;
   const parents = useMemo(() => buildParentOptions(flat), [flat]);
   const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
@@ -203,7 +204,13 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
         const channel = new BroadcastChannel("brand_creation");
         channel.postMessage({
           type: "BRAND_CREATED",
-          brand: { id: String(data.brand.id), name: data.brand.name, code: data.brand.code, status: data.brand.status }
+          brand: {
+            id: String(data.brand.id),
+            name: data.brand.name,
+            code: data.brand.code,
+            status: data.brand.status,
+            approvalStatus: data.brand.approvalStatus,
+          }
         });
         channel.close();
       } catch (err) {
@@ -250,7 +257,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-slate-800">Brand Created Successfully!</h2>
           <p className="text-sm text-slate-500 max-w-sm mx-auto">
-            The brand <span className="font-semibold text-slate-900">{name}</span> has been created and synced with your seller onboarding form.
+            The brand <span className="font-semibold text-slate-900">{name}</span> has been sent to HO approval. It will appear in seller onboarding after approval.
           </p>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 w-full">
@@ -279,7 +286,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
           <div>
             <div className="font-semibold text-brand-950">Adding Brand to Seller Onboarding</div>
             <div className="text-xs text-brand-800 mt-0.5">
-              Once you submit this brand, it will automatically populate and select itself in your active seller onboarding page. You can then close this tab.
+              After you submit this brand, it will be sent for HO admin approval. Once approved, the brand will appear in the associated brands list on the seller onboarding page.
             </div>
           </div>
         </div>

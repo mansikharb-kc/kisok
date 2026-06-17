@@ -83,22 +83,44 @@ export const POST = handler(async (req: Request) => {
 
   const brandNo = await nextBrandNo(d.brandType);
   const code = await nextBrandCode(d.name);
+  const isOnboardingLead = session.roles.some((r) => r.code === "ONB_LEAD");
+  const leadBranchId = session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId)?.branchId;
 
-  const brand = await prisma.brand.create({
-    data: {
-      ...d,
-      brandNo,
-      name: d.name,
-      code,
-      contractStart: contractStart ? new Date(contractStart) : null,
-      contractEnd: contractEnd ? new Date(contractEnd) : null,
-      // If the creator is an Onboarding Lead, set status to pending approval
-      approvalStatus: session.roles.some((r) => r.code === "ONB_LEAD") ? "pending" : "approved",
-      status: session.roles.some((r) => r.code === "ONB_LEAD") ? "pending_approval" : "active",
-      brandCategories: categoryIds?.length
-        ? { create: [...new Set(categoryIds.map(String))].map((id) => ({ categoryId: BigInt(id) })) }
-        : undefined,
-    },
+  const brand = await prisma.$transaction(async (tx) => {
+    const created = await tx.brand.create({
+      data: {
+        ...d,
+        brandNo,
+        name: d.name,
+        code,
+        contractStart: contractStart ? new Date(contractStart) : null,
+        contractEnd: contractEnd ? new Date(contractEnd) : null,
+        approvalStatus: isOnboardingLead ? "pending" : "approved",
+        status: isOnboardingLead ? "pending_approval" : "active",
+        brandCategories: categoryIds?.length
+          ? { create: [...new Set(categoryIds.map(String))].map((id) => ({ categoryId: BigInt(id) })) }
+          : undefined,
+      },
+    });
+
+    if (isOnboardingLead) {
+      await tx.changeRequest.create({
+        data: {
+          type: "NEW_BRAND",
+          branchId: leadBranchId ? BigInt(leadBranchId) : null,
+          requestedBy: BigInt(session.uid),
+          status: "pending",
+          payload: {
+            brandId: created.id.toString(),
+            brandName: created.name,
+            brandCode: created.code,
+            brandNo: created.brandNo,
+          },
+        },
+      });
+    }
+
+    return created;
   });
 
   await writeAudit({

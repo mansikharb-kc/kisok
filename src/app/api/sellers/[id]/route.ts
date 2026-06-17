@@ -87,6 +87,20 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
     if (existing) return fail("Membership ID must be unique.", 409);
   }
 
+  const uniqBrandIds = brandIds ? [...new Set(brandIds.map(String))].map((bid) => BigInt(bid)) : undefined;
+  if (uniqBrandIds && uniqBrandIds.length > 0) {
+    const approvedBrandCount = await prisma.brand.count({
+      where: {
+        id: { in: uniqBrandIds },
+        status: "active",
+        approvalStatus: "approved",
+      },
+    });
+    if (approvedBrandCount !== uniqBrandIds.length) {
+      return fail("Only HO-approved active brands can be associated with a seller.", 400);
+    }
+  }
+
   const updatedSeller = await prisma.$transaction(async (tx) => {
     const updated = await tx.seller.update({
       where: { id },
@@ -98,10 +112,9 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
     if (brandIds) {
       await tx.sellerBrand.deleteMany({ where: { sellerId: id } });
-      const uniq = [...new Set(brandIds.map(String))];
-      if (uniq.length) {
+      if (uniqBrandIds?.length) {
         await tx.sellerBrand.createMany({
-          data: uniq.map((bid) => ({ sellerId: id, brandId: BigInt(bid) })),
+          data: uniqBrandIds.map((bid) => ({ sellerId: id, brandId: bid })),
         });
       }
     }
@@ -151,8 +164,8 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
       }
     }
 
-    const finalBrandIds = brandIds 
-      ? brandIds 
+    const finalBrandIds = uniqBrandIds 
+      ? uniqBrandIds 
       : (await tx.sellerBrand.findMany({ where: { sellerId: id }, select: { brandId: true } })).map((b) => b.brandId);
 
     const finalCategoryIds = categoryIds

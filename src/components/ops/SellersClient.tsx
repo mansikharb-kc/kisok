@@ -404,7 +404,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                             <span className="text-slate-300 text-xs">—</span>
                           ) : (
                             s.sellerBrands.map((sb) => (
-                              <span key={sb.brand.code} className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold border border-brand-100">
+                              <span key={sb.brand.code} className="text-[10px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-semibold shadow-sm">
                                 {sb.brand.name}
                               </span>
                             ))
@@ -419,10 +419,10 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                             s.contracts.map((c) => (
                               <span
                                 key={c.id}
-                                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                                className={`text-[10px] px-2 py-0.5 rounded-md font-semibold border shadow-sm ${
                                   c.verified
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                    : "bg-amber-50 text-amber-700 border-amber-100"
+                                    ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
+                                    : "bg-amber-50/70 text-amber-700 border-amber-100"
                                 }`}
                               >
                                 {c.program.name} {c.verified ? "✓" : "⏳"}
@@ -433,7 +433,7 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       </td>
                       <td className="px-4 py-3.5 align-middle text-xs font-medium text-slate-600">
                         {!hasAssignments ? (
-                          <span className="inline-flex items-center gap-1 text-amber-600 font-semibold">
+                          <span className="inline-flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50/50 border border-amber-100/60 px-2 py-0.5 rounded-md text-[11px] shadow-sm animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                             Unassigned
                           </span>
@@ -467,15 +467,15 @@ export default function SellersClient({ initialSellers }: { initialSellers: Sell
                       </td>
                       <td className="px-4 py-3.5 align-middle">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border shadow-sm ${
                             s.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                              ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
                               : "bg-slate-100 text-slate-500 border border-slate-200"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
+                              s.status === "active" ? "bg-emerald-500" : "bg-slate-400"
                             }`}
                           />
                           {s.status}

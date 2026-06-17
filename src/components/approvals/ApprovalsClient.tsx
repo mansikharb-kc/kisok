@@ -38,6 +38,11 @@ function summarize(req: ChangeRequestRow): string {
     const program = req.payload?.programName || (req.payload?.programId ? `Program ${req.payload.programId}` : "a program");
     return `${branch} wants ${program}`;
   }
+  if (req.type === "NEW_BRAND") {
+    const brand = req.payload?.brandName || (req.payload?.brandId ? `Brand ${req.payload.brandId}` : "a new brand");
+    const code = req.payload?.brandCode ? ` (${req.payload.brandCode})` : "";
+    return `${req.branchName || "Onboarding lead"} requested ${brand}${code}`;
+  }
   return req.type.replace(/_/g, " ");
 }
 

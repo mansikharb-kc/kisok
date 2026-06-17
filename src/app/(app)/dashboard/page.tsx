@@ -18,14 +18,14 @@ async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
       },
       select: { userId: true },
     });
-    actorUserIds = matchingRoles.map((ur) => ur.userId);
+    actorUserIds = matchingRoles.map((ur: any) => ur.userId);
     whereClause = { actorUserId: { in: actorUserIds } };
   } else if (branchId) {
     const userRoles = await prisma.userRole.findMany({
       where: { branchId },
       select: { userId: true },
     });
-    actorUserIds = userRoles.map((ur) => ur.userId);
+    actorUserIds = userRoles.map((ur: any) => ur.userId);
     whereClause = { actorUserId: { in: actorUserIds } };
   }
 
@@ -41,7 +41,7 @@ async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
     : [];
   const nameById = new Map(actors.map((a) => [a.id.toString(), a.fullName]));
 
-  return logs.map((l) => ({
+  return logs.map((l: any) => ({
     id: l.id.toString(),
     label: actionLabel(l.action),
     tone: actionTone(l.action),
@@ -53,15 +53,15 @@ async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
 
 async function countL4Categories(status?: string) {
   const l1 = await prisma.category.findMany({ where: { parentId: null }, select: { id: true } });
-  const l1Ids = l1.map((c) => c.id);
+  const l1Ids = l1.map((c: any) => c.id);
   if (l1Ids.length === 0) return 0;
 
   const l2 = await prisma.category.findMany({ where: { parentId: { in: l1Ids } }, select: { id: true } });
-  const l2Ids = l2.map((c) => c.id);
+  const l2Ids = l2.map((c: any) => c.id);
   if (l2Ids.length === 0) return 0;
 
   const l3 = await prisma.category.findMany({ where: { parentId: { in: l2Ids } }, select: { id: true } });
-  const l3Ids = l3.map((c) => c.id);
+  const l3Ids = l3.map((c: any) => c.id);
   if (l3Ids.length === 0) return 0;
 
   const whereClause: any = { parentId: { in: l3Ids } };
@@ -168,7 +168,7 @@ async function obExecCounts(branchId: bigint, userId: string) {
     where: { obExecUserId: uid },
     select: { sellerId: true },
   });
-  const sellerIds = assignedSellers.map((a) => a.sellerId);
+  const sellerIds = assignedSellers.map((a: any) => a.sellerId);
   const assignedSellersCount = sellerIds.length;
 
   const [
@@ -214,7 +214,7 @@ async function obExecCounts(branchId: bigint, userId: string) {
       : Promise.resolve([]),
   ]);
 
-  const brandIds = [...new Set(sellerBrands.map((sb) => sb.brandId))];
+  const brandIds = [...new Set(sellerBrands.map((sb: any) => sb.brandId))];
   const totalRecords = brandIds.length > 0
     ? await prisma.brandProduct.count({
         where: { brandId: { in: brandIds }, status: "active" },

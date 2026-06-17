@@ -94,6 +94,20 @@ export const POST = handler(async (req: Request) => {
     rest.membershipId = await nextMembershipId();
   }
 
+  const uniqBrandIds = [...new Set(brandIds.map(String))].map((id) => BigInt(id));
+  if (uniqBrandIds.length > 0) {
+    const approvedBrandCount = await prisma.brand.count({
+      where: {
+        id: { in: uniqBrandIds },
+        status: "active",
+        approvalStatus: "approved",
+      },
+    });
+    if (approvedBrandCount !== uniqBrandIds.length) {
+      return fail("Only HO-approved active brands can be associated with a seller.", 400);
+    }
+  }
+
   // Create seller, brand mappings, and contracts in a transaction
   const seller = await prisma.$transaction(async (tx) => {
     const created = await tx.seller.create({
@@ -102,7 +116,7 @@ export const POST = handler(async (req: Request) => {
         branchId,
         customFields: customFields ?? undefined,
         sellerBrands: {
-          create: brandIds.map((bid) => ({ brandId: bid })),
+          create: uniqBrandIds.map((bid) => ({ brandId: bid })),
         },
         sellerCategories: {
           create: categoryIds.map((cid) => ({ categoryId: cid })),
@@ -138,9 +152,9 @@ export const POST = handler(async (req: Request) => {
       });
     }
 
-    if (brandIds.length > 0 && categoryIds.length > 0) {
+    if (uniqBrandIds.length > 0 && categoryIds.length > 0) {
       const brandCategoriesToCreate = [];
-      for (const bid of brandIds) {
+      for (const bid of uniqBrandIds) {
         for (const cid of categoryIds) {
           brandCategoriesToCreate.push({
             brandId: bid,

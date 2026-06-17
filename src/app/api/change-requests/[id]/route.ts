@@ -99,6 +99,19 @@ async function decide(req: Request, ctx: { params: { id: string } }): Promise<Ne
       }
     }
 
+    if (request.type === "NEW_BRAND") {
+      const p = request.payload as { brandId?: string } | null;
+      if (p?.brandId) {
+        await tx.brand.update({
+          where: { id: BigInt(p.brandId) },
+          data: {
+            approvalStatus: decision,
+            status: decision === "approved" ? "active" : "inactive",
+          },
+        });
+      }
+    }
+
     return tx.changeRequest.update({
       where: { id: requestId },
       data: {

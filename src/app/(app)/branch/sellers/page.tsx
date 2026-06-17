@@ -75,7 +75,7 @@ export default async function Page() {
                       {s.sellerBrands.length === 0
                         ? <span className="text-slate-300 text-xs">—</span>
                         : s.sellerBrands.map((sb: any) => (
-                          <span key={sb.brand.code} className="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">
+                          <span key={sb.brand.code} className="text-[11px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-medium shadow-sm">
                             {sb.brand.name}
                           </span>
                         ))
@@ -87,7 +87,7 @@ export default async function Page() {
                       {s.contracts.length === 0
                         ? <span className="text-slate-300 text-xs">—</span>
                         : s.contracts.map((c: any) => (
-                          <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded-full ${c.verified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                          <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded-md font-medium border shadow-sm ${c.verified ? "bg-emerald-50/70 text-emerald-700 border-emerald-100" : "bg-amber-50/70 text-amber-700 border-amber-100"}`}>
                             {c.program.name} {c.verified ? "✓" : ""}
                           </span>
                         ))
@@ -95,14 +95,14 @@ export default async function Page() {
                     </div>
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {s.contracts.length === 0
                         ? <span className="text-slate-300 text-xs">—</span>
                         : s.contracts.map((c: any) => {
                           const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
                           const ymd = formatDaysToYMD(c.fitoutPeriod);
                           return (
-                            <span key={c.id} className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
+                            <span key={c.id} className="text-[11px] px-2.5 py-1 rounded-md bg-slate-50 text-slate-655 font-medium border border-slate-200/80 shadow-sm leading-relaxed">
                               {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
                               {ymd && ` (${ymd})`}
                             </span>
@@ -113,14 +113,17 @@ export default async function Page() {
                   </td>
                   <td className="px-4 py-3 align-middle text-xs text-slate-600">
                     {s.assignments.length === 0
-                      ? <span className="text-amber-500">Unassigned</span>
+                      ? <span className="inline-flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50/50 border border-amber-100/60 px-2 py-0.5 rounded-md text-[11px] shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                          Unassigned
+                        </span>
                       : s.assignments.map((a: any) => a.exec.fullName).join(", ")
                     }
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${s.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
-                      {s.status}
+                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border shadow-sm ${s.status === "active" ? "bg-emerald-50/70 text-emerald-700 border-emerald-100" : "bg-slate-100 text-slate-500"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                      <span className="capitalize">{s.status}</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 align-middle text-[11px] text-slate-500">

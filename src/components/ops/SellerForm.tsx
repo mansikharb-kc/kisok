@@ -153,9 +153,16 @@ export default function SellerForm({
   }, []);
 
   // Brands Mapped
+  const approvedBrandIdSet = useMemo(() => new Set(brands.map((b) => String(b.id))), [brands]);
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(
-    seller?.sellerBrands.map((sb) => sb.brandId) ?? []
+    seller?.sellerBrands.map((sb) => String(sb.brandId)).filter((id) => approvedBrandIdSet.has(id)) ?? []
   );
+
+  const selectedBrands = useMemo(() => {
+    return selectedBrandIds
+      .map((brandId) => brands.find((b) => String(b.id) === String(brandId)))
+      .filter(Boolean) as BrandOption[];
+  }, [selectedBrandIds, brands]);
 
   const parents = useMemo(() => buildParentOptions(flatCategories), [flatCategories]);
   const byId = useMemo(() => new Map(parents.map((p) => [p.id, p])), [parents]);
@@ -164,6 +171,8 @@ export default function SellerForm({
   const [pickedCategoryIds, setPickedCategoryIds] = useState<string[]>(
     seller?.sellerCategories?.map((sc) => String(sc.categoryId)) ?? []
   );
+
+  const [prevSelectedBrandIds, setPrevSelectedBrandIds] = useState<string[]>(selectedBrandIds);
 
   const allowedCategoryIds = useMemo(() => {
     if (selectedBrandIds.length === 0) return null;
@@ -242,6 +251,73 @@ export default function SellerForm({
     }
     return initial;
   });
+
+  useEffect(() => {
+    const addedBrands = selectedBrandIds.filter((id) => !prevSelectedBrandIds.includes(id));
+    const removedBrands = prevSelectedBrandIds.filter((id) => !selectedBrandIds.includes(id));
+
+    if (addedBrands.length > 0 || removedBrands.length > 0) {
+      let nextPicked = [...pickedCategoryIds];
+
+      // 1. Add categories of newly selected brands
+      addedBrands.forEach((brandId) => {
+        const b = brands.find((br) => String(br.id) === String(brandId));
+        if (b && b.brandCategories) {
+          b.brandCategories.forEach((bc) => {
+            const cid = String(bc.categoryId);
+            if (!nextPicked.includes(cid)) {
+              nextPicked.push(cid);
+            }
+          });
+        }
+      });
+
+      // 2. Remove categories of deselected brands, unless they belong to other selected brands
+      if (removedBrands.length > 0) {
+        const stillSelectedCategoryIds = new Set<string>();
+        const stillSelectedBrandIds = selectedBrandIds.filter((id) => !addedBrands.includes(id));
+        stillSelectedBrandIds.forEach((brandId) => {
+          const b = brands.find((br) => String(br.id) === String(brandId));
+          if (b && b.brandCategories) {
+            b.brandCategories.forEach((bc) => stillSelectedCategoryIds.add(String(bc.categoryId)));
+          }
+        });
+
+        const removedCategoryIds = new Set<string>();
+        removedBrands.forEach((brandId) => {
+          const b = brands.find((br) => String(br.id) === String(brandId));
+          if (b && b.brandCategories) {
+            b.brandCategories.forEach((bc) => removedCategoryIds.add(String(bc.categoryId)));
+          }
+        });
+
+        nextPicked = nextPicked.filter((cid) => {
+          if (removedCategoryIds.has(cid) && !stillSelectedCategoryIds.has(cid)) {
+            return false;
+          }
+          return true;
+        });
+      }
+
+      setPickedCategoryIds(nextPicked);
+      setPrevSelectedBrandIds(selectedBrandIds);
+      setSel({});
+
+      const nextPickedSet = new Set(nextPicked);
+      setActiveContracts((prev) => {
+        let changed = false;
+        const next: typeof prev = {};
+
+        for (const [programId, contract] of Object.entries(prev)) {
+          const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => nextPickedSet.has(String(id)));
+          if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
+          next[programId] = { ...contract, categoryIds: nextCategoryIds };
+        }
+
+        return changed ? next : prev;
+      });
+    }
+  }, [selectedBrandIds, prevSelectedBrandIds, brands, flatCategories, pickedCategoryIds]);
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -840,32 +916,68 @@ export default function SellerForm({
             </div>
           )}
         {/* display categories per selected brand */}
-<div className="mt-4">
-  <h3 className="text-sm font-medium mb-2">Categories per Brand</h3>
-  <div className="grid gap-2">
-    {selectedBrandIds.map((bid) => {
-      const brand = brands.find((b) => String(b.id) === String(bid));
-      const catIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
-      const uniqueCatIds = Array.from(new Set(catIds));
-      return (
-        <div key={bid} className="bg-slate-50 border border-slate-200 rounded p-3">
-          <div className="font-semibold">{brand?.name}</div>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {uniqueCatIds.map((cid) => {
-              const cat = flatCategories.find((c) => String(c.id) === cid);
-              return (
-                <span key={cid} className="text-xs bg-brand-100 text-brand-800 px-2 py-0.5 rounded">
-                  {cat?.name ?? cid}
-                </span>
-              );
-            })}
+        {selectedBrandIds.length > 0 && (
+          <div className="mt-5 border-t border-slate-100 pt-4">
+            <h3 className="text-sm font-bold text-slate-800 mb-1">Select Operating Categories per Brand</h3>
+            <p className="text-xs text-slate-500 mb-3">Check or uncheck the categories this seller is active in for each brand.</p>
+            <div className="grid gap-3">
+              {selectedBrandIds.map((bid) => {
+                const brand = brands.find((b) => String(b.id) === String(bid));
+                const catIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
+                const uniqueCatIds = Array.from(new Set(catIds));
+                if (uniqueCatIds.length === 0) return null;
+                return (
+                  <div key={bid} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="w-2 h-2 rounded-full bg-brand-500"></span>
+                      <span className="font-bold text-slate-700 text-sm">{brand?.name} Categories</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueCatIds.map((cid) => {
+                        const cat = flatCategories.find((c) => String(c.id) === cid);
+                        if (!cat) return null;
+                        const isChecked = pickedCategoryIds.includes(cid);
+                        return (
+                          <button
+                            key={cid}
+                            type="button"
+                            onClick={() => {
+                              if (isChecked) {
+                                setPickedCategoryIds((prev) => prev.filter((x) => x !== cid));
+                                // Also remove from active contracts
+                                setActiveContracts((prev) => {
+                                  let changed = false;
+                                  const next: typeof prev = {};
+                                  for (const [programId, contract] of Object.entries(prev)) {
+                                    const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => id !== cid);
+                                    if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
+                                    next[programId] = { ...contract, categoryIds: nextCategoryIds };
+                                  }
+                                  return changed ? next : prev;
+                                });
+                              } else {
+                                setPickedCategoryIds((prev) => [...prev, cid]);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition active:scale-[0.98] ${
+                              isChecked
+                                ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                : "bg-white/80 backdrop-blur-sm text-slate-750 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                            }`}
+                          >
+                            {isChecked && <span className="text-[10px]">✓</span>}
+                            <span>{cat.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
         </div>
-      );
-    })}
-  </div>
-</div>
-</div>
       </div>
 
       {/* 4. Contracts */}
@@ -1111,29 +1223,85 @@ export default function SellerForm({
                             Please select categories in Step 3 first.
                           </p>
                         ) : (
-                          <div className="flex flex-wrap gap-2 mt-1.5">
-                            {pickedCategoryIds.map((cid) => {
-                              const node = byId.get(cid);
-                              const isChecked = (details.categoryIds ?? []).includes(cid);
+                          <div className="space-y-3 mt-2">
+                            {selectedBrandIds.map((bid) => {
+                              const brand = brands.find((b) => String(b.id) === String(bid));
+                              const brandCatIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
+                              const activeBrandCats = brandCatIds.filter((cid) => pickedCategoryIds.includes(cid));
+                              
+                              if (activeBrandCats.length === 0) return null;
+
                               return (
-                                <button
-                                  key={cid}
-                                  type="button"
-                                  onClick={() => toggleContractCategory(p.id, cid)}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition ${
-                                    isChecked
-                                      ? "bg-brand-50 text-brand-700 border-brand-300"
-                                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-                                  }`}
-                                >
-                                  {isChecked && "✓ "}
-                                  <span className="text-[9px] px-1 rounded bg-slate-100 font-medium text-slate-500">
-                                    {node ? levelMeta(node.level).label : ""}
-                                  </span>
-                                  {node?.name ?? cid}
-                                </button>
+                                <div key={bid} className="bg-white/40 rounded-xl p-3 border border-slate-200 shadow-xs">
+                                  <div className="text-xs font-bold text-slate-700 mb-2">{brand?.name} Categories</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {activeBrandCats.map((cid) => {
+                                      const node = byId.get(cid);
+                                      const isChecked = (details.categoryIds ?? []).includes(cid);
+                                      return (
+                                        <button
+                                          key={cid}
+                                          type="button"
+                                          onClick={() => toggleContractCategory(p.id, cid)}
+                                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-[0.98] ${
+                                            isChecked
+                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs"
+                                              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                                          }`}
+                                        >
+                                          {isChecked && "✓ "}
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 font-medium text-slate-500">
+                                            {node ? levelMeta(node.level).label : ""}
+                                          </span>
+                                          {node?.name ?? cid}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               );
                             })}
+
+                            {(() => {
+                              const allBrandCatIds = new Set<string>();
+                              selectedBrandIds.forEach((bid) => {
+                                const brand = brands.find((b) => String(b.id) === String(bid));
+                                brand?.brandCategories?.forEach((bc) => allBrandCatIds.add(String(bc.categoryId)));
+                              });
+                              const otherCats = pickedCategoryIds.filter((cid) => !allBrandCatIds.has(cid));
+
+                              if (otherCats.length === 0) return null;
+
+                              return (
+                                <div className="bg-white/40 rounded-xl p-3 border border-slate-200 shadow-xs">
+                                  <div className="text-xs font-bold text-slate-700 mb-2">Other / Manually Added Categories</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {otherCats.map((cid) => {
+                                      const node = byId.get(cid);
+                                      const isChecked = (details.categoryIds ?? []).includes(cid);
+                                      return (
+                                        <button
+                                          key={cid}
+                                          type="button"
+                                          onClick={() => toggleContractCategory(p.id, cid)}
+                                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-[0.98] ${
+                                            isChecked
+                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs"
+                                              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                                          }`}
+                                        >
+                                          {isChecked && "✓ "}
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 font-medium text-slate-500">
+                                            {node ? levelMeta(node.level).label : ""}
+                                          </span>
+                                          {node?.name ?? cid}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

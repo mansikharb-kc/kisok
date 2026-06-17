@@ -352,7 +352,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                         s.sellerBrands.map((sb) => (
                           <span
                             key={sb.brand.code}
-                            className="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium"
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-medium shadow-sm"
                           >
                             {sb.brand.name}
                           </span>
@@ -368,10 +368,10 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                         s.contracts.map((c) => (
                           <span
                             key={c.id}
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                            className={`text-[11px] px-2 py-0.5 rounded-md font-medium border shadow-sm ${
                               c.verified
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
+                                ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
+                                : "bg-amber-50/70 text-amber-700 border-amber-100"
                             }`}
                           >
                             {c.program.name} {c.verified ? "✓" : "⏳"}
@@ -381,20 +381,18 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     </div>
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {s.contracts.length === 0 ? (
                         <span className="text-slate-300 text-xs">—</span>
                       ) : (
                         s.contracts.map((c) => {
                           const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
-                          const ymd = formatDaysToYMD(c.fitoutPeriod);
                           return (
                             <span
                               key={c.id}
-                              className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200"
+                              className="text-[11px] px-2.5 py-1 rounded-md bg-slate-50 text-slate-655 font-medium border border-slate-200/80 shadow-sm leading-relaxed"
                             >
                               {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
-                              {ymd && ` (${ymd})`}
                             </span>
                           );
                         })
@@ -403,7 +401,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   </td>
                   <td className="px-4 py-3 align-middle text-xs text-slate-600">
                     {s.assignments.length === 0 ? (
-                      <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                      <span className="inline-flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50/50 border border-amber-100/60 px-2 py-0.5 rounded-md text-[11px] shadow-sm">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
                         Unassigned
                       </span>
@@ -413,18 +411,18 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border shadow-sm ${
                         s.status === "active"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-500"
+                          ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
                       }`}
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
-                          s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
+                          s.status === "active" ? "bg-emerald-500" : "bg-slate-400"
                         }`}
                       />
-                      {s.status}
+                      <span className="capitalize">{s.status}</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 align-middle">
@@ -474,9 +472,9 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     </div>
                   </div>
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold shrink-0 uppercase tracking-wider ${
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[9px] font-bold shrink-0 uppercase tracking-wider border shadow-sm ${
                       s.status === "active"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
                         : "bg-slate-100 text-slate-500 border border-slate-200"
                     }`}
                   >
@@ -507,8 +505,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                     <div className="font-medium text-slate-700 mt-0.5 text-[11px]">
                       {s.contracts.map((c) => {
                         const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
-                        const ymd = formatDaysToYMD(c.fitoutPeriod);
-                        return `${c.program.name}: ${rawDays ? `${rawDays} Days` : "N/A"}${ymd ? ` (${ymd})` : ""}`;
+                        return `${c.program.name}: ${rawDays ? `${rawDays} Days` : "N/A"}`;
                       }).join(", ") || <span className="text-slate-300">—</span>}
                     </div>
                   </div>
@@ -524,7 +521,7 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                       s.sellerBrands.map((sb) => (
                         <span
                           key={sb.brand.code}
-                          className="text-[9px] px-2 py-0.5 rounded-full bg-brand-50 border border-brand-100 text-brand-700 font-medium"
+                          className="text-[9px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-medium shadow-sm"
                         >
                           {sb.brand.name}
                         </span>
@@ -543,10 +540,10 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                       s.contracts.map((c) => (
                         <span
                           key={c.id}
-                          className={`text-[9px] px-2 py-0.5 rounded-full font-medium border ${
+                          className={`text-[9px] px-2 py-0.5 rounded-md font-medium border shadow-sm ${
                             c.verified
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                              : "bg-amber-50 text-amber-700 border-amber-100"
+                              ? "bg-emerald-50/70 text-emerald-700 border-emerald-100"
+                              : "bg-amber-50/70 text-amber-700 border-amber-100"
                           }`}
                         >
                           {c.program.name} {c.verified ? "✓" : "⏳"}
