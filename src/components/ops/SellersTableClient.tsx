@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
+import IconButton from "@/components/ui/IconButton";
 import { formatDaysToYMD } from "@/lib/brandMeta";
 import { formatDate } from "@/lib/format";
 
@@ -169,16 +169,21 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   }, [rows, searchQuery, sortField, sortOrder, selectedSeller, selectedBrand, selectedProgram, selectedExec]);
 
   const SortIndicator = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return (
-        <span className="text-slate-300 opacity-60 group-hover:opacity-100 transition-opacity ml-1 text-[10px]">
-          ↕
-        </span>
-      );
-    }
+    const active = sortField === field;
     return (
-      <span className="text-brand-600 font-bold ml-1 text-xs">
-        {sortOrder === "asc" ? "↑" : "↓"}
+      <span className={`ml-1 inline-flex shrink-0 transition-opacity ${active ? "text-brand-600" : "text-slate-400 opacity-50 group-hover:opacity-90"}`}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          {!active ? (
+            <>
+              <polyline points="8 9 12 5 16 9" />
+              <polyline points="8 15 12 19 16 15" />
+            </>
+          ) : sortOrder === "asc" ? (
+            <polyline points="6 14 12 8 18 14" />
+          ) : (
+            <polyline points="6 10 12 16 18 10" />
+          )}
+        </svg>
       </span>
     );
   };
@@ -427,20 +432,10 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                       {s.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 align-middle">
+                  <td className="px-4 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
-                      <Link
-                        href={`/ops/sellers/${s.id}/edit`}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm"
-                      >
-                        Edit
-                      </Link>
-                      <Link
-                        href={`/ops/sellers/${s.id}`}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm"
-                      >
-                        View
-                      </Link>
+                      <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/ops/sellers/${s.id}/edit`)} />
+                      <IconButton kind="view" title="View" onClick={() => router.push(`/ops/sellers/${s.id}`)} />
                     </div>
                   </td>
                 </ClickableRow>
@@ -575,21 +570,9 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
               </div>
 
               {/* Actions footer */}
-              <div className="pt-2 border-t border-slate-100/60 flex items-center justify-end gap-1.5">
-                <Link
-                  href={`/ops/sellers/${s.id}/edit`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm font-semibold"
-                >
-                  Edit
-                </Link>
-                <Link
-                  href={`/ops/sellers/${s.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 text-slate-655 hover:border-brand-300 hover:text-brand-600 transition-colors bg-white shadow-sm font-semibold"
-                >
-                  View
-                </Link>
+              <div className="pt-2 border-t border-slate-100/60 flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/ops/sellers/${s.id}/edit`)} />
+                <IconButton kind="view" title="View" onClick={() => router.push(`/ops/sellers/${s.id}`)} />
               </div>
             </div>
           ))}
