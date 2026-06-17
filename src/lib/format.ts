@@ -1,3 +1,46 @@
+export function formatDate(date: Date | string | number | null | undefined): string {
+  if (!date) return "";
+  
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIndex = parseInt(m, 10) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${d.padStart(2, "0")}-${months[monthIndex]}-${y}`;
+    }
+  }
+
+  const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  
+  return `${day}-${month}-${year}`;
+}
+
+export function formatDateTime(date: Date | string | number | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  const hoursStr = String(hours).padStart(2, "0");
+  
+  return `${day}-${month}-${year}, ${hoursStr}:${minutes} ${ampm}`;
+}
+
 export function timeAgo(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const sec = Math.floor((Date.now() - d.getTime()) / 1000);
@@ -8,7 +51,7 @@ export function timeAgo(date: Date | string): string {
   if (hr < 24) return `${hr}h ago`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day}d ago`;
-  return d.toLocaleDateString();
+  return formatDate(d);
 }
 
 // "category.create" -> "Created category"

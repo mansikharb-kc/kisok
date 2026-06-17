@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTime } from "@/lib/format";
 
 export type ChangeRequestRow = {
   id: string;
@@ -41,12 +42,7 @@ function summarize(req: ChangeRequestRow): string {
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(iso);
 }
 
 export default function ApprovalsClient({ initialRequests }: { initialRequests: ChangeRequestRow[] }) {
@@ -54,10 +50,52 @@ export default function ApprovalsClient({ initialRequests }: { initialRequests: 
   const [tab, setTab] = useState<"pending" | "history">("pending");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
 
   const pending = useMemo(() => initialRequests.filter((r) => r.status === "pending"), [initialRequests]);
   const history = useMemo(() => initialRequests.filter((r) => r.status !== "pending"), [initialRequests]);
-  const visible = tab === "pending" ? pending : history;
+
+  const availableTypes = useMemo(() => {
+    return Array.from(new Set(initialRequests.map((r) => r.type))).sort();
+  }, [initialRequests]);
+
+  const availableBranches = useMemo(() => {
+    const names = initialRequests.map((r) => r.branchName).filter(Boolean) as string[];
+    return Array.from(new Set(names)).sort();
+  }, [initialRequests]);
+
+  const visible = useMemo(() => {
+    return initialRequests.filter((r) => {
+      const matchesTab = tab === "pending" ? r.status === "pending" : r.status !== "pending";
+      if (!matchesTab) return false;
+
+      if (typeFilter && r.type !== typeFilter) return false;
+
+      if (branchFilter && r.branchName !== branchFilter) return false;
+
+      if (query.trim()) {
+        const q = query.toLowerCase().trim();
+        const typeStr = r.type.replace(/_/g, " ").toLowerCase();
+        const summaryStr = summarize(r).toLowerCase();
+        const requesterStr = r.requestedByName.toLowerCase();
+        const branchStr = (r.branchName || "").toLowerCase();
+        const reasonStr = (r.reason || "").toLowerCase();
+        
+        const matchesQuery = 
+          typeStr.includes(q) ||
+          summaryStr.includes(q) ||
+          requesterStr.includes(q) ||
+          branchStr.includes(q) ||
+          reasonStr.includes(q);
+          
+        if (!matchesQuery) return false;
+      }
+
+      return true;
+    });
+  }, [initialRequests, tab, typeFilter, branchFilter, query]);
 
   async function decide(req: ChangeRequestRow, decision: "approved" | "rejected") {
     let reason: string | null = null;
@@ -110,6 +148,53 @@ export default function ApprovalsClient({ initialRequests }: { initialRequests: 
             Decision History ({history.length})
           </button>
         </nav>
+      </div>
+
+      {/* Filters */}
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search approvals..."
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md py-2.5 pl-10 pr-4 text-sm placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          />
+        </div>
+
+        <div>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-3 py-2.5 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            <option value="">All Request Types</option>
+            {availableTypes.map((t) => (
+              <option key={t} value={t}>
+                {t.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md px-3 py-2.5 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            <option value="">All Branches</option>
+            {availableBranches.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md shadow-sm">

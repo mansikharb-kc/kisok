@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { levelMeta } from "@/lib/categoryLevels";
+import { formatDMY } from "@/lib/brandMeta";
+import { slugFromName } from "@/lib/attributeMeta";
 
 type Branch = { id: string; name: string; branchCode: string };
 type Program = { id: string; name: string; code: string };
@@ -23,10 +25,172 @@ const inputCls =
 const labelCls = "block text-sm font-semibold text-slate-900 mb-1";
 const cardCls = "rounded border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm space-y-4";
 
+function parseTenureToPeriod(tenureStr: string): { years: number; months: number; days: number } {
+  const clean = tenureStr.trim().toLowerCase();
+  
+  let years = 0;
+  let months = 0;
+  let days = 0;
+
+  const yearMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:year|yr)/);
+  if (yearMatch) {
+    years = parseFloat(yearMatch[1]);
+  }
+
+  const monthMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:month|mo)/);
+  if (monthMatch) {
+    months = parseFloat(monthMatch[1]);
+  }
+
+  const dayMatch = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)/);
+  if (dayMatch) {
+    days = parseFloat(dayMatch[1]);
+  }
+
+  if (!yearMatch && !monthMatch && !dayMatch) {
+    const num = parseFloat(clean);
+    if (!isNaN(num)) {
+      if (num >= 30) {
+        days = num;
+      } else {
+        months = num;
+      }
+    }
+  }
+
+  return { years, months, days };
+}
+
+function formatTenure(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  
+  const parsed = parseTenureToPeriod(trimmed);
+  const hasDays = trimmed.toLowerCase().includes("day") || 
+                  trimmed.toLowerCase().includes("d") ||
+                  (!trimmed.toLowerCase().includes("year") && 
+                   !trimmed.toLowerCase().includes("yr") && 
+                   !trimmed.toLowerCase().includes("month") && 
+                   !trimmed.toLowerCase().includes("mo") && 
+                   parseFloat(trimmed) >= 30);
+                   
+  let years = 0;
+  let months = 0;
+  let days = 0;
+  
+  if (hasDays) {
+    const totalDays = (parsed.years * 365) + (parsed.months * 30) + parsed.days;
+    if (isNaN(totalDays) || totalDays <= 0) return val;
+    
+    years = Math.floor(totalDays / 365);
+    const remainingDays = totalDays % 365;
+    months = Math.floor(remainingDays / 30);
+    days = Math.round(remainingDays % 30);
+  } else {
+    const totalMonths = (parsed.years * 12) + parsed.months;
+    if (isNaN(totalMonths) || totalMonths <= 0) return val;
+    
+    years = Math.floor(totalMonths / 12);
+    months = Math.floor(totalMonths % 12);
+    days = Math.round(parsed.days);
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} Year${years > 1 ? "s" : ""}`);
+  if (months > 0) parts.push(`${months} Month${months > 1 ? "s" : ""}`);
+  if (days > 0) parts.push(`${days} Day${days > 1 ? "s" : ""}`);
+
+  if (parts.length === 0) return "0 Days";
+  return parts.join(", ");
+}
+
+function parseFitoutDays(fitoutStr: string): number {
+  const clean = fitoutStr.trim().toLowerCase();
+  const match = clean.match(/(\d+(?:\.\d+)?)\s*(?:day|d\b)?/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+}
+
+function formatFitoutPeriod(val: string): string {
+  const trimmed = val.trim();
+  if (!trimmed) return "";
+  const days = parseFitoutDays(trimmed);
+  if (days <= 0) return val;
+  return `${days} Day${days > 1 ? "s" : ""}`;
+}
+
+function addDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function subtractDays(dateStr: string, fitoutStr: string): string {
+  if (!dateStr) return "";
+  const days = parseFitoutDays(fitoutStr);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function calculateEndDate(startDateStr: string, tenureStr: string): string {
+  if (!startDateStr || !tenureStr) return "";
+  
+  const { years, months, days } = parseTenureToPeriod(tenureStr);
+  const parts = startDateStr.split("-");
+  if (parts.length !== 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(Date.UTC(year, month, day));
+  if (isNaN(date.getTime())) return "";
+
+  const clean = tenureStr.trim().toLowerCase();
+  const isDaysBased = clean.includes("day") || 
+                      clean.includes("d") ||
+                      (!clean.includes("year") && 
+                       !clean.includes("yr") && 
+                       !clean.includes("month") && 
+                       !clean.includes("mo") && 
+                       parseFloat(clean) >= 30);
+
+  if (isDaysBased) {
+    const totalDays = (years * 365) + (months * 30) + days;
+    date.setUTCDate(date.getUTCDate() + totalDays - 1);
+  } else {
+    const totalMonths = (years * 12) + months;
+    date.setUTCMonth(date.getUTCMonth() + totalMonths);
+    date.setUTCDate(date.getUTCDate() + days - 1);
+  }
+  
+  return date.toISOString().slice(0, 10);
+}
+
 export default function CollaborationForm({ branches, programs }: { branches: Branch[]; programs: Program[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const L = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1";
+  const I = "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500";
 
   const [branchId, setBranchId] = useState("");
   const [programMode, setProgramMode] = useState<"existing" | "new">(programs.length ? "existing" : "new");
@@ -42,10 +206,31 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
   const [spocPhone, setSpocPhone] = useState("");
   const [spocEmail, setSpocEmail] = useState("");
 
+  const [collaborationTenure, setCollaborationTenure] = useState("");
+  const [baseStartDate, setBaseStartDate] = useState("");
+  const [fitoutPeriod, setFitoutPeriod] = useState("");
+  
+  // Calculated states
   const [contractStart, setContractStart] = useState("");
   const [contractEnd, setContractEnd] = useState("");
-  const [fitoutPeriod, setFitoutPeriod] = useState("");
-  const [collaborationTenure, setCollaborationTenure] = useState("");
+  const [fitoutEnd, setFitoutEnd] = useState("");
+
+  useEffect(() => {
+    if (baseStartDate) {
+      const cStart = addDays(baseStartDate, fitoutPeriod);
+      setContractStart(cStart);
+      setFitoutEnd(subtractDays(cStart, "1"));
+      if (cStart && collaborationTenure) {
+        setContractEnd(calculateEndDate(cStart, collaborationTenure));
+      } else {
+        setContractEnd("");
+      }
+    } else {
+      setContractStart("");
+      setFitoutEnd("");
+      setContractEnd("");
+    }
+  }, [baseStartDate, fitoutPeriod, collaborationTenure]);
 
   // Categories — domain-wise cascading picker
   const [categories, setCategories] = useState<PickedCategory[]>([]);
@@ -229,8 +414,24 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
                 </select>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={programName} onChange={(e) => setProgramName(e.target.value)} className={inputCls} placeholder="Program name" />
-                  <input value={programCode} onChange={(e) => setProgramCode(e.target.value)} className={`${inputCls} font-mono`} placeholder="program-code" />
+                  <input
+                    value={programName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setProgramName(val);
+                      setProgramCode(slugFromName(val));
+                    }}
+                    className={inputCls}
+                    placeholder="Program name"
+                  />
+                  <input
+                    value={programCode}
+                    onChange={(e) => {
+                      setProgramCode(e.target.value);
+                    }}
+                    className={`${inputCls} font-mono`}
+                    placeholder="program-code"
+                  />
                 </div>
               )}
             </div>
@@ -238,7 +439,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
         </div>
 
         {/* View-only preview — Onboarding Lead fills these on the Add Seller page */}
-        <fieldset disabled className="space-y-5 opacity-70 m-0 p-0 border-0 min-w-0">
+        <div className="space-y-5 m-0 p-0 border-0 min-w-0">
           <p className="text-xs text-slate-500 italic">
             Member, contract &amp; category details are filled by the Onboarding Lead during seller onboarding — shown here for reference only.
           </p>
@@ -288,24 +489,109 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
 
         {/* Contract */}
         <div className={cardCls}>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Contract</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>Start date</label>
-              <input value={contractStart} onChange={(e) => setContractStart(e.target.value)} type="date" className={inputCls} />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2 mb-2">Contract</h2>
+          <div className="grid grid-cols-2 gap-6 pb-2 border-b border-slate-100/60">
+            {/* Left Column: Collaboration Tenure Dates */}
+            <div className="space-y-4">
+              <div>
+                <label className={L}>Collaboration Tenure</label>
+                <input
+                  value={collaborationTenure}
+                  onChange={(e) => setCollaborationTenure(e.target.value)}
+                  onBlur={(e) => {
+                    const formatted = formatTenure(e.target.value);
+                    if (formatted !== e.target.value) {
+                      setCollaborationTenure(formatted);
+                    }
+                  }}
+                  className={I}
+                  placeholder="e.g. 12 months"
+                />
+              </div>
+              <div>
+                <label className={L}>Collaboration Tenure Start Date</label>
+                <input
+                  type="date"
+                  value={contractStart}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
+              <div>
+                <label className={L}>Collaboration Tenure End Date</label>
+                <input
+                  type="date"
+                  value={contractEnd}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>End date</label>
-              <input value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} type="date" className={inputCls} />
+
+            {/* Right Column: Fitout Period Dates */}
+            <div className="space-y-4">
+              <div>
+                <label className={L}>Fitout Period</label>
+                <input
+                  value={fitoutPeriod}
+                  onChange={(e) => setFitoutPeriod(e.target.value)}
+                  onBlur={(e) => {
+                    const formatted = formatFitoutPeriod(e.target.value);
+                    if (formatted !== e.target.value) {
+                      setFitoutPeriod(formatted);
+                    }
+                  }}
+                  className={I}
+                  placeholder="e.g. 45 Days"
+                />
+              </div>
+              <div>
+                <label className={L}>Fitout Period Start Date</label>
+                <input
+                  type="date"
+                  value={baseStartDate}
+                  onChange={(e) => setBaseStartDate(e.target.value)}
+                  className={I}
+                />
+              </div>
+              <div>
+                <label className={L}>Fitout Period End Date</label>
+                <input
+                  type="date"
+                  value={fitoutEnd}
+                  readOnly
+                  disabled
+                  className={`${I} bg-slate-50 cursor-not-allowed`}
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Fitout period</label>
-              <input value={fitoutPeriod} onChange={(e) => setFitoutPeriod(e.target.value)} className={inputCls} placeholder="e.g. 30 days" />
-            </div>
-            <div>
-              <label className={labelCls}>Contract tenure</label>
-              <input value={collaborationTenure} onChange={(e) => setCollaborationTenure(e.target.value)} className={inputCls} placeholder="e.g. 12 months" />
-            </div>
+
+            {baseStartDate && (
+              <div className="col-span-2 mt-1 text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-y-2 gap-x-4 shadow-sm">
+                <span className="font-semibold text-brand-700 uppercase tracking-wider text-[10px]">Timeline Sequence:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Fitout Start:</span>
+                  <strong className="text-slate-800">{formatDMY(baseStartDate)}</strong>
+                </div>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Fitout End:</span>
+                  <strong className="text-slate-800">{fitoutEnd ? formatDMY(fitoutEnd) : "—"}</strong>
+                </div>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Contract Start:</span>
+                  <strong className="text-slate-800">{contractStart ? formatDMY(contractStart) : "—"}</strong>
+                </div>
+                <span className="text-slate-300 font-bold">➔</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400">Contract End:</span>
+                  <strong className="text-slate-800">{contractEnd ? formatDMY(contractEnd) : "—"}</strong>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -405,12 +691,12 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
         </div>
 
-        </fieldset>
+        </div>
 
         {/* Custom fields */}
         <div className={cardCls}>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Additional fields</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Section fields</h2>
             <button type="button" onClick={() => setShowAddField((s) => !s)} className="text-xs font-semibold text-brand-600 hover:text-brand-700">
               {showAddField ? "Cancel" : "+ Add field"}
             </button>
@@ -420,7 +706,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
             <div className="rounded border border-slate-200 bg-slate-50 p-4 space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className={labelCls}>Field label</label>
+                  <label className={labelCls}>Section name</label>
                   <input value={newField.label} onChange={(e) => setNewField((f) => ({ ...f, label: e.target.value }))} className={inputCls} placeholder="e.g. Display Zone" />
                 </div>
                 <div>
@@ -441,7 +727,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
               )}
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={newField.isRequired} onChange={(e) => setNewField((f) => ({ ...f, isRequired: e.target.checked }))} />
-                Required
+                Mandatory
               </label>
               <button type="button" onClick={addCustomField} className="rounded bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
                 Save field
@@ -450,7 +736,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           )}
 
           {customFields.length === 0 ? (
-            <p className="text-xs text-slate-400">No additional fields. HO admin can add fields with “+ Add field”.</p>
+            <p className="text-xs text-slate-400">No section fields. HO admin can add fields with “+ Add field”.</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {customFields.map((f) => (

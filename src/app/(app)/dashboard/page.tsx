@@ -4,15 +4,27 @@ import { prisma, serialize } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 import LeadAssignmentsTable from "@/components/ops/LeadAssignmentsTable";
 
-async function recentActivity(branchId: bigint | null) {
+async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   let whereClause = {};
 
-  if (branchId) {
+  let actorUserIds: bigint[] | undefined = undefined;
+
+  if (targetRoles.length > 0) {
+    const matchingRoles = await prisma.userRole.findMany({
+      where: {
+        role: { code: { in: targetRoles } },
+        ...(branchId ? { branchId } : {}),
+      },
+      select: { userId: true },
+    });
+    actorUserIds = matchingRoles.map((ur) => ur.userId);
+    whereClause = { actorUserId: { in: actorUserIds } };
+  } else if (branchId) {
     const userRoles = await prisma.userRole.findMany({
       where: { branchId },
       select: { userId: true },
     });
-    const actorUserIds = userRoles.map((ur) => ur.userId);
+    actorUserIds = userRoles.map((ur) => ur.userId);
     whereClause = { actorUserId: { in: actorUserIds } };
   }
 
@@ -372,7 +384,17 @@ export default async function DashboardPage() {
     occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
   }
 
-  const activity = await recentActivity(isHo ? null : targetBranchId);
+  const ROLE_TO_VISIBLE_ACTOR_ROLE: Record<string, string> = {
+    HO_ADMIN: "BRANCH_ADMIN",
+    BRANCH_ADMIN: "ONB_LEAD",
+    ONB_LEAD: "OB_EXEC",
+    OB_EXEC: "CONSIGNMENT_USER",
+  };
+  const targetRoles = session.roles
+    .map((r) => ROLE_TO_VISIBLE_ACTOR_ROLE[r.code])
+    .filter(Boolean);
+
+  const activity = await recentActivity(isHo ? null : targetBranchId, targetRoles);
   const roleLabels = session.roles.map((r) => ROLE_LABELS[r.code as RoleCode] ?? r.code);
 
   const displayBranchName = branchName || opsBranchName;

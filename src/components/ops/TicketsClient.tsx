@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isNonEmptyString } from "@/lib/validation";
+import { formatDate, formatDateTime } from "@/lib/format";
 import {
   TICKET_TYPES,
   ticketTypeLabel,
@@ -344,7 +345,7 @@ export default function TicketsClient({
                               <span className="text-slate-400">{ev.fromRole === "OB_EXEC" ? "Exec" : "Consign"} → {ev.toRole === "OB_EXEC" ? "Exec" : "Consign"}</span>
                             )}
                             {ev.note && <span className="text-slate-600">"{ev.note}"</span>}
-                            <span className="ml-auto text-slate-300">{new Date(ev.createdAt).toLocaleString()}</span>
+                            <span className="ml-auto text-slate-300">{formatDateTime(ev.createdAt)}</span>
                           </div>
                         ))}
                         {t.resolution && <div className="text-xs text-emerald-700">Resolution: {t.resolution}</div>}
@@ -476,7 +477,7 @@ export default function TicketsClient({
                         {PIPELINE_LABELS[c.status] ?? c.status.replace(/_/g, " ")}
                       </span>
                       {c.expectedDate && (
-                        <span className="text-xs text-slate-500">Expected: {new Date(c.expectedDate).toLocaleDateString()}</span>
+                        <span className="text-xs text-slate-500">Expected: {formatDate(c.expectedDate)}</span>
                       )}
                     </div>
                   </div>

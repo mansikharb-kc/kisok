@@ -205,17 +205,13 @@ export default function CategoryAttributePanel({
                       <>
                         <label className="flex items-center gap-1 cursor-pointer">
                           <input type="checkbox" checked={it.isRequired} disabled={busy} onChange={() => toggle(it, "isRequired")} />
-                          Required
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={it.isSearchable} disabled={busy} onChange={() => toggle(it, "isSearchable")} />
-                          Searchable
+                          Mandatory
                         </label>
                         <button onClick={() => unmap(it)} disabled={busy} className="ml-auto text-red-600 hover:underline">Remove</button>
                       </>
                     ) : (
                       <span className="text-slate-400">
-                        {it.isRequired ? "Required" : "Optional"}{it.isSearchable ? " · Searchable" : ""} · inherited (read-only)
+                        {it.isRequired ? "Mandatory" : "Optional"} · inherited (read-only)
                       </span>
                     )}
                   </div>

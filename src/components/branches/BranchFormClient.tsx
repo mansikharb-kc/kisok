@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { isNonEmptyString } from "@/lib/validation";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 type BranchStatus = "active" | "inactive";
 
@@ -54,11 +54,43 @@ export default function BranchFormClient({
   const [codeTouched, setCodeTouched] = useState(mode === "edit");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     setForm(initialValues);
     setCodeTouched(mode === "edit");
   }, [initialValues, mode]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await fetch("/api/categories");
+        const data = await res.json();
+        if (res.ok) {
+          setCategories(data.categories ?? []);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    loadCategories();
+  }, []);
+
+  const l1Domains = useMemo(() => {
+    return categories.filter((c) => !c.parentId && c.status === "active");
+  }, [categories]);
+
+  const l2GroupsByL1 = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    categories.forEach((c) => {
+      if (c.parentId && c.status === "active") {
+        if (!map[String(c.parentId)]) map[String(c.parentId)] = [];
+        map[String(c.parentId)].push(c);
+      }
+    });
+    return map;
+  }, [categories]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,7 +109,7 @@ export default function BranchFormClient({
       const res = await fetch(mode === "edit" && branchId ? `/api/branches/${branchId}` : "/api/branches", {
         method: mode === "edit" ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, categoryIds: selectedCategories }),
       });
       const data = await readApiResponse(res);
       if (!res.ok) {
@@ -152,6 +184,92 @@ export default function BranchFormClient({
             <option value="inactive">Inactive</option>
           </select>
         </div>
+ 
+        {mode === "create" && (
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-slate-900">Categories</label>
+            <div className="rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md p-4 space-y-3 max-h-72 overflow-y-auto shadow-inner">
+              {l1Domains.length === 0 ? (
+                <span className="text-xs text-slate-400">Loading categories...</span>
+              ) : (
+                l1Domains.map((l1) => {
+                  const groups = l2GroupsByL1[l1.id] || [];
+                  const isSelected = selectedCategories.includes(l1.id);
+                  const allGroupsSelected = groups.length > 0 && groups.map((g) => g.id).every((id) => selectedCategories.includes(id));
+                  return (
+                    <div key={l1.id} className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-slate-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            if (checked) {
+                              setSelectedCategories((prev) => [...prev, l1.id]);
+                            } else {
+                              const groupIds = groups.map((g) => g.id);
+                              setSelectedCategories((prev) => prev.filter((id) => id !== l1.id && !groupIds.includes(id)));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4"
+                        />
+                        {l1.name}
+                      </label>
+
+                      {isSelected && groups.length > 0 && (
+                        <div className="pl-6 border-l border-slate-200 space-y-2 py-1">
+                          <div className="flex items-center justify-between">
+                            <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Groups (Optional)</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const groupIds = groups.map((g) => g.id);
+                                if (allGroupsSelected) {
+                                  setSelectedCategories((prev) => prev.filter((id) => !groupIds.includes(id)));
+                                } else {
+                                  setSelectedCategories((prev) => {
+                                    const filtered = prev.filter((id) => !groupIds.includes(id));
+                                    return [...filtered, ...groupIds];
+                                  });
+                                }
+                              }}
+                              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 uppercase tracking-wider"
+                            >
+                              {allGroupsSelected ? "Deselect All" : "Select All"}
+                            </button>
+                          </div>
+                          <div className="grid gap-2 grid-cols-2">
+                            {groups.map((l2) => {
+                              const isL2Selected = selectedCategories.includes(l2.id);
+                              return (
+                                <label key={l2.id} className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isL2Selected}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      if (checked) {
+                                        setSelectedCategories((prev) => [...prev, l2.id]);
+                                      } else {
+                                        setSelectedCategories((prev) => prev.filter((id) => id !== l2.id));
+                                      }
+                                    }}
+                                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-3.5 w-3.5"
+                                  />
+                                  {l2.name}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           Branch master follows BRD: name, branch code, and status only. Warehouse and location setup live separately in Branch Setup.

@@ -6,6 +6,7 @@ import { prisma, serialize } from "@/lib/prisma";
 import { buildParentOptions } from "@/lib/categoryTree";
 import { levelMeta } from "@/lib/categoryLevels";
 import SellerBrandsList from "@/components/ops/SellerBrandsList";
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -218,13 +219,13 @@ export default async function Page({ params }: { params: { id: string } }) {
                       <div>
                         <div className="text-slate-400 uppercase tracking-wider font-semibold">Start Date</div>
                         <div className="text-slate-700 font-medium mt-0.5">
-                          {c.contractStart ? c.contractStart.slice(0, 10) : "—"}
+                          {c.contractStart ? formatDate(c.contractStart) : "—"}
                         </div>
                       </div>
                       <div>
                         <div className="text-slate-400 uppercase tracking-wider font-semibold">End Date</div>
                         <div className="text-slate-700 font-medium mt-0.5">
-                          {c.contractEnd ? c.contractEnd.slice(0, 10) : "—"}
+                          {c.contractEnd ? formatDate(c.contractEnd) : "—"}
                         </div>
                       </div>
                     </div>
@@ -329,11 +330,7 @@ export default async function Page({ params }: { params: { id: string } }) {
                       </span>
                     </td>
                     <td className="px-4 py-3 align-middle text-xs text-slate-500 font-medium">
-                      {new Date(r.createdAt).toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDate(r.createdAt)}
                     </td>
                   </tr>
                 ))}

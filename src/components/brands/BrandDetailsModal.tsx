@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Loader2, Globe, Phone, Mail, User, MapPin, Calendar, FileText, Tag } from "lucide-react";
+import { formatDate } from "@/lib/format";
 
 interface BrandDetailsModalProps {
   brandId: string | null;
@@ -174,7 +175,7 @@ export default function BrandDetailsModal({ brandId, onClose }: BrandDetailsModa
                       <div className="flex items-center gap-2.5 text-slate-700 font-medium">
                         <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>
-                          {brand.contractStart ? brand.contractStart.slice(0, 10) : "—"} to {brand.contractEnd ? brand.contractEnd.slice(0, 10) : "—"}
+                          {brand.contractStart ? formatDate(brand.contractStart) : "—"} to {brand.contractEnd ? formatDate(brand.contractEnd) : "—"}
                         </span>
                       </div>
                     )}

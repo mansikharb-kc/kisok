@@ -26,18 +26,10 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Branches</div>
-          <div className="mt-2 text-4xl font-bold text-slate-900">{initial.length}</div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Active</div>
           <div className="mt-2 text-4xl font-bold text-emerald-700">{activeCount}</div>
-        </div>
-        <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-brand-600">Branch DNA</div>
-          <div className="mt-2 text-4xl font-bold text-brand-700">{initial.filter((branch) => branch.branchCode).length}</div>
         </div>
         <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Master records</div>
