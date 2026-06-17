@@ -54,10 +54,15 @@ export default async function Page() {
   const totalSellers = rows.length;
   const assignedCount = rows.filter((s) => s.assignments.length > 0).length;
   const unassignedCount = totalSellers - assignedCount;
-  const activeContractsCount = rows.reduce(
-    (acc: number, s: any) => acc + s.contracts.filter((c: any) => c.verified).length,
-    0
-  );
+
+  const totalBrands = new Set(
+    rows.flatMap((s: any) => s.sellerBrands.map((sb: any) => sb.brand.code))
+  ).size;
+
+  const totalCategories = new Set(
+    rows.flatMap((s: any) => s.localRecords.map((lr: any) => lr.product?.category?.id))
+  ).size;
+
 
   return (
     <div className="space-y-5">
@@ -83,17 +88,17 @@ export default async function Page() {
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Sellers</div>
           <div className="text-3xl font-bold mt-1 text-slate-900">{totalSellers}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned</div>
-          <div className="text-3xl font-bold mt-1 text-emerald-600">{assignedCount}</div>
-        </div>
         <div className={`rounded-xl border p-5 shadow-sm ${unassignedCount > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
           <div className={`text-xs font-semibold uppercase tracking-wider ${unassignedCount > 0 ? "text-amber-600" : "text-slate-400"}`}>Unassigned</div>
           <div className={`text-3xl font-bold mt-1 ${unassignedCount > 0 ? "text-amber-700" : "text-slate-900"}`}>{unassignedCount}</div>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Contracts</div>
-          <div className="text-3xl font-bold mt-1 text-brand-600">{activeContractsCount}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Brands</div>
+          <div className="text-3xl font-bold mt-1 text-slate-900">{totalBrands}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Categories</div>
+          <div className="text-3xl font-bold mt-1 text-slate-900">{totalCategories}</div>
         </div>
       </div>
 

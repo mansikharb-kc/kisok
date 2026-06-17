@@ -29,6 +29,7 @@ const updateSchema = z.object({
     remarks: z.string().trim().max(500).optional().nullable(),
     obExecUserId: z.coerce.bigint().optional().nullable(),
     contractMediaId: z.coerce.bigint().optional().nullable(),
+    customFields: z.record(z.string(), z.any()).optional().nullable(),
   })).optional(),
 });
 
@@ -129,6 +130,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
             verified: c.verified,
             remarks: c.remarks,
             contractMediaId: c.contractMediaId,
+            customFields: c.customFields ?? undefined,
           })),
         });
       }

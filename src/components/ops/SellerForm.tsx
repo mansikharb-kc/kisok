@@ -42,6 +42,7 @@ type BrandOption = {
   id: string;
   name: string;
   code: string;
+  brandCategories?: { categoryId: string }[];
 };
 
 type ProgramOption = {
@@ -54,6 +55,9 @@ type ExecOption = {
   id: string;
   fullName: string;
   email: string;
+  _count?: {
+    assignments: number;
+  };
 };
 
 type CustomField = {
@@ -92,6 +96,7 @@ type SellerEdit = {
     remarks: string | null;
     contractMediaId?: string | null;
     contractMedia?: { url: string } | null;
+    customFields?: any;
   }[];
   assignments?: {
     programId: string | null;
@@ -114,6 +119,7 @@ export default function SellerForm({
 }) {
   const router = useRouter();
   const editing = !!seller;
+  console.log("CLIENT EXECS PROP:", execs);
 
   // Basic Information
   const [name, setName] = useState(seller?.name ?? "");
@@ -159,6 +165,35 @@ export default function SellerForm({
     seller?.sellerCategories?.map((sc) => String(sc.categoryId)) ?? []
   );
 
+  const allowedCategoryIds = useMemo(() => {
+    if (selectedBrandIds.length === 0) return null;
+    const categoryIds = new Set<string>();
+    
+    // 1. Gather direct category IDs from selected brands
+    selectedBrandIds.forEach((brandId) => {
+      const b = brands.find((br) => String(br.id) === String(brandId));
+      if (b && b.brandCategories) {
+        b.brandCategories.forEach((bc: any) => {
+          categoryIds.add(String(bc.categoryId));
+        });
+      }
+    });
+
+    // 2. Include all ancestors for cascading visibility
+    const expandedIds = new Set<string>();
+    const addWithAncestors = (catId: string) => {
+      if (expandedIds.has(catId)) return;
+      expandedIds.add(catId);
+      const cat = flatCategories.find((c) => String(c.id) === catId);
+      if (cat && cat.parentId) {
+        addWithAncestors(String(cat.parentId));
+      }
+    };
+
+    categoryIds.forEach((id) => addWithAncestors(id));
+    return expandedIds;
+  }, [selectedBrandIds, brands, flatCategories]);
+
   // Contracts/Programs
   // We represent contracts as a dictionary keyed by programId.
   const [activeContracts, setActiveContracts] = useState<
@@ -176,6 +211,7 @@ export default function SellerForm({
         obExecUserId: string;
         contractMediaId: string | null;
         contractMediaUrl: string | null;
+        categoryIds: string[];
       }
     >
   >(() => {
@@ -200,6 +236,7 @@ export default function SellerForm({
           obExecUserId: match ? String(match.obExecUserId) : "",
           contractMediaId: c.contractMediaId ? String(c.contractMediaId) : null,
           contractMediaUrl: c.contractMedia?.url ?? null,
+          categoryIds: (c.customFields as any)?.categoryIds ?? [],
         };
       }
     }
@@ -259,10 +296,14 @@ export default function SellerForm({
 
   // ---- category cascade ----
   function optionsForLevel(k: number) {
-    if (k === 1) return parents.filter((p) => p.level === 1);
+    let list = parents;
+    if (allowedCategoryIds) {
+      list = parents.filter((p) => allowedCategoryIds.has(String(p.id)));
+    }
+    if (k === 1) return list.filter((p) => p.level === 1);
     const parentSel = sel[k - 1];
     if (!parentSel) return [];
-    return parents.filter((p) => p.level === k && p.parentId === parentSel);
+    return list.filter((p) => p.level === k && p.parentId === parentSel);
   }
   function selectAt(k: number, id: string) {
     setSel((prev) => {
@@ -306,9 +347,28 @@ export default function SellerForm({
           obExecUserId: "",
           contractMediaId: null,
           contractMediaUrl: null,
+          categoryIds: [],
         };
       }
       return next;
+    });
+  }
+
+  function toggleContractCategory(programId: string, categoryId: string) {
+    setActiveContracts((prev) => {
+      const current = prev[programId];
+      if (!current) return prev;
+      const currentIds = current.categoryIds ?? [];
+      const nextIds = currentIds.includes(categoryId)
+        ? currentIds.filter((id) => id !== categoryId)
+        : [...currentIds, categoryId];
+      return {
+        ...prev,
+        [programId]: {
+          ...current,
+          categoryIds: nextIds,
+        },
+      };
     });
   }
 
@@ -428,6 +488,7 @@ export default function SellerForm({
         remarks: details.remarks || null,
         obExecUserId: details.obExecUserId || null,
         contractMediaId: details.contractMediaId ? String(details.contractMediaId) : null,
+        customFields: { categoryIds: details.categoryIds || [] },
       }));
 
       const payload = {
@@ -1015,6 +1076,41 @@ export default function SellerForm({
                           )}
                         </div>
                       </div>
+
+                      {/* Map categories to this program */}
+                      <div className="pt-3 border-t border-slate-100/60">
+                        <label className={L}>Map Categories to {p.name} <span className="text-[10px] text-slate-400 normal-case font-normal">(select all that apply)</span></label>
+                        {pickedCategoryIds.length === 0 ? (
+                          <p className="text-xs text-amber-600 font-medium italic mt-1">
+                            Please select categories in Step 3 first.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2 mt-1.5">
+                            {pickedCategoryIds.map((cid) => {
+                              const node = byId.get(cid);
+                              const isChecked = (details.categoryIds ?? []).includes(cid);
+                              return (
+                                <button
+                                  key={cid}
+                                  type="button"
+                                  onClick={() => toggleContractCategory(p.id, cid)}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition ${
+                                    isChecked
+                                      ? "bg-brand-50 text-brand-700 border-brand-300"
+                                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  {isChecked && "✓ "}
+                                  <span className="text-[9px] px-1 rounded bg-slate-100 font-medium text-slate-500">
+                                    {node ? levelMeta(node.level).label : ""}
+                                  </span>
+                                  {node?.name ?? cid}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -1066,12 +1162,25 @@ export default function SellerForm({
                         className={I}
                       >
                         <option value="">— Select Executive —</option>
-                        {execs.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
-                            {ex.fullName} ({ex.email})
-                          </option>
-                        ))}
+                        {execs.map((ex) => {
+                          const count = ex._count?.assignments ?? 0;
+                          return (
+                            <option key={ex.id} value={ex.id}>
+                              {ex.fullName} ({ex.email}) — {count} work{count === 1 ? "" : "s"}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {details.obExecUserId && (() => {
+                        const selectedExec = execs.find((e) => String(e.id) === String(details.obExecUserId));
+                        if (!selectedExec) return null;
+                        const count = selectedExec._count?.assignments ?? 0;
+                        return (
+                          <div className="mt-1.5 text-xs text-slate-500 font-medium">
+                            Currently assigned: <span className="font-semibold text-brand-600">{count} active work{count === 1 ? "" : "s"}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
