@@ -142,8 +142,8 @@ export default function ProgramsClient({
                     <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white">{program.code}</span>
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${program.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${program.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize text-white ${program.status === "active" ? "bg-emerald-600" : "bg-slate-500"}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                       {program.status}
                     </span>
                   </td>

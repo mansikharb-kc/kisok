@@ -31,10 +31,7 @@ export default async function Page({ params }: { params: { id: string } }) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Link href="/masters/programs" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-            Back to programs
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">{s.name}</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{s.name}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/masters/programs/${s.id}/edit`} className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">

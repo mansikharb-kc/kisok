@@ -339,17 +339,11 @@ export default function AssignmentsTableClient({ initialRows }: AssignmentsTable
                     {/* Status */}
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                          row.seller.status === "active"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                        className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-semibold text-white capitalize ${
+                          row.seller.status === "active" ? "bg-emerald-600" : "bg-slate-500"
                         }`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            row.seller.status === "active" ? "bg-emerald-500" : "bg-slate-300"
-                          }`}
-                        />
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
                         {row.seller.status}
                       </span>
                     </td>

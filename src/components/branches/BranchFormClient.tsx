@@ -133,9 +133,6 @@ export default function BranchFormClient({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="space-y-2">
-        <Link href="/masters/branches" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-          Back to branches
-        </Link>
         <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
         <p className="text-sm text-slate-600">{description}</p>
       </div>

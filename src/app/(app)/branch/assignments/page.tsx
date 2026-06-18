@@ -79,7 +79,7 @@ export default async function Page() {
                         </span>
                       ))}
                     </div>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${s.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold text-white capitalize ${s.status === "active" ? "bg-emerald-600" : "bg-slate-500"}`}>
                       {s.status}
                     </span>
                   </div>

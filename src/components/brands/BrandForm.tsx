@@ -277,15 +277,15 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   return (
     <form onSubmit={submit} className="space-y-5 max-w-4xl">
       {origin === "seller-onboarding" && (
-        <div className="rounded-2xl bg-brand-50/70 border border-brand-200/60 text-brand-900 text-sm p-4 flex items-start gap-3 shadow-sm">
-          <div className="p-1.5 bg-brand-100 rounded-lg text-brand-700">
+        <div className="rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 text-sm p-4 flex items-start gap-3 shadow-sm dark:bg-white/[0.04] dark:border-white/10 dark:text-slate-300">
+          <div className="p-1.5 bg-slate-200 rounded-lg text-slate-600 dark:bg-white/10 dark:text-white">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <div className="font-semibold text-brand-950">Adding Brand to Seller Onboarding</div>
-            <div className="text-xs text-brand-800 mt-0.5">
+            <div className="font-semibold text-slate-900 dark:text-white">Adding Brand to Seller Onboarding</div>
+            <div className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
               After you submit this brand, it will be sent for HO admin approval. Once approved, the brand will appear in the associated brands list on the seller onboarding page.
             </div>
           </div>
@@ -294,10 +294,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
       {/* Top bar */}
       <div className="flex items-start justify-between">
         <div>
-          <button type="button" onClick={() => router.push("/masters/brands")} className="text-sm text-slate-500 hover:text-slate-800">
-            ‹ Back to Brand Master
-          </button>
-          <h1 className="text-2xl font-bold mt-1">{editing ? `Edit Brand` : "Add New Brand"}</h1>
+          <h1 className="text-2xl font-bold">{editing ? `Edit Brand` : "Add New Brand"}</h1>
           <p className="text-sm text-slate-500">Fill in the brand details, operating categories, and contract terms below</p>
         </div>
         <div className="flex gap-2">

@@ -5,7 +5,6 @@ import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import { buildParentOptions } from "@/lib/categoryTree";
 import { levelMeta } from "@/lib/categoryLevels";
-import SellerBrandsList from "@/components/ops/SellerBrandsList";
 import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
 import { formatDate } from "@/lib/format";
 
@@ -64,29 +63,19 @@ export default async function Page({ params }: { params: { id: string } }) {
     return byId.get(String(sc.categoryId));
   }).filter(Boolean) ?? [];
 
-  const card = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
-  const labelStyle = "text-xs font-semibold uppercase tracking-wider text-slate-400";
-  const valStyle = "text-sm font-medium text-slate-800 mt-1";
-
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-8 max-w-4xl">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <Link
-            href="/ops/sellers"
-            className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            ‹ Back to Sellers
-          </Link>
-          <h1 className="text-2xl font-bold mt-1 text-slate-900">{s.name}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{s.name}</h1>
           <p className="text-sm text-slate-500">Seller detail and governance records</p>
         </div>
         <div className="flex gap-3">
           <Link
             href={`/print/sellers/${s.id}`}
             target="_blank"
-            className="rounded-lg border border-slate-350 bg-white/60 backdrop-blur-md text-slate-750 px-5 py-2 text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+            className="rounded-lg border border-slate-300 bg-white/60 backdrop-blur-md text-slate-700 px-5 py-2 text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
           >
             Print Contract / Profile
           </Link>
@@ -99,226 +88,126 @@ export default async function Page({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* Grid of Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column: Basic Profile & Associations */}
-        <div className="md:col-span-1 space-y-6">
-          {/* Profile Card */}
-          <div className={card}>
-            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-              Profile
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <div className={labelStyle}>Seller Name</div>
-                <div className={valStyle}>{s.name}</div>
-              </div>
-              <div>
-                <div className={labelStyle}>Seller Code</div>
-                <div className={`${valStyle} font-mono text-xs`}>{s.sellerCode}</div>
-              </div>
-              <div>
-                <div className={labelStyle}>Membership ID</div>
-                <div className={valStyle}>{s.membershipId ?? <span className="text-slate-300">Not set</span>}</div>
-              </div>
-              <div>
-                <div className={labelStyle}>Status</div>
-                <div className="mt-1.5">
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      s.status === "active"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        s.status === "active" ? "bg-emerald-500" : "bg-slate-300"
-                      }`}
-                    />
-                    {s.status}
-                  </span>
+      {/* Profile */}
+      <FormSection title="Profile">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Field label="Seller Name">{s.name}</Field>
+          <Field label="Seller Code" mono>{s.sellerCode}</Field>
+          <Field label="Membership ID">{s.membershipId ?? <span className="text-slate-400">Not set</span>}</Field>
+          <Field label="Branch">{s.branch.name}</Field>
+          <Field label="Status">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white capitalize ${s.status === "active" ? "bg-emerald-600" : "bg-slate-500"}`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              {s.status}
+            </span>
+          </Field>
+        </div>
+      </FormSection>
+
+      {/* Program Contracts */}
+      <FormSection title="Program Contracts">
+        {s.contracts.length === 0 ? (
+          <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
+            No active program contracts established.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {s.contracts.map((c: any) => {
+              const fitoutStr = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+              const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
+              const baseStartDate = startStr && fitoutStr ? subtractDays(startStr, fitoutStr) : "";
+              const fitoutEnd = baseStartDate && fitoutStr ? subtractDays(startStr, "1") : "";
+              const tenureDays = c.collaborationTenure ? c.collaborationTenure.replace(/\D/g, "") : "";
+
+              return (
+                <div key={c.id} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-slate-800 text-sm">{c.program.name}</div>
+                    <span className={`text-[11px] px-2.5 py-1 rounded-full font-semibold text-white ${c.verified ? "bg-emerald-600" : "bg-amber-600"}`}>
+                      {c.verified ? "Verified ✓" : "Verification Pending"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Field label="Collaboration Tenure ( In Days )">
+                      {tenureDays ? `${tenureDays} Days` : "—"}
+                      {tenureDays && formatDaysToYMD(c.collaborationTenure) ? <span className="block text-[11px] text-slate-400">( {formatDaysToYMD(c.collaborationTenure)} )</span> : null}
+                    </Field>
+                    <Field label="Collaboration Tenure Start Date">{c.contractStart ? formatDMY(c.contractStart.slice(0, 10)) : "—"}</Field>
+                    <Field label="Collaboration Tenure End Date">{c.contractEnd ? formatDMY(c.contractEnd.slice(0, 10)) : "—"}</Field>
+                    <Field label="Fitout Period ( In Days )">
+                      {fitoutStr ? `${fitoutStr} Days` : "—"}
+                      {fitoutStr && formatDaysToYMD(fitoutStr) ? <span className="block text-[11px] text-slate-400">( {formatDaysToYMD(fitoutStr)} )</span> : null}
+                    </Field>
+                    <Field label="Fitout Period Start Date">{baseStartDate ? formatDMY(baseStartDate) : "—"}</Field>
+                    <Field label="Fitout Period End Date">{fitoutEnd ? formatDMY(fitoutEnd) : "—"}</Field>
+                    {c.remarks ? <div className="sm:col-span-2 lg:col-span-3"><Field label="Remarks">{c.remarks}</Field></div> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </FormSection>
+
+      {/* Categories */}
+      <FormSection title="Categories Operated In">
+        {sellerCategoriesList.length === 0 ? (
+          <p className="text-sm text-slate-400">No categories associated with this seller.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {sellerCategoriesList.map((cat: any) => (
+              <span key={cat.id} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-3 py-1.5 text-xs">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${levelMeta(cat.level).badge}`}>{levelMeta(cat.level).label}</span>
+                <span className="font-mono text-slate-400">{cat.number}</span>
+                <span className="font-medium text-slate-800">{cat.name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </FormSection>
+
+      {/* Brands */}
+      <FormSection title="Authorized Brands">
+        {s.sellerBrands.length === 0 ? (
+          <p className="text-sm text-slate-400">No brands associated with this seller.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {s.sellerBrands.map((sb: any) => (
+              <span key={sb.brand.id} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-3 py-1.5 text-xs">
+                <span className="font-medium text-slate-800">{sb.brand.name}</span>
+                <span className="font-mono text-slate-400">{sb.brand.code}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </FormSection>
+
+      {/* Assignments */}
+      <FormSection title="Assigned Onboarding Executives">
+        {s.assignments.length === 0 ? (
+          <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
+            No executives assigned yet. Go to{" "}
+            <Link href="/ops/assignments" className="text-brand-600 hover:underline">Assignments</Link> to assign one.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {s.assignments.map((a: any) => (
+              <div key={a.exec.email} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-4 py-2.5">
+                <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold font-mono">
+                  {a.exec.fullName.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">{a.exec.fullName}</div>
+                  <div className="text-xs text-slate-400">{a.exec.email}</div>
                 </div>
               </div>
-              <div>
-                <div className={labelStyle}>Branch</div>
-                <div className={valStyle}>{s.branch.name}</div>
-              </div>
-            </div>
+            ))}
           </div>
+        )}
+      </FormSection>
 
-          {/* Categories Operated In */}
-          <div className={card}>
-            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-              Categories Operated In
-            </h3>
-            {sellerCategoriesList.length === 0 ? (
-              <p className="text-sm text-slate-400">No categories associated with this seller.</p>
-            ) : (
-              <div className="space-y-2">
-                {sellerCategoriesList.map((cat: any) => (
-                  <div key={cat.id} className="flex items-center gap-2 text-xs">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${levelMeta(cat.level).badge}`}>
-                      {levelMeta(cat.level).label}
-                    </span>
-                    <span className="font-mono text-slate-400 shrink-0">{cat.number}</span>
-                    <span className="font-medium text-slate-800 truncate">{cat.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Brands Associated */}
-          <SellerBrandsList sellerBrands={s.sellerBrands} />
-        </div>
-
-        {/* Right Column: Contracts and Assignments */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Contracts */}
-          <div className={card}>
-            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-              Program Contracts
-            </h3>
-            {s.contracts.length === 0 ? (
-              <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
-                No active program contracts established.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {s.contracts.map((c: any) => {
-                  const fitoutStr = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
-                  const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
-                  const baseStartDate = startStr && fitoutStr ? subtractDays(startStr, fitoutStr) : "";
-                  const fitoutEnd = baseStartDate && fitoutStr ? subtractDays(startStr, "1") : "";
-
-                  return (
-                    <div
-                      key={c.id}
-                      className="rounded-xl border border-slate-150 bg-slate-50/50 p-4 space-y-3"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <div className="font-bold text-slate-800 text-sm">{c.program.name}</div>
-                        <span
-                          className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
-                            c.verified
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}
-                        >
-                          {c.verified ? "Verified ✓" : "Verification Pending "}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Collaboration Tenure ( In Days )</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {c.collaborationTenure ? (
-                              <>
-                                {c.collaborationTenure.replace(/\D/g, "")} Days
-                                {formatDaysToYMD(c.collaborationTenure) && (
-                                  <span className="text-slate-500 text-[11px] block font-semibold mt-0.5">
-                                    ( {formatDaysToYMD(c.collaborationTenure)} )
-                                  </span>
-                                )}
-                              </>
-                            ) : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Collaboration Tenure Start Date</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {c.contractStart ? formatDMY(c.contractStart.slice(0, 10)) : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Collaboration Tenure End Date</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {c.contractEnd ? formatDMY(c.contractEnd.slice(0, 10)) : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Fitout Period ( In Days )</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {fitoutStr ? (
-                              <>
-                                {fitoutStr} Days
-                                {formatDaysToYMD(fitoutStr) && (
-                                  <span className="text-slate-500 text-[11px] block font-semibold mt-0.5">
-                                    ( {formatDaysToYMD(fitoutStr)} )
-                                  </span>
-                                )}
-                              </>
-                            ) : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Fitout Period Start Date</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {baseStartDate ? formatDMY(baseStartDate) : "—"}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-slate-400 uppercase tracking-wider font-semibold">Fitout Period End Date</div>
-                          <div className="text-slate-700 font-medium mt-0.5">
-                            {fitoutEnd ? formatDMY(fitoutEnd) : "—"}
-                          </div>
-                        </div>
-                      </div>
-
-                      {c.remarks && (
-                        <div className="pt-2 text-xs border-t border-slate-100/60">
-                          <span className="text-slate-400 font-semibold uppercase tracking-wider block mb-0.5">
-                            Remarks
-                          </span>
-                          <p className="text-slate-600 font-medium">{c.remarks}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Assignments */}
-          <div className={card}>
-            <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-              Assigned Onboarding Executives
-            </h3>
-            {s.assignments.length === 0 ? (
-              <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
-                No executives assigned to this seller yet. Go to{" "}
-                <Link href="/ops/assignments" className="text-brand-600 hover:underline">
-                  Assignments
-                </Link>{" "}
-                to assign an executive.
-              </p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {s.assignments.map((a: any) => (
-                  <div key={a.exec.email} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold font-mono">
-                      {a.exec.fullName.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-800">{a.exec.fullName}</div>
-                      <div className="text-xs text-slate-400">{a.exec.email}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Onboarded Products Section */}
-      <div className={card}>
-        <h3 className="font-bold text-slate-950 mb-4 pb-2 border-b border-slate-100">
-          Onboarded Products ({s.localRecords.length})
-        </h3>
+      {/* Onboarded Products */}
+      <FormSection title={`Onboarded Products (${s.localRecords.length})`}>
         {s.localRecords.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-sm text-slate-400">
             No products have been onboarded for this seller yet.
@@ -356,12 +245,12 @@ export default async function Page({ params }: { params: { id: string } }) {
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider ${
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white ${
                           r.status === "completed" || r.status === "active" || r.status === "submitted"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                            ? "bg-emerald-600"
                             : r.status === "draft"
-                            ? "bg-slate-100 text-slate-600 border border-slate-200"
-                            : "bg-amber-50 text-amber-700 border border-amber-100"
+                            ? "bg-slate-500"
+                            : "bg-amber-600"
                         }`}
                       >
                         {r.status}
@@ -376,6 +265,28 @@ export default async function Page({ params }: { params: { id: string } }) {
             </table>
           </div>
         )}
+      </FormSection>
+    </div>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="mb-4 border-b border-slate-200 pb-2 text-sm font-bold uppercase tracking-wider text-slate-700">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className={`mt-1 rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md px-3 py-2 text-sm font-medium text-slate-800 ${mono ? "font-mono text-xs" : ""}`}>
+        {children}
       </div>
     </div>
   );

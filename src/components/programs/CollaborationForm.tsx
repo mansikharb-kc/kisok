@@ -236,9 +236,6 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="space-y-2">
-        <Link href="/masters/programs" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-          Back to programs
-        </Link>
         <h1 className="text-3xl font-bold text-slate-900">New Program</h1>
         <p className="text-sm text-slate-600">
           Set up a program for a branch — program details, the collaborating member, contract terms and categories.

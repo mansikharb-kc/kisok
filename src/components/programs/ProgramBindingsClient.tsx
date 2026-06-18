@@ -135,10 +135,7 @@ export default function ProgramBindingsClient({ program, attributes }: { program
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Link href={`/masters/programs/${program.id}`} className="text-sm font-semibold text-brand-600 hover:text-brand-700">
-            Back to program details
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">{program.name} bindings</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{program.name} bindings</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">This page only groups existing attributes under the program. Definition attributes are contract terms; common attributes are shared product fields.</p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -1,5 +1,4 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
@@ -39,12 +38,6 @@ export default async function PrintSellerPage({ params }: { params: { id: string
     <div className="min-h-screen bg-white/60 backdrop-blur-md text-slate-900 p-8 max-w-4xl mx-auto">
       {/* Control bar: Hidden when printing */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-8 print:hidden">
-        <Link
-          href={`/ops/sellers/${s.id}`}
-          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          ‹ Back to Seller Profile
-        </Link>
         <PrintButton />
       </div>
 
