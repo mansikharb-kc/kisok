@@ -24,17 +24,19 @@ function uploadSrc(url: string | null | undefined): string | null {
   return url;
 }
 
-function formatAttrValue(v: {
-  valueText: string | null;
-  valueNumber: any;
-  valueBool: boolean | null;
-  valueDate: Date | null;
-  option: { optionValue: string } | null;
-  attribute: { unit: string | null };
-}): string {
+function formatAttrValue(
+  v: {
+    valueText: string | null;
+    valueNumber: any;
+    valueBool: boolean | null;
+    valueDate: Date | null;
+    option: { optionValue: string } | null;
+  },
+  unit: string | null
+): string {
   if (v.option?.optionValue) return v.option.optionValue;
   if (v.valueText) return v.valueText;
-  if (v.valueNumber != null) return `${v.valueNumber}${v.attribute.unit ? ` ${v.attribute.unit}` : ""}`;
+  if (v.valueNumber != null) return `${v.valueNumber}${unit ? ` ${unit}` : ""}`;
   if (v.valueBool != null) return v.valueBool ? "Yes" : "No";
   if (v.valueDate) return new Date(v.valueDate).toLocaleDateString();
   return "";
@@ -51,33 +53,37 @@ export default async function PrintStickerPage({
   const id = parseId(params.copyId);
   if (id === null) notFound();
 
-  const copy = await prisma.productCopy.findUnique({
-    where: { id },
-    select: {
-      instanceCode: true,
-      qr: { select: { url: true } },
-      location: { select: { locationId: true } },
-      product: {
-        select: {
-          name: true,
-          sku: true,
-          categoryId: true,
-          brand: { select: { name: true, logo: { select: { url: true } } } },
-          attrValues: {
-            select: {
-              attributeId: true,
-              valueText: true,
-              valueNumber: true,
-              valueBool: true,
-              valueDate: true,
-              option: { select: { optionValue: true } },
-              attribute: { select: { code: true, unit: true } },
+  const [copy, attributes] = await Promise.all([
+    prisma.productCopy.findUnique({
+      where: { id },
+      select: {
+        instanceCode: true,
+        qr: { select: { url: true } },
+        location: { select: { locationId: true } },
+        product: {
+          select: {
+            name: true,
+            sku: true,
+            categoryId: true,
+            brand: { select: { name: true, logo: { select: { url: true } } } },
+            attrValues: {
+              select: {
+                attributeId: true,
+                valueText: true,
+                valueNumber: true,
+                valueBool: true,
+                valueDate: true,
+                option: { select: { optionValue: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.attribute.findMany({
+      select: { id: true, code: true, unit: true },
+    }),
+  ]);
   if (!copy) notFound();
 
   // Resolve the sticker template: an explicit ?template= wins, else the first
@@ -100,6 +106,8 @@ export default async function PrintStickerPage({
   }
 
   const layout = normalizeLayout(template.layout);
+
+  const attributeMap = new Map(attributes.map((a) => [a.id.toString(), a]));
 
   // Index attribute values by attributeId for fast lookup.
   const byAttr = new Map(copy.product.attrValues.map((v) => [String(v.attributeId), v]));
@@ -124,7 +132,8 @@ export default async function PrintStickerPage({
         break;
       case "attribute": {
         const v = f.attributeId ? byAttr.get(String(f.attributeId)) : undefined;
-        value = v ? formatAttrValue(v) : "";
+        const attrMeta = f.attributeId ? attributeMap.get(String(f.attributeId)) : undefined;
+        value = v ? formatAttrValue(v, attrMeta?.unit ?? null) : "";
         break;
       }
     }

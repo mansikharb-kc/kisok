@@ -6,25 +6,27 @@ import { writeAudit } from "@/lib/audit";
 
 // Serialize a BrandProduct (with attr values + attribute meta) into the
 // read-only shape the wizard shows when a (brand, sku) master already exists.
-function serializeMaster(p: {
-  id: bigint;
-  brandId: bigint;
-  sku: string;
-  name: string;
-  categoryId: bigint;
-  status: string;
-  category: { name: string; code: string } | null;
-  brand: { name: string; code: string } | null;
-  attrValues: {
-    attributeId: bigint;
-    valueText: string | null;
-    valueNumber: unknown;
-    valueBool: boolean | null;
-    valueDate: Date | null;
-    option: { optionValue: string } | null;
-    attribute: { name: string; code: string; dataType: string; unit: string | null };
-  }[];
-}) {
+function serializeMaster(
+  p: {
+    id: bigint;
+    brandId: bigint;
+    sku: string;
+    name: string;
+    categoryId: bigint;
+    status: string;
+    category: { name: string; code: string } | null;
+    brand: { name: string; code: string } | null;
+    attrValues: {
+      attributeId: bigint;
+      valueText: string | null;
+      valueNumber: unknown;
+      valueBool: boolean | null;
+      valueDate: Date | null;
+      option: { optionValue: string } | null;
+    }[];
+  },
+  attributeMap: Map<string, { name: string; code: string; dataType: string; unit: string | null }>
+) {
   return {
     exists: true,
     id: p.id.toString(),
@@ -35,19 +37,25 @@ function serializeMaster(p: {
     status: p.status,
     category: p.category,
     brand: p.brand,
-    attrValues: p.attrValues.map((v) => ({
-      attributeId: v.attributeId.toString(),
-      name: v.attribute.name,
-      code: v.attribute.code,
-      dataType: v.attribute.dataType,
-      unit: v.attribute.unit,
-      value: v.option
-        ? v.option.optionValue
-        : v.valueText ??
-          (v.valueNumber != null ? String(v.valueNumber) : null) ??
-          (v.valueBool != null ? (v.valueBool ? "Yes" : "No") : null) ??
-          (v.valueDate ? new Date(v.valueDate).toISOString().slice(0, 10) : null),
-    })),
+    attrValues: p.attrValues
+      .map((v) => {
+        const attr = attributeMap.get(v.attributeId.toString());
+        if (!attr) return null;
+        return {
+          attributeId: v.attributeId.toString(),
+          name: attr.name,
+          code: attr.code,
+          dataType: attr.dataType,
+          unit: attr.unit,
+          value: v.option
+            ? v.option.optionValue
+            : v.valueText ??
+              (v.valueNumber != null ? String(v.valueNumber) : null) ??
+              (v.valueBool != null ? (v.valueBool ? "Yes" : "No") : null) ??
+              (v.valueDate ? new Date(v.valueDate).toISOString().slice(0, 10) : null),
+        };
+      })
+      .filter(Boolean),
   };
 }
 
@@ -66,22 +74,28 @@ export const GET = handler(async (req: Request) => {
     return fail("Invalid brandId", 400);
   }
 
-  const product = await prisma.brandProduct.findUnique({
-    where: { brandId_sku: { brandId, sku } },
-    include: {
-      category: { select: { name: true, code: true } },
-      brand: { select: { name: true, code: true } },
-      attrValues: {
-        include: {
-          option: { select: { optionValue: true } },
-          attribute: { select: { name: true, code: true, dataType: true, unit: true } },
+  const [product, attributes] = await Promise.all([
+    prisma.brandProduct.findUnique({
+      where: { brandId_sku: { brandId, sku } },
+      include: {
+        category: { select: { name: true, code: true } },
+        brand: { select: { name: true, code: true } },
+        attrValues: {
+          include: {
+            option: { select: { optionValue: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.attribute.findMany({
+      select: { id: true, name: true, code: true, dataType: true, unit: true },
+    }),
+  ]);
 
   if (!product) return ok({ exists: false });
-  return ok(serializeMaster(product));
+
+  const attributeMap = new Map(attributes.map((a) => [a.id.toString(), a]));
+  return ok(serializeMaster(product, attributeMap));
 });
 
 const valueSchema = z.object({
