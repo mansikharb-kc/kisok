@@ -51,20 +51,8 @@ async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   }));
 }
 
-async function countL4Categories(status?: string) {
-  const l1 = await prisma.category.findMany({ where: { parentId: null }, select: { id: true } });
-  const l1Ids = l1.map((c: any) => c.id);
-  if (l1Ids.length === 0) return 0;
-
-  const l2 = await prisma.category.findMany({ where: { parentId: { in: l1Ids } }, select: { id: true } });
-  const l2Ids = l2.map((c: any) => c.id);
-  if (l2Ids.length === 0) return 0;
-
-  const l3 = await prisma.category.findMany({ where: { parentId: { in: l2Ids } }, select: { id: true } });
-  const l3Ids = l3.map((c: any) => c.id);
-  if (l3Ids.length === 0) return 0;
-
-  const whereClause: any = { parentId: { in: l3Ids } };
+async function countCategories(status?: string) {
+  const whereClause: any = {};
   if (status) whereClause.status = status;
   return prisma.category.count({ where: whereClause });
 }
@@ -72,7 +60,7 @@ async function countL4Categories(status?: string) {
 async function globalCounts() {
   const [categories, attributes, brands, programs, sellers, products, copies, pendingApprovals] =
     await Promise.all([
-      countL4Categories(),
+      countCategories(),
       prisma.attribute.count(),
       prisma.brand.count(),
       prisma.program.count(),
@@ -99,11 +87,12 @@ async function branchCounts(branchId: bigint) {
     locationsCount,
     copiesCount,
     labeledCopiesCount,
-    openConsignmentsCount,
+    consignmentsCount,
+    pipelinesCount,
     pendingApprovalsCount,
     programsCount,
   ] = await Promise.all([
-    countL4Categories("active"),
+    countCategories("active"),
     prisma.attribute.count({ where: { status: "active" } }),
     prisma.categoryAttribute.count(),
     prisma.brand.count({ where: { status: "active" } }),
@@ -117,6 +106,12 @@ async function branchCounts(branchId: bigint) {
     prisma.productCopy.count({ where: { branchId } }),
     prisma.sticker.count({ where: { copy: { branchId }, status: "printed" } }),
     prisma.consignment.count({ where: { seller: { branchId }, status: { not: "closed" } } }),
+    prisma.onboardingPipeline.count({
+      where: {
+        assignment: { seller: { branchId } },
+        status: { in: ["TICKET_RAISED", "CONSIGNMENT_RECEIVED"] },
+      },
+    }),
     prisma.changeRequest.count({ where: { branchId, status: "pending" } }),
     prisma.branchProgram.count({ where: { branchId, approvalStatus: "approved" } }),
   ]);
@@ -136,7 +131,7 @@ async function branchCounts(branchId: bigint) {
     copies: copiesCount,
     labeledCopies: labeledCopiesCount,
     pendingCopies: copiesCount - labeledCopiesCount,
-    openConsignments: openConsignmentsCount,
+    openConsignments: consignmentsCount + pipelinesCount,
     pendingApprovals: pendingApprovalsCount,
     programs: programsCount,
   };
@@ -146,7 +141,8 @@ async function onbLeadCounts(branchId: bigint) {
   const [
     sellersCount,
     unassignedCount,
-    openConsignments,
+    consignmentsCount,
+    pipelinesCount,
     sampleSizes,
     programs,
     warehousesCount,
@@ -154,11 +150,18 @@ async function onbLeadCounts(branchId: bigint) {
     prisma.seller.count({ where: { branchId } }),
     prisma.seller.count({ where: { branchId, assignments: { none: {} } } }),
     prisma.consignment.count({ where: { seller: { branchId }, status: { not: "closed" } } }),
+    prisma.onboardingPipeline.count({
+      where: {
+        assignment: { seller: { branchId } },
+        status: { in: ["TICKET_RAISED", "CONSIGNMENT_RECEIVED"] },
+      },
+    }),
     prisma.sampleSize.count({ where: { branchId } }),
     prisma.branchProgram.count({ where: { branchId, approvalStatus: "approved" } }),
     prisma.locationNode.count({ where: { branchId, nodeType: "WAREHOUSE", status: "active" } }),
   ]);
   const assignedCount = sellersCount - unassignedCount;
+  const openConsignments = consignmentsCount + pipelinesCount;
 
   // Branch-wide onboarding progress
   const sellerBrands = await prisma.sellerBrand.findMany({
@@ -207,9 +210,17 @@ async function obExecCounts(branchId: bigint, userId: string) {
     placementLocations,
     sellerBrands,
   ] = await Promise.all([
-    sellerIds.length > 0
-      ? prisma.consignment.count({ where: { sellerId: { in: sellerIds }, status: "passed_back" } })
-      : Promise.resolve(0),
+    Promise.all([
+      sellerIds.length > 0
+        ? prisma.consignment.count({ where: { sellerId: { in: sellerIds }, status: "passed_back" } })
+        : Promise.resolve(0),
+      prisma.onboardingPipeline.count({
+        where: {
+          assignment: { obExecUserId: uid, seller: { branchId } },
+          status: "CONSIGNMENT_RECEIVED",
+        },
+      }),
+    ]).then(([c1, c2]) => c1 + c2),
     prisma.localOnboardingRecord.count({
       where: {
         branchId,
@@ -265,12 +276,29 @@ async function obExecCounts(branchId: bigint, userId: string) {
 
 async function consignmentUserCounts(branchId: bigint) {
   const statuses = ["initiated", "received", "in_buffer", "fabricating", "qc", "passed_back"];
-  const counts = await Promise.all(
-    statuses.map((status) =>
-      prisma.consignment.count({ where: { seller: { branchId }, status } })
-    )
-  );
+  const [counts, initiatedPipelines, passedBackPipelines] = await Promise.all([
+    Promise.all(
+      statuses.map((status) =>
+        prisma.consignment.count({ where: { seller: { branchId }, status } })
+      )
+    ),
+    prisma.onboardingPipeline.count({
+      where: {
+        assignment: { seller: { branchId } },
+        status: "TICKET_RAISED",
+      },
+    }),
+    prisma.onboardingPipeline.count({
+      where: {
+        assignment: { seller: { branchId } },
+        status: "CONSIGNMENT_RECEIVED",
+      },
+    }),
+  ]);
+
   const statusBreakdown = Object.fromEntries(statuses.map((s, i) => [s, counts[i]]));
+  statusBreakdown.initiated = (statusBreakdown.initiated || 0) + initiatedPipelines;
+  statusBreakdown.passed_back = (statusBreakdown.passed_back || 0) + passedBackPipelines;
 
   // Items pending QC = consignment items for consignments in "qc" status
   const pendingQcItems = await prisma.consignmentItem.count({
@@ -520,7 +548,6 @@ export default async function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Operations</span>
-              <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{branchName}</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
@@ -627,21 +654,28 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total Records</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.totalRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">products in assigned brands</div>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarded Records</div>
-                  <div className="text-3xl font-bold mt-1 text-emerald-600">{obExecData.productsOnboarded}</div>
-                  <div className="text-xs text-slate-500 mt-1">local records created</div>
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assigned Sellers</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.assignedSellersCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">sellers assigned to you</div>
+                </a>
+                <a href="/ops/consignments" className={`group rounded-xl border p-5 shadow-sm hover:shadow-md transition-all ${obExecData.pendingConsignments > 0 ? "border-amber-200 bg-amber-50 hover:border-amber-300" : "border-slate-200 bg-white/60 backdrop-blur-md hover:border-brand-300"}`}>
+                  <div className={`text-xs font-medium ${obExecData.pendingConsignments > 0 ? "text-amber-600" : "text-slate-400 group-hover:text-brand-600"}`}>Pending Consignments</div>
+                  <div className={`text-3xl font-bold mt-1 ${obExecData.pendingConsignments > 0 ? "text-amber-700" : "text-slate-900"}`}>{obExecData.pendingConsignments}</div>
+                  <div className="text-xs text-slate-500 mt-1">awaiting executive verification</div>
                 </a>
                 <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Not Onboarded Records</div>
-                  <div className="text-3xl font-bold mt-1 text-amber-600">{obExecData.notOnboardedRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">pending onboarding</div>
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarding Progress</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.productsOnboarded} / {obExecData.totalRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">{obExecData.notOnboardedRecords} SKUs pending</div>
+                </a>
+                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Physical Copies</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.copiesPlaced + obExecData.copiesUnplaced}</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {obExecData.copiesPlaced} placed · {obExecData.copiesUnplaced} unplaced
+                  </div>
                 </a>
               </div>
             </div>
@@ -722,7 +756,8 @@ export default async function DashboardPage() {
               href="/branch/warehouse"
               className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors shrink-0"
             >
-              View Warehouse Tree →
+              View Warehouse Tree
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
             </a>
           </div>
         ) : (
@@ -734,9 +769,10 @@ export default async function DashboardPage() {
               </div>
               <a
                 href="/branch/warehouse"
-                className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline animate-pulse"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-slate-200"
               >
-                View Warehouse Tree -&gt;
+                View Warehouse Tree
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
               </a>
             </div>
 

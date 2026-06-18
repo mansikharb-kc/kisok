@@ -47,88 +47,82 @@ export default async function Page() {
         </div>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+          <table className="w-full table-fixed text-sm">
+            <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Seller</th>
-                <th className="px-4 py-3 text-left font-medium">Membership ID</th>
-                <th className="px-4 py-3 text-left font-medium">Brands</th>
-                <th className="px-4 py-3 text-left font-medium">Programs / Contracts</th>
-                <th className="px-4 py-3 text-left font-medium">Fitout Period ( In Days )</th>
-                <th className="px-4 py-3 text-left font-medium">Assigned Exec</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Activity</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[15%]">Seller</th>
+                <th className="px-3 py-3 text-center whitespace-nowrap w-[12%]">Membership ID</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[11%]">Brands</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[13%]">Programs</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[14%]">Fitout Period</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[11%]">Assigned Exec</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[8%]">Status</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[16%]">Activity</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((s: any) => (
                 <tr key={s.id} className={`hover:bg-slate-50 ${s.status !== "active" ? "opacity-60" : ""}`}>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="font-semibold text-slate-800">{s.name}</div>
-                    <div className="font-mono text-[11px] text-slate-400">{s.sellerCode}</div>
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-semibold text-slate-800 truncate">{s.name}</div>
+                    <div className="font-mono text-[11px] text-slate-400 truncate">{s.sellerCode}</div>
                   </td>
-                  <td className="px-4 py-3 align-middle font-mono text-xs text-slate-600">
-                    {s.membershipId ?? <span className="text-slate-300">—</span>}
+                  <td className="px-3 py-3 align-top text-center">
+                    {s.membershipId
+                      ? <span className="inline-block rounded bg-slate-800 px-2 py-0.5 font-mono text-[11px] text-white whitespace-nowrap">{s.membershipId}</span>
+                      : <span className="text-slate-300">—</span>}
                   </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.sellerBrands.length === 0
-                        ? <span className="text-slate-300 text-xs">—</span>
-                        : s.sellerBrands.map((sb: any) => (
-                          <span key={sb.brand.code} className="text-[11px] px-2 py-0.5 rounded-md bg-brand-50/70 border border-brand-100 text-brand-700 font-medium shadow-sm">
-                            {sb.brand.name}
-                          </span>
-                        ))
-                      }
-                    </div>
+                  <td className="px-4 py-3 align-top">
+                    {s.sellerBrands.length === 0
+                      ? <span className="text-slate-300 text-xs">—</span>
+                      : <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                          {s.sellerBrands.map((sb: any) => <span key={sb.brand.code} className="truncate">{sb.brand.name}</span>)}
+                        </div>}
                   </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1">
-                      {s.contracts.length === 0
-                        ? <span className="text-slate-300 text-xs">—</span>
-                        : s.contracts.map((c: any) => (
-                          <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded-md font-medium border shadow-sm ${c.verified ? "bg-emerald-50/70 text-emerald-700 border-emerald-100" : "bg-amber-50/70 text-amber-700 border-amber-100"}`}>
-                            {c.program.name} {c.verified ? "✓" : ""}
-                          </span>
-                        ))
-                      }
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.contracts.length === 0
-                        ? <span className="text-slate-300 text-xs">—</span>
-                        : s.contracts.map((c: any) => {
-                          const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
-                          const ymd = formatDaysToYMD(c.fitoutPeriod);
-                          return (
-                            <span key={c.id} className="text-[11px] px-2.5 py-1 rounded-md bg-slate-50 text-slate-655 font-medium border border-slate-200/80 shadow-sm leading-relaxed">
-                              {c.program.name}: {rawDays ? `${rawDays} Days` : <span className="text-slate-400">N/A</span>}
-                              {ymd && ` (${ymd})`}
+                  <td className="px-4 py-3 align-top">
+                    {s.contracts.length === 0
+                      ? <span className="text-slate-300 text-xs">—</span>
+                      : <div className="flex flex-col gap-0.5 text-xs">
+                          {s.contracts.map((c: any) => (
+                            <span key={c.id} className={c.verified ? "text-emerald-600" : "text-amber-600"}>
+                              {c.program.name}{c.verified ? " ✓" : ""}
                             </span>
-                          );
-                        })
-                      }
-                    </div>
+                          ))}
+                        </div>}
                   </td>
-                  <td className="px-4 py-3 align-middle text-xs text-slate-600">
+                  <td className="px-4 py-3 align-top">
+                    {s.contracts.length === 0
+                      ? <span className="text-slate-300 text-xs">—</span>
+                      : <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                          {s.contracts.map((c: any) => {
+                            const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
+                            const ymd = formatDaysToYMD(c.fitoutPeriod);
+                            return (
+                              <span key={c.id}>
+                                <span className="font-medium text-slate-700">{rawDays ? `${rawDays} days` : "N/A"}</span>
+                                {ymd ? <span className="text-slate-400"> ({ymd})</span> : null}
+                              </span>
+                            );
+                          })}
+                        </div>}
+                  </td>
+                  <td className="px-4 py-3 align-top text-xs">
                     {s.assignments.length === 0
-                      ? <span className="inline-flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50/50 border border-amber-100/60 px-2 py-0.5 rounded-md text-[11px] shadow-sm">
+                      ? <span className="inline-flex items-center gap-1.5 text-amber-600 font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
                           Unassigned
                         </span>
-                      : s.assignments.map((a: any) => a.exec.fullName).join(", ")
-                    }
+                      : <span className="text-slate-600">{s.assignments.map((a: any) => a.exec.fullName).join(", ")}</span>}
                   </td>
-                  <td className="px-4 py-3 align-middle">
-                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold border shadow-sm ${s.status === "active" ? "bg-emerald-50/70 text-emerald-700 border-emerald-100" : "bg-slate-100 text-slate-500"}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : "bg-slate-400"}`} />
+                  <td className="px-4 py-3 align-top">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-white ${s.status === "active" ? "bg-emerald-600" : "bg-slate-500"}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                       <span className="capitalize">{s.status}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 align-middle text-[11px] text-slate-500">
-                    <div>{s._count.consignments} consignments</div>
-                    <div>{s._count.localRecords} products</div>
+                  <td className="px-4 py-3 align-top text-[11px] text-slate-500 whitespace-nowrap">
+                    <div><span className="font-semibold text-slate-700">{s._count.consignments}</span> consignments</div>
+                    <div><span className="font-semibold text-slate-700">{s._count.localRecords}</span> products</div>
                   </td>
                 </tr>
               ))}
