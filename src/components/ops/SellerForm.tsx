@@ -174,35 +174,6 @@ export default function SellerForm({
 
   const [prevSelectedBrandIds, setPrevSelectedBrandIds] = useState<string[]>(selectedBrandIds);
 
-  const allowedCategoryIds = useMemo(() => {
-    if (selectedBrandIds.length === 0) return null;
-    const categoryIds = new Set<string>();
-    
-    // 1. Gather direct category IDs from selected brands
-    selectedBrandIds.forEach((brandId) => {
-      const b = brands.find((br) => String(br.id) === String(brandId));
-      if (b && b.brandCategories) {
-        b.brandCategories.forEach((bc: any) => {
-          categoryIds.add(String(bc.categoryId));
-        });
-      }
-    });
-
-    // 2. Include all ancestors for cascading visibility
-    const expandedIds = new Set<string>();
-    const addWithAncestors = (catId: string) => {
-      if (expandedIds.has(catId)) return;
-      expandedIds.add(catId);
-      const cat = flatCategories.find((c) => String(c.id) === catId);
-      if (cat && cat.parentId) {
-        addWithAncestors(String(cat.parentId));
-      }
-    };
-
-    categoryIds.forEach((id) => addWithAncestors(id));
-    return expandedIds;
-  }, [selectedBrandIds, brands, flatCategories]);
-
   // Contracts/Programs
   // We represent contracts as a dictionary keyed by programId.
   const [activeContracts, setActiveContracts] = useState<
@@ -221,6 +192,7 @@ export default function SellerForm({
         contractMediaId: string | null;
         contractMediaUrl: string | null;
         categoryIds: string[];
+        brandCategoryIds: Record<string, string[]>;
       }
     >
   >(() => {
@@ -233,6 +205,17 @@ export default function SellerForm({
         const startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
         const baseStartStr = startStr && rawFitout ? subtractDays(startStr, rawFitout) : "";
         const fitoutEndStr = baseStartStr && rawFitout ? subtractDays(startStr, "1") : "";
+        
+        const savedBrandCats = (c.customFields as any)?.brandCategoryIds ?? {};
+        const savedFlatCats = (c.customFields as any)?.categoryIds ?? [];
+        const brandCategoryIds: Record<string, string[]> = { ...savedBrandCats };
+        
+        if (Object.keys(brandCategoryIds).length === 0 && savedFlatCats.length > 0 && seller?.sellerBrands) {
+          for (const sb of seller.sellerBrands) {
+            brandCategoryIds[String(sb.brandId)] = [...savedFlatCats];
+          }
+        }
+
         initial[c.programId] = {
           collaborationTenure: rawTenure,
           fitoutPeriod: rawFitout,
@@ -245,7 +228,8 @@ export default function SellerForm({
           obExecUserId: match ? String(match.obExecUserId) : "",
           contractMediaId: c.contractMediaId ? String(c.contractMediaId) : null,
           contractMediaUrl: c.contractMedia?.url ?? null,
-          categoryIds: (c.customFields as any)?.categoryIds ?? [],
+          categoryIds: savedFlatCats,
+          brandCategoryIds,
         };
       }
     }
@@ -321,8 +305,22 @@ export default function SellerForm({
 
         for (const [programId, contract] of Object.entries(prev)) {
           const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => nextPickedSet.has(String(id)));
+          
+          const nextBrandCategoryIds: Record<string, string[]> = {};
+          for (const [bid, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
+            if (bid === "other" || selectedBrandIds.includes(bid)) {
+              nextBrandCategoryIds[bid] = cats.filter((id) => nextPickedSet.has(String(id)));
+            } else {
+              changed = true;
+            }
+          }
+          
           if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
-          next[programId] = { ...contract, categoryIds: nextCategoryIds };
+          next[programId] = {
+            ...contract,
+            categoryIds: nextCategoryIds,
+            brandCategoryIds: nextBrandCategoryIds,
+          };
         }
 
         return changed ? next : prev;
@@ -384,9 +382,6 @@ export default function SellerForm({
   // ---- category cascade ----
   function optionsForLevel(k: number) {
     let list = parents;
-    if (allowedCategoryIds) {
-      list = parents.filter((p) => allowedCategoryIds.has(String(p.id)));
-    }
     if (k === 1) return list.filter((p) => p.level === 1);
     const parentSel = sel[k - 1];
     if (!parentSel) return [];
@@ -413,6 +408,24 @@ export default function SellerForm({
   }
   function removeAssociation(id: string) {
     setPickedCategoryIds((p) => p.filter((x) => x !== id));
+    setActiveContracts((prev) => {
+      let changed = false;
+      const next: typeof prev = {};
+      for (const [programId, contract] of Object.entries(prev)) {
+        const nextCategoryIds = (contract.categoryIds ?? []).filter((cid) => cid !== id);
+        const nextBrandCategoryIds: Record<string, string[]> = {};
+        for (const [bid, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
+          nextBrandCategoryIds[bid] = cats.filter((cid) => cid !== id);
+        }
+        if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
+        next[programId] = {
+          ...contract,
+          categoryIds: nextCategoryIds,
+          brandCategoryIds: nextBrandCategoryIds,
+        };
+      }
+      return changed ? next : prev;
+    });
   }
 
   // Toggle program contract selection
@@ -436,6 +449,7 @@ export default function SellerForm({
           contractMediaId: null,
           contractMediaUrl: null,
           categoryIds: [],
+          brandCategoryIds: {},
         };
         added = true;
       }
@@ -447,19 +461,33 @@ export default function SellerForm({
     }
   }
 
-  function toggleContractCategory(programId: string, categoryId: string) {
+  function toggleContractCategory(programId: string, brandId: string, categoryId: string) {
     setActiveContracts((prev) => {
       const current = prev[programId];
       if (!current) return prev;
-      const currentIds = current.categoryIds ?? [];
-      const nextIds = currentIds.includes(categoryId)
-        ? currentIds.filter((id) => id !== categoryId)
-        : [...currentIds, categoryId];
+      
+      const currentBrandCategoryIds = current.brandCategoryIds ?? {};
+      const currentBrandCats = currentBrandCategoryIds[brandId] ?? [];
+      const nextBrandCats = currentBrandCats.includes(categoryId)
+        ? currentBrandCats.filter((id) => id !== categoryId)
+        : [...currentBrandCats, categoryId];
+        
+      const nextBrandCategoryIds = {
+        ...currentBrandCategoryIds,
+        [brandId]: nextBrandCats,
+      };
+
+      const allSelectedCats = new Set<string>();
+      Object.values(nextBrandCategoryIds).forEach((cats) => {
+        cats.forEach((cid) => allSelectedCats.add(cid));
+      });
+
       return {
         ...prev,
         [programId]: {
           ...current,
-          categoryIds: nextIds,
+          brandCategoryIds: nextBrandCategoryIds,
+          categoryIds: Array.from(allSelectedCats),
         },
       };
     });
@@ -581,7 +609,10 @@ export default function SellerForm({
         remarks: details.remarks || null,
         obExecUserId: details.obExecUserId || null,
         contractMediaId: details.contractMediaId ? String(details.contractMediaId) : null,
-        customFields: { categoryIds: details.categoryIds || [] },
+        customFields: {
+          categoryIds: details.categoryIds || [],
+          brandCategoryIds: details.brandCategoryIds || {},
+        },
       }));
 
       const payload = {
@@ -961,14 +992,21 @@ export default function SellerForm({
                             onClick={() => {
                               if (isChecked) {
                                 setPickedCategoryIds((prev) => prev.filter((x) => x !== cid));
-                                // Also remove from active contracts
                                 setActiveContracts((prev) => {
                                   let changed = false;
                                   const next: typeof prev = {};
                                   for (const [programId, contract] of Object.entries(prev)) {
                                     const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => id !== cid);
+                                    const nextBrandCategoryIds: Record<string, string[]> = {};
+                                    for (const [bId, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
+                                      nextBrandCategoryIds[bId] = cats.filter((id) => id !== cid);
+                                    }
                                     if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
-                                    next[programId] = { ...contract, categoryIds: nextCategoryIds };
+                                    next[programId] = {
+                                      ...contract,
+                                      categoryIds: nextCategoryIds,
+                                      brandCategoryIds: nextBrandCategoryIds,
+                                    };
                                   }
                                   return changed ? next : prev;
                                 });
@@ -1281,15 +1319,15 @@ export default function SellerForm({
                                   <div className="flex flex-wrap gap-2">
                                     {activeBrandCats.map((cid) => {
                                       const node = byId.get(cid);
-                                      const isChecked = (details.categoryIds ?? []).includes(cid);
+                                      const isChecked = (details.brandCategoryIds?.[String(bid)] ?? []).includes(cid);
                                       return (
                                         <button
                                           key={cid}
                                           type="button"
-                                          onClick={() => toggleContractCategory(p.id, cid)}
+                                          onClick={() => toggleContractCategory(p.id, String(bid), cid)}
                                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-[0.98] ${
                                             isChecked
-                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs"
+                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs font-bold"
                                               : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
                                           }`}
                                         >
@@ -1322,15 +1360,15 @@ export default function SellerForm({
                                   <div className="flex flex-wrap gap-2">
                                     {otherCats.map((cid) => {
                                       const node = byId.get(cid);
-                                      const isChecked = (details.categoryIds ?? []).includes(cid);
+                                      const isChecked = (details.brandCategoryIds?.["other"] ?? []).includes(cid);
                                       return (
                                         <button
                                           key={cid}
                                           type="button"
-                                          onClick={() => toggleContractCategory(p.id, cid)}
+                                          onClick={() => toggleContractCategory(p.id, "other", cid)}
                                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-[0.98] ${
                                             isChecked
-                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs"
+                                              ? "bg-brand-50 text-brand-700 border-brand-300 shadow-xs font-bold"
                                               : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
                                           }`}
                                         >

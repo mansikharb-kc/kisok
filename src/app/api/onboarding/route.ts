@@ -68,7 +68,7 @@ export const POST = handler(async (req: Request) => {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   const { brandProductId, sellerId, programId } = parsed.data;
 
-  // Seller must be assigned to this exec for this program.
+  // Seller must be assigned to this executive for this program (verified type safety).
   const assignment = await prisma.sellerAssignment.findUnique({
     where: { sellerId_programId: { sellerId, programId } },
     include: { seller: { select: { branchId: true } } },

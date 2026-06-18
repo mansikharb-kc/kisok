@@ -6,6 +6,8 @@ import { prisma, serialize } from "@/lib/prisma";
 import { subtractDays, formatDMY, formatDaysToYMD } from "@/lib/brandMeta";
 import { formatDate } from "@/lib/format";
 import ExtendFitoutForm from "@/components/ops/ExtendFitoutForm";
+import OnboardingPipelineForm from "@/components/ops/OnboardingPipelineForm";
+import SkuOnboardingChecklist from "@/components/ops/SkuOnboardingChecklist";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +15,12 @@ interface TaskPageProps {
   params: {
     id: string;
   };
+  searchParams: {
+    brandId?: string;
+  };
 }
 
-export default async function TaskPage({ params }: TaskPageProps) {
+export default async function TaskPage({ params, searchParams }: TaskPageProps) {
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -38,7 +43,7 @@ export default async function TaskPage({ params }: TaskPageProps) {
     notFound();
   }
 
-  // Fetch assignment details
+  // Fetch assignment details (without pipeline relation first)
   const assignment = await prisma.sellerAssignment.findUnique({
     where: { id: assignmentId },
     include: {
@@ -51,6 +56,20 @@ export default async function TaskPage({ params }: TaskPageProps) {
                   id: true,
                   name: true,
                   code: true,
+                  contactPerson: true,
+                  phone: true,
+                  email: true,
+                  brandCategories: {
+                    include: {
+                      category: {
+                        select: {
+                          id: true,
+                          name: true,
+                          code: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -82,6 +101,52 @@ export default async function TaskPage({ params }: TaskPageProps) {
     redirect("/dashboard");
   }
 
+  // Get brands associated with the seller
+  const sellerBrands = assignment.seller.sellerBrands;
+  const brandIds = sellerBrands.map((sb) => sb.brandId);
+
+  // Determine active brand
+  let activeBrandId: bigint | null = null;
+  if (searchParams.brandId) {
+    try {
+      activeBrandId = BigInt(searchParams.brandId);
+    } catch {}
+  }
+  if (!activeBrandId && brandIds.length > 0) {
+    activeBrandId = brandIds[0];
+  }
+
+  const activeBrand = sellerBrands.find((sb) => sb.brand.id.toString() === activeBrandId?.toString())?.brand;
+
+  // Fetch or create pipeline for the active brand
+  let pipeline = null;
+  if (activeBrandId) {
+    pipeline = await prisma.onboardingPipeline.findUnique({
+      where: {
+        assignmentId_brandId: {
+          assignmentId,
+          brandId: activeBrandId,
+        },
+      },
+      include: {
+        ticket: true,
+      },
+    });
+
+    if (!pipeline) {
+      pipeline = await prisma.onboardingPipeline.create({
+        data: {
+          assignmentId,
+          brandId: activeBrandId,
+          status: "INITIATION",
+        },
+        include: {
+          ticket: true,
+        },
+      });
+    }
+  }
+
   // Fetch program contract
   const contract = await prisma.sellerContract.findFirst({
     where: {
@@ -89,10 +154,6 @@ export default async function TaskPage({ params }: TaskPageProps) {
       programId: assignment.programId,
     },
   });
-
-  // Get brands associated with the seller
-  const sellerBrands = assignment.seller.sellerBrands;
-  const brandIds = sellerBrands.map((sb) => sb.brandId);
 
   // Fetch all active products under these brands
   const products = await prisma.brandProduct.findMany({
@@ -140,11 +201,13 @@ export default async function TaskPage({ params }: TaskPageProps) {
   onboardingRecords.forEach((rec) => {
     onboardingMap.set(rec.brandProductId.toString(), rec.status);
   });
+  const onboardingObj = Object.fromEntries(onboardingMap.entries());
 
   // Serialize objects for safer server component rendering (converting BigInts to string)
   const a = serialize(assignment) as any;
   const c = contract ? (serialize(contract) as any) : null;
   const pList = serialize(products) as any[];
+  const pLine = serialize(pipeline) as any;
 
   // Group products by brand ID for easier rendering
   const productsByBrandId: Record<string, any[]> = {};
@@ -154,6 +217,16 @@ export default async function TaskPage({ params }: TaskPageProps) {
     }
     productsByBrandId[prod.brandId].push(prod);
   });
+
+  // Filter active brand specific metrics
+  const activeBrandProducts = activeBrand
+    ? pList.filter((p) => p.brandId.toString() === activeBrand.id.toString())
+    : [];
+  const activeBrandOnboardedCount = activeBrand
+    ? onboardingRecords.filter((rec) =>
+        activeBrandProducts.some((p) => p.id.toString() === rec.brandProductId.toString())
+      ).length
+    : 0;
 
   // Date parsing and calculations
   let fitoutStr = "";
@@ -202,9 +275,52 @@ export default async function TaskPage({ params }: TaskPageProps) {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700">
               Program: <span className="font-bold">{a.program.name}</span>
             </span>
+            {activeBrand && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700">
+                Active Brand: <span className="font-bold">{activeBrand.name}</span>
+              </span>
+            )}
+            {activeBrand && (activeBrand as any).brandCategories && (activeBrand as any).brandCategories.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Brand Categories: <span className="font-bold">{(activeBrand as any).brandCategories.map((bc: any) => bc.category.name).join(", ")}</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Brand Tabs at the Top */}
+      {sellerBrands.length > 1 && (
+        <div className="flex flex-wrap border-b border-slate-200 gap-1 pb-1">
+          {sellerBrands.map((sb) => {
+            const active = sb.brand.id.toString() === activeBrandId?.toString();
+            const cats = (sb.brand as any).brandCategories?.map((bc: any) => bc.category.name).join(", ");
+            return (
+              <Link
+                key={sb.brand.id.toString()}
+                href={`/ops/onboarding/task/${params.id}?brandId=${sb.brand.id.toString()}`}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex flex-col items-start gap-1.5 ${
+                  active
+                    ? "border-slate-900 text-slate-900 bg-slate-50 font-bold scale-[1.01]"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{sb.brand.name}</span>
+                  <span className="text-[10px] font-mono text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded font-bold">
+                    {sb.brand.code}
+                  </span>
+                </div>
+                {cats && (
+                  <span className="text-[9px] text-slate-400 font-medium leading-none">
+                    {cats}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {/* Warning if contract is missing */}
       {!c && (
@@ -219,210 +335,159 @@ export default async function TaskPage({ params }: TaskPageProps) {
 
       {/* Grid of timelines and extension form */}
       {c && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Timeline & Schedule details */}
-          <div className="md:col-span-2 space-y-6">
-            <div className={cardStyle}>
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-105">
-                <h3 className="font-bold text-slate-950 text-sm">Contract Schedules &amp; Timelines</h3>
-                <div className="flex gap-2">
-                  {isTodayInFitout && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
-                      <span className="h-1 w-1 rounded-full bg-sky-500 animate-pulse" />
-                      In Fitout
-                    </span>
-                  )}
-                  {isTodayInCollaboration && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                      Active Collaboration
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Fitout Timeline Section */}
-                <div className="rounded-xl bg-slate-50/80 border border-slate-150 p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                    <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">Fitout Period</span>
-                    <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                      {fitoutStr ? `${fitoutStr} Days` : "Not Set"}
-                    </span>
-                  </div>
-                  <div className="space-y-2.5 text-xs">
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">Start Date</div>
-                      <div className="text-slate-800 font-bold mt-0.5">
-                        {baseStartDate ? formatDMY(baseStartDate) : "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">End Date</div>
-                      <div className="text-slate-800 font-bold mt-0.5">
-                        {fitoutEnd ? formatDMY(fitoutEnd) : "—"}
-                      </div>
-                    </div>
-                    {fitoutStr && formatDaysToYMD(fitoutStr) && (
-                      <div className="text-[11px] text-slate-500 font-semibold italic mt-1">
-                        ({formatDaysToYMD(fitoutStr)} equivalent)
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Collaboration Timeline Section */}
-                <div className="rounded-xl bg-slate-50/80 border border-slate-150 p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                    <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">Collaboration Tenure</span>
-                    <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                      {c.collaborationTenure ? `${c.collaborationTenure.replace(/\D/g, "")} Days` : "Not Set"}
-                    </span>
-                  </div>
-                  <div className="space-y-2.5 text-xs">
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">Start Date</div>
-                      <div className="text-slate-800 font-bold mt-0.5">
-                        {startStr ? formatDMY(startStr) : "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-semibold uppercase tracking-wider">End Date</div>
-                      <div className="text-slate-800 font-bold mt-0.5">
-                        {endStr ? formatDMY(endStr) : "—"}
-                      </div>
-                    </div>
-                    {c.collaborationTenure && formatDaysToYMD(c.collaborationTenure) && (
-                      <div className="text-[11px] text-slate-500 font-semibold italic mt-1">
-                        ({formatDaysToYMD(c.collaborationTenure)} equivalent)
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {c.remarks && (
-                <div className="mt-5 pt-4 border-t border-slate-150 text-xs">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                    Timeline Notes / Extension History
+        <details className="group space-y-3" open>
+          <summary className="flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:opacity-85 transition-opacity py-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-bold text-slate-800">Contract Schedules &amp; Timelines</h2>
+              <div className="flex gap-2">
+                {isTodayInFitout && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+                    In Fitout
                   </span>
-                  <div className="bg-slate-50/50 rounded-lg border border-slate-100 p-3 text-slate-600 font-mono leading-relaxed whitespace-pre-line max-h-[150px] overflow-y-auto">
-                    {c.remarks}
+                )}
+                {isTodayInCollaboration && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active Collaboration
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors">
+              <span className="group-open:hidden">Expand</span>
+              <span className="hidden group-open:inline">Collapse</span>
+              <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </summary>
+          <div className="pt-1">
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 shadow-sm p-0 overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+                {/* Left Part: Schedule details */}
+                <div className="lg:col-span-8 p-6 space-y-6">
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                    <h3 className="font-bold text-slate-800 text-sm">Schedule Details</h3>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Fitout Timeline Section */}
+                    <div className="rounded border border-slate-200 p-4 space-y-4 bg-slate-50/30 flex flex-col justify-between">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">Fitout Period</span>
+                        <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                          {fitoutStr ? `${fitoutStr} Days` : "Not Set"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</div>
+                          <div className="text-slate-900 font-bold mt-1 text-sm">{baseStartDate ? formatDMY(baseStartDate) : "—"}</div>
+                        </div>
+                        
+                        <div className="flex items-center justify-center text-slate-300">
+                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </div>
+                        
+                        <div className="flex-1 text-right">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date</div>
+                          <div className="text-slate-900 font-bold mt-1 text-sm">{fitoutEnd ? formatDMY(fitoutEnd) : "—"}</div>
+                        </div>
+                      </div>
+                      
+                      {fitoutStr && formatDaysToYMD(fitoutStr) && (
+                        <div className="text-[10px] text-slate-500 font-medium italic pt-1 border-t border-slate-100/60">
+                          ({formatDaysToYMD(fitoutStr)} equivalent)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Collaboration Timeline Section */}
+                    <div className="rounded border border-slate-200 p-4 space-y-4 bg-slate-50/30 flex flex-col justify-between">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">Collaboration Tenure</span>
+                        <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                          {c.collaborationTenure ? `${c.collaborationTenure.replace(/\D/g, "")} Days` : "Not Set"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</div>
+                          <div className="text-slate-900 font-bold mt-1 text-sm">{startStr ? formatDMY(startStr) : "—"}</div>
+                        </div>
+                        
+                        <div className="flex items-center justify-center text-slate-300">
+                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </div>
+                        
+                        <div className="flex-1 text-right">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date</div>
+                          <div className="text-slate-900 font-bold mt-1 text-sm">{endStr ? formatDMY(endStr) : "—"}</div>
+                        </div>
+                      </div>
+                      
+                      {c.collaborationTenure && formatDaysToYMD(c.collaborationTenure) && (
+                        <div className="text-[10px] text-slate-500 font-medium italic pt-1 border-t border-slate-100/60">
+                          ({formatDaysToYMD(c.collaborationTenure)} equivalent)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {c.remarks && (
+                    <div className="mt-5 pt-4 border-t border-slate-200 text-xs">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                        Timeline Notes &amp; History
+                      </span>
+                      <div className="bg-slate-50/50 rounded border border-slate-200 p-3 text-slate-650 font-mono leading-relaxed whitespace-pre-line max-h-[150px] overflow-y-auto">
+                        {c.remarks}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Right Part: Extend Fitout Form */}
+                <div className="lg:col-span-4 p-6 bg-slate-50/30 flex flex-col justify-between">
+                  <ExtendFitoutForm
+                    assignmentId={a.id}
+                    currentFitoutDays={fitoutStr ? Number(fitoutStr) : 0}
+                  />
+                </div>
+              </div>
             </div>
           </div>
+        </details>
+      )}
 
-          {/* Extend Fitout Form Card */}
-          <div className="md:col-span-1">
-            <ExtendFitoutForm
-              assignmentId={a.id}
-              currentFitoutDays={fitoutStr ? Number(fitoutStr) : 0}
-            />
-          </div>
-        </div>
+      {/* Onboarding Pipeline Tracker & Interactive forms */}
+      {activeBrand && (
+        <OnboardingPipelineForm
+          key={activeBrand.id.toString()}
+          assignmentId={a.id}
+          pipeline={pLine}
+          brands={[serialize(activeBrand) as any]}
+        />
       )}
 
       {/* SKU Onboarding Checklist Card */}
-      <div className={cardStyle}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-2 border-b border-slate-100">
-          <div>
-            <h3 className="font-bold text-slate-950 text-sm">SKU Onboarding Checklist</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Verify which products under the seller's brands are onboarded in the "{a.program.name}" program.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-              Total SKUs: {products.length}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 text-xs border border-emerald-200">
-              Onboarded: {onboardingRecords.length}
-            </span>
-          </div>
-        </div>
-
-        {sellerBrands.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-350 bg-slate-50/50 p-8 text-center text-sm text-slate-400">
-            No brands are currently associated with this seller.
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {sellerBrands.map((sb) => {
-              const brandProducts = productsByBrandId[sb.brand.id.toString()] ?? [];
-
-              return (
-                <div key={sb.brand.id.toString()} className="border border-slate-150 rounded-xl overflow-hidden bg-white/40 shadow-xs">
-                  <div className="bg-slate-55 border-b border-slate-150 px-4 py-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800 text-sm">{sb.brand.name}</span>
-                      <span className="text-[10px] font-mono text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
-                        {sb.brand.code}
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      {brandProducts.length} SKU{brandProducts.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  {brandProducts.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400 italic">
-                      No active products found under this brand.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {brandProducts.map((p) => {
-                        const status = onboardingMap.get(p.id.toString());
-                        const isOnboarded = !!status;
-
-                        return (
-                          <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/30 transition-colors">
-                            <div className="space-y-0.5 max-w-lg">
-                              <div className="font-semibold text-slate-800 text-sm">{p.name}</div>
-                              <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                                <span className="font-mono text-slate-400 font-medium">SKU: {p.sku}</span>
-                                <span className="text-slate-350">•</span>
-                                <span className="text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
-                                  Category: {p.category.name}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
-                              {isOnboarded ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                  Onboarded ({status})
-                                </span>
-                              ) : (
-                                <>
-                                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                    Pending
-                                  </span>
-                                  {isExec && (
-                                    <Link
-                                      href={`/ops/onboarding/new?sellerId=${a.sellerId}&programId=${a.programId}&brandId=${sb.brand.id}`}
-                                      className="inline-flex items-center gap-1 rounded bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition shadow-sm"
-                                    >
-                                      + Onboard Product
-                                    </Link>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <SkuOnboardingChecklist
+        sellerId={a.sellerId}
+        programId={a.programId}
+        programName={a.program.name}
+        brands={activeBrand ? [serialize(activeBrand) as any] : []}
+        productsByBrandId={productsByBrandId}
+        onboardingMap={onboardingObj}
+        isExec={isExec}
+        totalProductsCount={activeBrandProducts.length}
+        onboardedCount={activeBrandOnboardedCount}
+      />
     </div>
   );
 }

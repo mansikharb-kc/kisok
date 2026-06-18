@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import OnboardingList from "@/components/ops/OnboardingList";
+import ClickableRow from "@/components/ops/ClickableRow";
 
 export const dynamic = "force-dynamic";
 
@@ -142,14 +143,15 @@ export default async function OnboardingPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {obExecAssignmentsList.map((a: any) => (
-                    <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                    <ClickableRow
+                      key={a.id}
+                      href={`/ops/onboarding/task/${a.id}`}
+                      className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                    >
                       <td className="px-5 py-3.5">
-                        <Link
-                          href={`/ops/onboarding/task/${a.id}`}
-                          className="font-bold text-brand-600 hover:text-brand-850 hover:underline block"
-                        >
+                        <div className="font-bold text-slate-800">
                           {a.seller.name}
-                        </Link>
+                        </div>
                         <div className="text-[11px] text-slate-400 font-mono">
                           {a.seller.sellerCode} {a.seller.membershipId ? `· ${a.seller.membershipId}` : ""}
                         </div>
@@ -188,13 +190,13 @@ export default async function OnboardingPage() {
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <Link
-                          href={`/ops/onboarding/new?sellerId=${a.seller.id}${a.program ? `&programId=${a.program.id}` : ""}`}
+                          href={`/ops/onboarding/task/${a.id}`}
                           className="inline-flex items-center gap-1.5 rounded bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
                         >
-                          + Onboard Product
+                          View Task
                         </Link>
                       </td>
-                    </tr>
+                    </ClickableRow>
                   ))}
                 </tbody>
               </table>

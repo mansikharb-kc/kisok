@@ -430,9 +430,21 @@ async function main() {
   await prisma.sellerBrand.upsert({ where: { sellerId_brandId: { sellerId: sellerJaquar.id, brandId: brandJaquar.id } }, update: {}, create: { sellerId: sellerJaquar.id, brandId: brandJaquar.id } });
 
   // Seller assignments → OB Execs
-  await prisma.sellerAssignment.upsert({ where: { sellerId_obExecUserId: { sellerId: sellerKohler.id, obExecUserId: obExec1.id } }, update: {}, create: { sellerId: sellerKohler.id, obExecUserId: obExec1.id, assignedBy: onbLead.id } });
-  await prisma.sellerAssignment.upsert({ where: { sellerId_obExecUserId: { sellerId: sellerAP.id, obExecUserId: obExec2.id } }, update: {}, create: { sellerId: sellerAP.id, obExecUserId: obExec2.id, assignedBy: onbLead.id } });
-  await prisma.sellerAssignment.upsert({ where: { sellerId_obExecUserId: { sellerId: sellerJaquar.id, obExecUserId: obExec1.id } }, update: {}, create: { sellerId: sellerJaquar.id, obExecUserId: obExec1.id, assignedBy: onbLead.id } });
+  await prisma.sellerAssignment.upsert({
+    where: { sellerId_programId: { sellerId: sellerKohler.id, programId: progImmersive.id } },
+    update: { obExecUserId: obExec1.id },
+    create: { sellerId: sellerKohler.id, programId: progImmersive.id, obExecUserId: obExec1.id, assignedBy: onbLead.id }
+  });
+  await prisma.sellerAssignment.upsert({
+    where: { sellerId_programId: { sellerId: sellerAP.id, programId: progCatalogue.id } },
+    update: { obExecUserId: obExec2.id },
+    create: { sellerId: sellerAP.id, programId: progCatalogue.id, obExecUserId: obExec2.id, assignedBy: onbLead.id }
+  });
+  await prisma.sellerAssignment.upsert({
+    where: { sellerId_programId: { sellerId: sellerJaquar.id, programId: progImmersive.id } },
+    update: { obExecUserId: obExec1.id },
+    create: { sellerId: sellerJaquar.id, programId: progImmersive.id, obExecUserId: obExec1.id, assignedBy: onbLead.id }
+  });
 
   // Seller contracts
   await prisma.sellerContract.upsert({

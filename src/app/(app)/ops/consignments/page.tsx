@@ -30,6 +30,7 @@ export default async function ConsignmentsPage({
   const isOverseer = hasRole(session.roles, "CONSIGNMENT_USER", "ONB_LEAD");
   const uid = BigInt(session.uid);
 
+  // Filter tickets by active branch context
   const ticketWhere = { branchId };
 
   const [ticketRows, assignments, obExecs, consignmentRows] = await Promise.all([
@@ -41,6 +42,7 @@ export default async function ConsignmentsPage({
         brand: { select: { name: true } },
         record: { include: { product: { select: { name: true, sku: true } } } },
         events: { orderBy: { createdAt: "asc" } },
+        onboardingPipeline: true,
       },
     }),
     isExec

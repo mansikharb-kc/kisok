@@ -61,6 +61,7 @@ type Ticket = {
   brand: { name: string } | null;
   record: { product: { name: string; sku: string } } | null;
   events: TEvent[];
+  onboardingPipeline?: any;
 };
 type SellerOpt = { id: string; name: string; sellerCode: string; brands: { id: string; name: string }[] };
 
@@ -125,6 +126,109 @@ export default function TicketsClient({
   const [qcResultInput, setQcResultInput] = useState<Record<string, string>>({});
   const [qcNotesInput, setQcNotesInput] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<Record<string, string>>({});
+
+  // Pipeline consignment receipt form states
+  const [pipelineReceivedDate, setPipelineReceivedDate] = useState<Record<string, string>>({});
+  const [pipelineVehicleDetails, setPipelineVehicleDetails] = useState<Record<string, string>>({});
+  const [pipelineQtyReceived, setPipelineQtyReceived] = useState<Record<string, string>>({});
+  const [pipelineBoxQc, setPipelineBoxQc] = useState<Record<string, string>>({});
+  const [pipelinePhotoUrl, setPipelinePhotoUrl] = useState<Record<string, string>>({});
+  const [pipelinePackingListDoc, setPipelinePackingListDoc] = useState<Record<string, string>>({});
+  const [pipelineRemarks, setPipelineRemarks] = useState<Record<string, string>>({});
+  const [pipelineErrors, setPipelineErrors] = useState<Record<string, string>>({});
+  const [uploadingPhotoMap, setUploadingPhotoMap] = useState<Record<string, boolean>>({});
+  const [uploadingPackingMap, setUploadingPackingMap] = useState<Record<string, boolean>>({});
+
+  async function handlePhotoUpload(ticketId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhotoMap((p) => ({ ...p, [ticketId]: true }));
+    setPipelineErrors((p) => ({ ...p, [ticketId]: "" }));
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setPipelineErrors((p) => ({ ...p, [ticketId]: data.error || "Photograph upload failed" }));
+        return;
+      }
+      setPipelinePhotoUrl((p) => ({ ...p, [ticketId]: data.url }));
+    } catch {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Photograph upload failed" }));
+    } finally {
+      setUploadingPhotoMap((p) => ({ ...p, [ticketId]: false }));
+    }
+  }
+
+  async function handlePackingUpload(ticketId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPackingMap((p) => ({ ...p, [ticketId]: true }));
+    setPipelineErrors((p) => ({ ...p, [ticketId]: "" }));
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setPipelineErrors((p) => ({ ...p, [ticketId]: data.error || "Packing list upload failed" }));
+        return;
+      }
+      setPipelinePackingListDoc((p) => ({ ...p, [ticketId]: data.url }));
+    } catch {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Packing list upload failed" }));
+    } finally {
+      setUploadingPackingMap((p) => ({ ...p, [ticketId]: false }));
+    }
+  }
+
+  async function submitPipelineReceipt(ticketId: string) {
+    const qty = parseInt(pipelineQtyReceived[ticketId] || "0", 10);
+    const boxQc = pipelineBoxQc[ticketId] || "Good";
+    const date = pipelineReceivedDate[ticketId] || new Date().toISOString().slice(0, 10);
+    const vehicle = pipelineVehicleDetails[ticketId] || "";
+    const photo = pipelinePhotoUrl[ticketId] || "";
+    const packingList = pipelinePackingListDoc[ticketId] || "";
+    const remarks = pipelineRemarks[ticketId] || "";
+
+    setBusy(true);
+    setPipelineErrors((p) => ({ ...p, [ticketId]: "" }));
+    try {
+      const res = await fetch(`/api/tickets/${ticketId}/receive-consignment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receivedDate: date,
+          vehicleDetails: vehicle,
+          quantityReceived: qty,
+          boxQc,
+          photographUrl: photo,
+          packingListDoc: packingList,
+          consignmentRemarks: remarks,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPipelineErrors((p) => ({ ...p, [ticketId]: data.error || "Failed to receive consignment" }));
+        return;
+      }
+
+      setPipelineReceivedDate((p) => ({ ...p, [ticketId]: "" }));
+      setPipelineVehicleDetails((p) => ({ ...p, [ticketId]: "" }));
+      setPipelineQtyReceived((p) => ({ ...p, [ticketId]: "" }));
+      setPipelineBoxQc((p) => ({ ...p, [ticketId]: "" }));
+      setPipelinePhotoUrl((p) => ({ ...p, [ticketId]: "" }));
+      setPipelinePackingListDoc((p) => ({ ...p, [ticketId]: "" }));
+      setPipelineRemarks((p) => ({ ...p, [ticketId]: "" }));
+      router.refresh();
+    } catch {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "A network error occurred." }));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // raise form
   const [showRaise, setShowRaise] = useState(false);
@@ -352,23 +456,247 @@ export default function TicketsClient({
                       </div>
                     )}
 
+                    {/* Onboarding Pipeline Info Details for Consignment User */}
+                    {t.onboardingPipeline && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-3 space-y-3">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Onboarding Pipeline Details
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs text-slate-600">
+                          <div>
+                            <span className="font-semibold text-slate-400 block mb-0.5">Sample Target List</span>
+                            <span className="text-slate-800 font-medium">{t.onboardingPipeline.itemTarget || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-400 block mb-0.5">Next Action Time</span>
+                            <span className="text-slate-800 font-medium">{t.onboardingPipeline.nextActionTime || "—"}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-400 block mb-0.5">Remarks</span>
+                            <span className="text-slate-800 font-medium">{t.onboardingPipeline.remarks || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Actions */}
                     {active && (
-                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      <div className="mt-3 flex items-center gap-2 flex-wrap w-full">
                         <input
                           value={noteText[t.id] ?? ""}
                           onChange={(e) => setNoteText((p) => ({ ...p, [t.id]: e.target.value }))}
                           placeholder="Add a note..."
                           className="flex-1 min-w-[160px] rounded-md border border-slate-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                         />
-                        <button onClick={() => act(t.id, "note", { note: noteText[t.id] })} disabled={busy || !(noteText[t.id]?.trim())} className="text-xs text-slate-600 hover:underline disabled:opacity-40">
+                        <button onClick={() => act(t.id, "note", { note: noteText[t.id] })} disabled={busy || !(noteText[t.id]?.trim())} className="text-xs text-slate-600 hover:underline disabled:opacity-40 mr-2">
                           Note
                         </button>
 
                         {isConsign && t.currentRole === "CONSIGNMENT_USER" && (
-                          <button onClick={() => act(t.id, "send_to_exec", { note: noteText[t.id] })} disabled={busy} className="rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs hover:bg-blue-700">
-                            Send to Exec →
-                          </button>
+                          t.onboardingPipeline ? (
+                            <details className="group mt-3 w-full">
+                              <summary className="cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden flex items-center justify-start py-1">
+                                <div className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-55 px-3.5 py-2 text-xs font-semibold text-indigo-900 shadow-sm transition active:scale-[0.98] select-none">
+                                  <span className="group-open:hidden">Record Consignment Receipt</span>
+                                  <span className="hidden group-open:inline">Hide Receipt Form</span>
+                                  <svg className="w-3.5 h-3.5 transform group-open:rotate-180 transition-transform duration-200 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+                              </summary>
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  submitPipelineReceipt(t.id);
+                                }}
+                                className="w-full bg-indigo-50/50 border border-indigo-150 rounded-xl p-4 mt-3 space-y-4"
+                              >
+                                <div>
+                                  <h4 className="font-bold text-indigo-900 text-xs uppercase tracking-wider">Record Consignment Receipt</h4>
+                                  <p className="text-[11px] text-indigo-650 mt-0.5">Please fill out details of the received brand package to advance the pipeline.</p>
+                                </div>
+
+                                {pipelineErrors[t.id] && (
+                                  <div className="rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-1.5 font-medium">
+                                    {pipelineErrors[t.id]}
+                                  </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Date Received</label>
+                                    <input
+                                      type="date"
+                                      value={pipelineReceivedDate[t.id] || new Date().toISOString().slice(0, 10)}
+                                      onChange={(e) => setPipelineReceivedDate((p) => ({ ...p, [t.id]: e.target.value }))}
+                                      required
+                                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Vehicle Details</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. KA-01-MX-1234"
+                                      value={pipelineVehicleDetails[t.id] || ""}
+                                      onChange={(e) => setPipelineVehicleDetails((p) => ({ ...p, [t.id]: e.target.value }))}
+                                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Quantity Received</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      required
+                                      value={pipelineQtyReceived[t.id] ?? ""}
+                                      onChange={(e) => setPipelineQtyReceived((p) => ({ ...p, [t.id]: e.target.value }))}
+                                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white no-spinner"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">QC of the Box</label>
+                                    <select
+                                      value={pipelineBoxQc[t.id] || "Good"}
+                                      onChange={(e) => setPipelineBoxQc((p) => ({ ...p, [t.id]: e.target.value }))}
+                                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 bg-white cursor-pointer font-semibold"
+                                    >
+                                      <option value="Good">Good / Intact</option>
+                                      <option value="Scratched">Scratched</option>
+                                      <option value="Damaged">Damaged / Open</option>
+                                      <option value="Incomplete">Incomplete Items</option>
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Photograph Reference</label>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. DSC_1092.jpg"
+                                        value={pipelinePhotoUrl[t.id] || ""}
+                                        onChange={(e) => setPipelinePhotoUrl((p) => ({ ...p, [t.id]: e.target.value }))}
+                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                      />
+                                      <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPhotoMap[t.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
+                                        {uploadingPhotoMap[t.id] ? "Uploading..." : "Upload File"}
+                                        <input
+                                          type="file"
+                                          accept="image/*,application/pdf"
+                                          onChange={(e) => handlePhotoUpload(t.id, e)}
+                                          className="hidden"
+                                          disabled={!!uploadingPhotoMap[t.id]}
+                                        />
+                                      </label>
+                                    </div>
+                                    {pipelinePhotoUrl[t.id] && (
+                                      <div className="mt-1 flex items-center gap-2">
+                                        {pipelinePhotoUrl[t.id].startsWith("/api/uploads/") ? (
+                                          <a
+                                            href={pipelinePhotoUrl[t.id]}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                            View Photo
+                                          </a>
+                                        ) : (
+                                          <span className="text-slate-500 text-[11px] italic">Ref: {pipelinePhotoUrl[t.id]}</span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => setPipelinePhotoUrl((p) => ({ ...p, [t.id]: "" }))}
+                                          className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Packing List Doc</label>
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. PKG-551.pdf"
+                                        value={pipelinePackingListDoc[t.id] || ""}
+                                        onChange={(e) => setPipelinePackingListDoc((p) => ({ ...p, [t.id]: e.target.value }))}
+                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                      />
+                                      <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPackingMap[t.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
+                                        {uploadingPackingMap[t.id] ? "Uploading..." : "Upload File"}
+                                        <input
+                                          type="file"
+                                          accept="application/pdf,image/*"
+                                          onChange={(e) => handlePackingUpload(t.id, e)}
+                                          className="hidden"
+                                          disabled={!!uploadingPackingMap[t.id]}
+                                        />
+                                      </label>
+                                    </div>
+                                    {pipelinePackingListDoc[t.id] && (
+                                      <div className="mt-1 flex items-center gap-2">
+                                        {pipelinePackingListDoc[t.id].startsWith("/api/uploads/") ? (
+                                          <a
+                                            href={pipelinePackingListDoc[t.id]}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                            View Packing List
+                                          </a>
+                                        ) : (
+                                          <span className="text-slate-500 text-[11px] italic">Ref: {pipelinePackingListDoc[t.id]}</span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => setPipelinePackingListDoc((p) => ({ ...p, [t.id]: "" }))}
+                                          className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="sm:col-span-2 md:col-span-3">
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Receipt Remarks</label>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="Remarks on the consignment..."
+                                      value={pipelineRemarks[t.id] || ""}
+                                      onChange={(e) => setPipelineRemarks((p) => ({ ...p, [t.id]: e.target.value }))}
+                                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-end pt-1">
+                                  <button
+                                    type="submit"
+                                    disabled={busy}
+                                    className="rounded bg-indigo-600 text-white px-4 py-2 text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-60 shadow-sm"
+                                  >
+                                    {busy ? "Submitting..." : "Push Ticket: Consignment Received"}
+                                  </button>
+                                </div>
+                              </form>
+                            </details>
+                          ) : (
+                            <button onClick={() => act(t.id, "send_to_exec", { note: noteText[t.id] })} disabled={busy} className="rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs hover:bg-blue-700">
+                              Send to Exec →
+                            </button>
+                          )
                         )}
                         {isExec && t.currentRole === "OB_EXEC" && (
                           <button onClick={() => act(t.id, "send_to_consignment", { note: noteText[t.id] })} disabled={busy} className="rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs hover:bg-amber-700">
@@ -529,7 +857,7 @@ export default function TicketsClient({
                                         setReceivedQtyInput((p) => ({ ...p, [it.id]: v }));
                                       }}
                                       disabled={busy}
-                                      className="w-12 rounded border border-slate-350 px-1 py-0.5 text-center focus:ring-1 focus:ring-brand-500 font-semibold"
+                                      className="w-12 rounded border border-slate-350 px-1 py-0.5 text-center focus:ring-1 focus:ring-brand-500 font-semibold no-spinner"
                                     />
                                     <span className="text-slate-400">/ {it.expectedQty ?? 0}</span>
                                     {receivedQtyInput[it.id] !== undefined && receivedQtyInput[it.id] !== (it.receivedQty ?? 0) && (

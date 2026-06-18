@@ -112,6 +112,7 @@ export default function OnboardingForm({
     const urlSellerId = params.get("sellerId") || "";
     const urlProgramId = params.get("programId") || "";
     const urlBrandId = params.get("brandId") || "";
+    const urlSku = params.get("sku") || "";
 
     getJSON("/api/onboarding/options")
       .then((d) => {
@@ -121,6 +122,7 @@ export default function OnboardingForm({
         if (urlSellerId) setSellerId(urlSellerId);
         if (urlProgramId) setProgramId(urlProgramId);
         if (urlBrandId) setBrandId(urlBrandId);
+        if (urlSku) setSku(urlSku);
 
         setTimeout(() => {
           isBootingRef.current = false;

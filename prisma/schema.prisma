@@ -226,6 +226,7 @@ model Brand {
   brandProducts   BrandProduct[]
   brandCategories BrandCategory[]
   tickets         Ticket[]
+  onboardingPipelines OnboardingPipeline[]
 
   @@map("brands")
 }
@@ -491,6 +492,8 @@ model SellerAssignment {
   seller  Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   program Program @relation(fields: [programId], references: [id])
   exec    User    @relation("ExecAssignments", fields: [obExecUserId], references: [id], onDelete: Cascade)
+
+  pipelines OnboardingPipeline[]
 
   @@unique([sellerId, programId])
   @@index([programId])
@@ -772,6 +775,8 @@ model Ticket {
   record LocalOnboardingRecord? @relation(fields: [localRecordId], references: [id])
   events TicketEvent[]
 
+  onboardingPipeline OnboardingPipeline?
+
   @@index([branchId])
   @@index([sellerId])
   @@index([status])
@@ -863,4 +868,44 @@ model Notification {
 
   @@index([userId])
   @@map("notifications")
+}
+
+model OnboardingPipeline {
+  id              BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  assignmentId    BigInt   @map("assignment_id") @db.UnsignedBigInt
+  brandId         BigInt   @map("brand_id") @db.UnsignedBigInt
+  status          String   @default("INITIATION") @db.VarChar(30) // INITIATION | TICKET_RAISED | CONSIGNMENT_RECEIVED | CLOSED
+
+  // Initiation details
+  discussionDone  Boolean  @default(false) @map("discussion_done")
+  docAttached     String?  @map("doc_attached") @db.VarChar(255)
+  itemTarget      String?  @map("item_target") @db.VarChar(255)
+  nextActionTime  String?  @map("next_action_time") @db.VarChar(100)
+  remarks         String?  @db.Text
+  dateToRevisit   String?  @map("date_to_revisit") @db.VarChar(100)
+
+  // Consignment user receipt details
+  receivedDate    DateTime? @map("received_date") @db.Date
+  vehicleDetails  String?   @map("vehicle_details") @db.VarChar(255)
+  quantityReceived Int?     @map("quantity_received")
+  boxQc           String?   @map("box_qc") @db.VarChar(100)
+  photographUrl   String?   @map("photograph_url") @db.VarChar(255)
+  packingListDoc  String?   @map("packing_list_doc") @db.VarChar(255)
+  consignmentRemarks String? @map("consignment_remarks") @db.Text
+
+  // Executive checkbox validation
+  execVerified    Boolean   @default(false) @map("exec_verified")
+
+  // Ticket association
+  ticketId        BigInt?   @unique @map("ticket_id") @db.UnsignedBigInt
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  assignment      SellerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@unique([assignmentId, brandId])
+  @@map("onboarding_pipelines")
 }
