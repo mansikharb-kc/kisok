@@ -468,7 +468,7 @@ export default function TicketsClient({
                             <span className="text-slate-800 font-medium">{t.onboardingPipeline.itemTarget || "—"}</span>
                           </div>
                           <div>
-                            <span className="font-semibold text-slate-400 block mb-0.5">Next Action Time</span>
+                            <span className="font-semibold text-slate-400 block mb-0.5">Next Action Item</span>
                             <span className="text-slate-800 font-medium">{t.onboardingPipeline.nextActionTime || "—"}</span>
                           </div>
                           <div>

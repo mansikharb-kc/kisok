@@ -138,9 +138,9 @@ export default function PlacementForm({
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Place Product Copies</h2>
+                <h2 className="text-xl font-bold text-slate-900">Place Product Units</h2>
                 <p className="text-sm text-slate-500">
-                  Generate physical copies (with QR) of an onboarded product into a warehouse location.
+                  Generate physical units (with QR) of an onboarded product into a warehouse location.
                 </p>
               </div>
               <button
@@ -203,7 +203,7 @@ export default function PlacementForm({
               </div>
 
               <div>
-                <label className={L}>Number of Copies</label>
+                <label className={L}>Number of Units</label>
                 <input
                   type="number"
                   min={1}
@@ -279,7 +279,7 @@ export default function PlacementForm({
                 ))}
               </div>
               <p className="text-[11px] text-slate-400">
-                At most one copy may be MASTER. If a master already exists for this product in your branch and you
+                At most one unit may be MASTER. If a master already exists for this product in your branch and you
                 mark a new one, the previous master is demoted to SLAVE automatically.
               </p>
             </div>
@@ -300,7 +300,7 @@ export default function PlacementForm({
                 disabled={busy || !canPlace}
                 className="rounded-lg bg-brand-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-60 transition-colors"
               >
-                {busy ? "Placing…" : `Place ${rows.length} cop${rows.length === 1 ? "y" : "ies"}`}
+                {busy ? "Placing…" : `Place ${rows.length} unit${rows.length === 1 ? "" : "s"}`}
               </button>
             </div>
           </form>

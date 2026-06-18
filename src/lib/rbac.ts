@@ -52,6 +52,7 @@ export const NAV: NavItem[] = [
   { href: "/ops/onboarding",    label: "Product Onboarding",group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
+  { href: "/ops/activity",      label: "Activity",         group: "Operations", roles: ["OB_EXEC", "ONB_LEAD"] },
 
   // Admin
   { href: "/users/role/ho-admin", label: "HO Admins", group: "Users", roles: ["HO_ADMIN"] },

@@ -170,7 +170,7 @@ export default function SampleSizesClient({
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Label</th>
                 <th className="px-4 py-3 text-left font-medium">Dimensions</th>
-                <th className="px-4 py-3 text-left font-medium">Copies using this size</th>
+                <th className="px-4 py-3 text-left font-medium">Units using this size</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
                 <th className="px-4 py-3 text-left font-medium">Actions</th>
               </tr>
@@ -185,7 +185,7 @@ export default function SampleSizesClient({
                   <td className="px-4 py-3 align-middle">
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700">
                       {s._count?.copies ?? 0}
-                      <span className="text-xs text-slate-400 font-normal">copies</span>
+                      <span className="text-xs text-slate-400 font-normal">units</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 align-middle">

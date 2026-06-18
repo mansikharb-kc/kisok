@@ -88,6 +88,38 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
     await tx.ticketEvent.create({
       data: { ticketId: id, byUserId: BigInt(session.uid), action, fromRole, toRole, note: note ?? null },
     });
+
+    // Sync pipeline status if this ticket is linked to an onboarding pipeline
+    const pipeline = await tx.onboardingPipeline.findUnique({
+      where: { ticketId: id },
+    });
+
+    if (pipeline) {
+      let pipelineUpdateData: Record<string, unknown> = {};
+
+      if (action === "resolve" || action === "close") {
+        pipelineUpdateData = {
+          status: "CLOSED",
+          execVerified: true,
+        };
+      } else if (action === "send_to_exec") {
+        pipelineUpdateData = {
+          status: "CONSIGNMENT_RECEIVED",
+        };
+      } else if (action === "send_to_consignment") {
+        pipelineUpdateData = {
+          status: "TICKET_RAISED",
+        };
+      }
+
+      if (Object.keys(pipelineUpdateData).length > 0) {
+        await tx.onboardingPipeline.update({
+          where: { id: pipeline.id },
+          data: pipelineUpdateData,
+        });
+      }
+    }
+
     return u;
   });
 

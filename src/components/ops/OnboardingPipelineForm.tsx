@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Send, Package, CheckCircle2, ChevronRight, HelpCircle } from "lucide-react";
+import { Check, Send, Package, CheckCircle2, ChevronRight, HelpCircle, Bell } from "lucide-react";
 
 interface OnboardingPipelineFormProps {
   assignmentId: string;
@@ -83,12 +83,46 @@ export default function OnboardingPipelineForm({
   const [discussionDone, setDiscussionDone] = useState(pipeline.discussionDone ?? false);
   const [docAttached, setDocAttached] = useState(pipeline.docAttached ?? "");
   const [itemTarget, setItemTarget] = useState(pipeline.itemTarget ?? "");
-  const [nextActionTime, setNextActionTime] = useState(formatToDDMMMYYYY(pipeline.nextActionTime) ?? "");
+  const [nextActionTime, setNextActionTime] = useState(pipeline.nextActionTime ?? "");
   const [remarks, setRemarks] = useState(pipeline.remarks ?? "");
   const [dateToRevisit, setDateToRevisit] = useState(formatToDDMMMYYYY(pipeline.dateToRevisit) ?? "");
   const [brandId, setBrandId] = useState(brands[0]?.id ?? "");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingTarget, setUploadingTarget] = useState(false);
+
+  const [savedReminderDate, setSavedReminderDate] = useState<string>(pipeline.reminders?.[0]?.dateToRevisit ?? "");
+  const [savingReminder, setSavingReminder] = useState(false);
+  const [reminderMsg, setReminderMsg] = useState("");
+
+  async function handleSetReminder() {
+    if (!dateToRevisit.trim()) return;
+    setSavingReminder(true);
+    setReminderMsg("");
+    setError("");
+    try {
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pipelineId: pipeline.id,
+          dateToRevisit: dateToRevisit.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to set reminder");
+        return;
+      }
+      setSavedReminderDate(dateToRevisit.trim());
+      setReminderMsg("Reminder set successfully!");
+      setTimeout(() => setReminderMsg(""), 3000);
+      router.refresh();
+    } catch {
+      setError("Failed to set reminder due to a network error.");
+    } finally {
+      setSavingReminder(false);
+    }
+  }
 
   async function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -334,19 +368,109 @@ export default function OnboardingPipelineForm({
         {status === "INITIATION" && (
           <div className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-                <input
-                  type="checkbox"
-                  id="discussCheck"
-                  checked={discussionDone}
-                  onChange={(e) => setDiscussionDone(e.target.checked)}
-                  className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                />
-                <label htmlFor="discussCheck" className="font-semibold text-slate-700 cursor-pointer">
-                  Discussion with Brand Done
-                </label>
+              {/* 1. Target Brand */}
+              {brands.length > 1 ? (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Select Target Brand
+                  </label>
+                  <select
+                    value={brandId}
+                    onChange={(e) => setBrandId(e.target.value)}
+                    className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white cursor-pointer font-semibold"
+                  >
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : brands.length === 1 ? (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Target Brand
+                  </label>
+                  <div className="w-full rounded border border-slate-200 bg-slate-50/50 px-2.5 py-1.5 font-semibold text-slate-700">
+                    {brands[0].name} ({brands[0].code})
+                  </div>
+                </div>
+              ) : null}
+
+              {/* 2. Discussion with Brand Done */}
+              <div className="flex flex-col justify-end">
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="discussCheck"
+                    checked={discussionDone}
+                    onChange={(e) => setDiscussionDone(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="discussCheck" className="font-semibold text-slate-700 cursor-pointer">
+                    Discussion with Brand Done
+                  </label>
+                </div>
               </div>
 
+              {/* 3. Next Action Item */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Next Action Item
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Call brand manager for SKU details"
+                  value={nextActionTime}
+                  onChange={(e) => setNextActionTime(e.target.value)}
+                  className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                />
+              </div>
+
+              {/* 4. Date to Revisit */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Date to Revisit
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. 30-Jun-2026"
+                    value={dateToRevisit}
+                    onChange={(e) => setDateToRevisit(e.target.value)}
+                    onBlur={() => setDateToRevisit(formatToDDMMMYYYY(dateToRevisit))}
+                    className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                  />
+                  {dateToRevisit.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleSetReminder}
+                      disabled={savingReminder || dateToRevisit.trim() === savedReminderDate}
+                      className={`px-3 py-1.5 rounded border text-xs font-semibold flex items-center gap-1 shrink-0 transition ${
+                        dateToRevisit.trim() === savedReminderDate
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-250 cursor-default"
+                          : "bg-brand-50 hover:bg-brand-100 text-brand-700 border-brand-200"
+                      }`}
+                    >
+                      <Bell className="h-3.5 w-3.5" />
+                      {savingReminder
+                        ? "Setting..."
+                        : dateToRevisit.trim() === savedReminderDate
+                        ? "Reminder Set"
+                        : savedReminderDate
+                        ? "Update Reminder"
+                        : "Set Reminder"}
+                    </button>
+                  )}
+                </div>
+                {reminderMsg && (
+                  <div className="text-[10px] text-emerald-600 font-semibold mt-1">
+                    {reminderMsg}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Document Attached */}
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                   Document Attached (e.g. MoU Ref)
@@ -398,6 +522,7 @@ export default function OnboardingPipelineForm({
                 )}
               </div>
 
+              {/* 6. Item Target List */}
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                   Item Target List
@@ -449,62 +574,6 @@ export default function OnboardingPipelineForm({
                   </div>
                 )}
               </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Next Action Time
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 25-Jun-2026, 2:00 PM"
-                  value={nextActionTime}
-                  onChange={(e) => setNextActionTime(e.target.value)}
-                  onBlur={() => setNextActionTime(formatToDDMMMYYYY(nextActionTime))}
-                  className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Date to Revisit
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 30-Jun-2026"
-                  value={dateToRevisit}
-                  onChange={(e) => setDateToRevisit(e.target.value)}
-                  onBlur={() => setDateToRevisit(formatToDDMMMYYYY(dateToRevisit))}
-                  className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
-                />
-              </div>
-
-              {brands.length > 1 ? (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Select Target Brand
-                  </label>
-                  <select
-                    value={brandId}
-                    onChange={(e) => setBrandId(e.target.value)}
-                    className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white cursor-pointer font-semibold"
-                  >
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : brands.length === 1 ? (
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Target Brand
-                  </label>
-                  <div className="w-full rounded border border-slate-200 bg-slate-50/50 px-2.5 py-1.5 font-semibold text-slate-700">
-                    {brands[0].name} ({brands[0].code})
-                  </div>
-                </div>
-              ) : null}
             </div>
 
             <div>

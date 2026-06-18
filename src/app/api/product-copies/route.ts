@@ -149,6 +149,14 @@ export const POST = handler(async (req: Request) => {
     c.role === "MASTER" && (wantsMaster ? true : false) ? "MASTER" : "SLAVE",
   );
 
+  // --- Find existing copies for this local onboarding record to update them in-place if possible ---
+  const existingCopies = await prisma.productCopy.findMany({
+    where: { localRecordId },
+    orderBy: { sequenceNo: "asc" },
+  });
+  const E = existingCopies.length;
+  const R = copies.length;
+
   // --- Branch code + next sequence per (brandProduct, branch). ---
   const branch = await prisma.branch.findUnique({
     where: { id: branchId },
@@ -169,11 +177,8 @@ export const POST = handler(async (req: Request) => {
     select: { id: true },
   });
 
-  // --- Build per-copy plan + generate QR PNGs (file writes BEFORE the txn). ---
-  const dir = join(process.cwd(), "public", "uploads");
-  await mkdir(dir, { recursive: true });
-
-  const plan: {
+  // --- Build per-copy plan + generate QR PNGs only for NEW copies ---
+  const newCopiesPlan: {
     sequenceNo: number;
     instanceCode: string;
     copyRole: string;
@@ -182,37 +187,59 @@ export const POST = handler(async (req: Request) => {
     qrSizeBytes: number;
   }[] = [];
 
-  for (let i = 0; i < copies.length; i++) {
-    const sequenceNo = nextSeq++;
-    const padded = String(sequenceNo).padStart(4, "0");
-    const instanceCode = `${record.product.sku}-${branchCode}-${padded}`;
+  if (R > E) {
+    const dir = join(process.cwd(), "public", "uploads");
+    await mkdir(dir, { recursive: true });
 
-    const buf = await QRCode.toBuffer(instanceCode, { width: 256 });
-    const fileName = `${randomUUID()}.png`;
-    await writeFile(join(dir, fileName), buf);
+    for (let i = E; i < R; i++) {
+      const sequenceNo = nextSeq++;
+      const padded = String(sequenceNo).padStart(4, "0");
+      const instanceCode = `${record.product.sku}-${branchCode}-${padded}`;
 
-    plan.push({
-      sequenceNo,
-      instanceCode,
-      copyRole: effectiveRoles[i],
-      sampleSizeId: copies[i].sampleSizeId ?? null,
-      qrUrl: `/uploads/${fileName}`,
-      qrSizeBytes: buf.length,
-    });
+      const buf = await QRCode.toBuffer(instanceCode, { width: 256 });
+      const fileName = `${randomUUID()}.png`;
+      await writeFile(join(dir, fileName), buf);
+
+      newCopiesPlan.push({
+        sequenceNo,
+        instanceCode,
+        copyRole: effectiveRoles[i],
+        sampleSizeId: copies[i].sampleSizeId ?? null,
+        qrUrl: `/uploads/${fileName}`,
+        qrSizeBytes: buf.length,
+      });
+    }
   }
 
   // --- Persist everything atomically. ---
   const created = await prisma.$transaction(async (tx) => {
     // Demote the previous master if this request designates a new one.
     if (wantsMaster && existingMaster) {
-      await tx.productCopy.update({
-        where: { id: existingMaster.id },
+      await tx.productCopy.updateMany({
+        where: { brandProductId, branchId, copyRole: "MASTER" },
         data: { copyRole: "SLAVE" },
       });
     }
 
-    const createdCopies = [];
-    for (const p of plan) {
+    const resultCopies = [];
+
+    // 1. Update existing copies in-place
+    for (let i = 0; i < Math.min(R, E); i++) {
+      const copyId = existingCopies[i].id;
+      const updated = await tx.productCopy.update({
+        where: { id: copyId },
+        data: {
+          locationNodeId,
+          sampleSizeId: copies[i].sampleSizeId ?? null,
+          copyRole: effectiveRoles[i],
+        },
+        select: { id: true, instanceCode: true, copyRole: true },
+      });
+      resultCopies.push(updated);
+    }
+
+    // 2. Create new copies
+    for (const p of newCopiesPlan) {
       const media = await tx.media.create({
         data: {
           type: "qr",
@@ -250,10 +277,18 @@ export const POST = handler(async (req: Request) => {
         });
       }
 
-      createdCopies.push(copy);
+      resultCopies.push(copy);
     }
 
-    return createdCopies;
+    // 3. Delete extra copies if the quantity has been reduced
+    if (E > R) {
+      const idsToDelete = existingCopies.slice(R).map((c) => c.id);
+      await tx.productCopy.deleteMany({
+        where: { id: { in: idsToDelete } },
+      });
+    }
+
+    return resultCopies;
   });
 
   await writeAudit({

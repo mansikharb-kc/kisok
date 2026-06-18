@@ -32,6 +32,7 @@ model User {
 
   roles       UserRole[]
   assignments SellerAssignment[] @relation("ExecAssignments")
+  reminders   Reminder[]
 
   @@map("users")
 }
@@ -902,10 +903,29 @@ model OnboardingPipeline {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  reminders       Reminder[]
+
   assignment      SellerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
 
   @@unique([assignmentId, brandId])
   @@map("onboarding_pipelines")
+}
+
+model Reminder {
+  id            BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  pipelineId    BigInt             @map("pipeline_id") @db.UnsignedBigInt
+  userId        BigInt             @map("user_id") @db.UnsignedBigInt
+  dateToRevisit String             @map("date_to_revisit") @db.VarChar(100)
+  status        String             @default("pending") @db.VarChar(20) // pending | dismissed
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  pipeline      OnboardingPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId])
+  @@index([userId])
+  @@map("reminders")
 }

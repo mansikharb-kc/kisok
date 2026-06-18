@@ -23,9 +23,9 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
     <div className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="font-bold text-slate-800 text-sm">Physical Copy Catalogues</h2>
+          <h2 className="font-bold text-slate-800 text-sm">Physical Unit Catalogues</h2>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-            {rows.length} copies total
+            {rows.length} units total
           </span>
         </div>
 
@@ -62,7 +62,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
 
       {rows.length === 0 ? (
         <div className="p-12 text-center text-slate-400 text-sm">
-          No physical product copies have been placed at this branch yet.
+          No physical product units have been placed at this branch yet.
         </div>
       ) : viewMode === "table" ? (
         <div className="overflow-x-auto">
@@ -71,7 +71,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <th className="px-5 py-3.5">QR & Instance Code</th>
                 <th className="px-5 py-3.5">Product Details</th>
-                <th className="px-5 py-3.5">Copy Role & Size</th>
+                <th className="px-5 py-3.5">Unit Role & Size</th>
                 <th className="px-5 py-3.5">Physical Location</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5 text-right">Sticker</th>

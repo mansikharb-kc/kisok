@@ -397,7 +397,7 @@ export default function SellerForm({
   }
   const deepest = useMemo(() => {
     let id: string | null = null;
-    for (let k = 1; k <= LEVELS.length; k++) if (sel[k]) id = sel[k];
+    for (let k = 1; k <= LEVELS.slice(0, 4).length; k++) if (sel[k]) id = sel[k];
     return id;
   }, [sel]);
 
@@ -919,7 +919,7 @@ export default function SellerForm({
       <div className={card}>
         <StepHeader n={3} title="Categories Operated In" sub="Link the seller to categories in your taxonomy" />
         <div className="space-y-3">
-          {LEVELS.map((lvl, idx) => {
+          {LEVELS.slice(0, 4).map((lvl, idx) => {
             const k = idx + 1;
             if (k > 1 && !sel[k - 1]) return null;
             const opts = optionsForLevel(k);

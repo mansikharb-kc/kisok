@@ -130,6 +130,12 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
       },
       include: {
         ticket: true,
+        reminders: {
+          where: {
+            userId: BigInt(session.uid),
+            status: "pending",
+          },
+        },
       },
     });
 
@@ -142,6 +148,12 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
         },
         include: {
           ticket: true,
+          reminders: {
+            where: {
+              userId: BigInt(session.uid),
+              status: "pending",
+            },
+          },
         },
       });
     }
@@ -182,26 +194,55 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
     },
   });
 
-  // Fetch local onboarding records for status check
-  const onboardingRecords = await prisma.localOnboardingRecord.findMany({
-    where: {
-      sellerId: assignment.sellerId,
-      programId: assignment.programId,
-      branchId: branchId,
-      brandProductId: { in: products.map((p) => p.id) },
-    },
-    select: {
-      brandProductId: true,
-      status: true,
-    },
-  });
+  // Fetch local onboarding records for status check, plus locations and sizes for placement
+  const [onboardingRecords, locations, sizes] = await Promise.all([
+    prisma.localOnboardingRecord.findMany({
+      where: {
+        sellerId: assignment.sellerId,
+        programId: assignment.programId,
+        branchId: branchId,
+        brandProductId: { in: products.map((p) => p.id) },
+      },
+      select: {
+        id: true,
+        brandProductId: true,
+        status: true,
+        copies: {
+          select: {
+            id: true,
+            copyRole: true,
+            sampleSizeId: true,
+            locationNodeId: true,
+            location: {
+              select: {
+                name: true,
+                locationId: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.locationNode.findMany({
+      where: { branchId, isPlacementEligible: true, status: "active" },
+      orderBy: [{ path: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, locationId: true, path: true, programId: true },
+    }),
+    prisma.sampleSize.findMany({
+      where: { branchId, status: "active" },
+      orderBy: { label: "asc" },
+      select: { id: true, label: true },
+    }),
+  ]);
 
-  // Create lookup dictionary for status and presence
-  const onboardingMap = new Map<string, string>();
+  // Create lookup dictionary mapping product ID to the onboarding record details
+  const onboardingMap = new Map<string, any>();
   onboardingRecords.forEach((rec) => {
-    onboardingMap.set(rec.brandProductId.toString(), rec.status);
+    onboardingMap.set(rec.brandProductId.toString(), rec);
   });
-  const onboardingObj = Object.fromEntries(onboardingMap.entries());
+  const onboardingObj = serialize(Object.fromEntries(onboardingMap.entries())) as any;
+  const serializedLocations = serialize(locations) as any[];
+  const serializedSizes = serialize(sizes) as any[];
 
   // Serialize objects for safer server component rendering (converting BigInts to string)
   const a = serialize(assignment) as any;
@@ -487,6 +528,8 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
         isExec={isExec}
         totalProductsCount={activeBrandProducts.length}
         onboardedCount={activeBrandOnboardedCount}
+        locations={serializedLocations}
+        sizes={serializedSizes}
       />
     </div>
   );
