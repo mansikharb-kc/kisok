@@ -190,11 +190,11 @@ export default function SampleSizesClient({
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        s.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-white capitalize ${
+                        s.status === "active" ? "bg-emerald-600" : "bg-slate-500"
                       }`}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                       {s.status}
                     </span>
                   </td>

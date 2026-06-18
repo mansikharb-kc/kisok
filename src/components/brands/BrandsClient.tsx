@@ -158,8 +158,8 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
                     <span className="text-xs text-slate-500">{b.brandType ?? "—"}</span>
                   </div>
                 </div>
-                <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ${b.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${b.status === "active" ? "bg-emerald-500" : "bg-slate-300"}`} />
+                <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize text-white ${b.status === "active" ? "bg-emerald-600" : "bg-slate-500"}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
                   {b.status}
                 </span>
               </div>

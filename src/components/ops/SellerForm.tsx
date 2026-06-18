@@ -675,14 +675,7 @@ export default function SellerForm({
       {/* Top bar */}
       <div className="flex items-start justify-between">
         <div>
-          <button
-            type="button"
-            onClick={() => router.push("/ops/sellers")}
-            className="text-sm text-slate-500 hover:text-slate-800"
-          >
-            ‹ Back to Sellers
-          </button>
-          <h1 className="text-2xl font-bold mt-1">
+          <h1 className="text-2xl font-bold">
             {editing ? `Edit Seller: ${seller?.name}` : "Add New Seller"}
           </h1>
           <p className="text-sm text-slate-500">
@@ -874,8 +867,8 @@ export default function SellerForm({
                       onClick={() => toggleBrand(b.id)}
                       className={`relative flex items-center justify-between py-3.5 px-5 rounded-xl text-left text-sm font-medium transition-all group duration-150 hover:scale-[1.01] cursor-pointer ${
                         checked
-                          ? "border-2 border-black bg-brand-50/80 text-brand-950 shadow-sm font-semibold"
-                          : "border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-slate-700"
+                          ? "border-2 border-slate-900 bg-slate-100 text-slate-900 shadow-sm font-semibold dark:border-white dark:bg-white/10 dark:text-white"
+                          : "border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-slate-700 dark:border-white/15 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] dark:hover:border-white/25 dark:text-slate-200"
                       }`}
                     >
                       <div className="min-w-0 pr-6">
@@ -888,7 +881,7 @@ export default function SellerForm({
                               e.stopPropagation();
                               setSelectedBrandDetailsId(b.id);
                             }}
-                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 transition-colors rounded p-0.5"
+                            className="inline-flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors rounded p-0.5"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -900,8 +893,8 @@ export default function SellerForm({
                       <span
                         className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                           checked
-                            ? "border-black bg-black text-white text-[10px]"
-                            : "border-slate-300 bg-white/60 backdrop-blur-md group-hover:border-slate-400"
+                            ? "border-slate-900 bg-slate-900 text-white text-[10px] dark:border-white dark:bg-white dark:text-black"
+                            : "border-slate-300 bg-white/60 backdrop-blur-md group-hover:border-slate-400 dark:border-white/30 dark:bg-transparent"
                         }`}
                       >
                         {checked && "✓"}

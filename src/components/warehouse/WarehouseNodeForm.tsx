@@ -144,8 +144,7 @@ export default function WarehouseNodeForm({
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <button type="button" onClick={() => router.push(backHref)} className="text-sm text-slate-500 hover:text-slate-800">‹ Back to Warehouse</button>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900">
           {editNode ? `Edit — ${editNode.name}` : parentNode ? `Add sub-node under “${parentNode.name}”` : "Add Warehouse"}
         </h1>
         <p className="text-sm text-slate-500">Program: <span className="font-medium">{programName}</span></p>

@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ClickableRow from "./ClickableRow";
 import IconButton from "@/components/ui/IconButton";
 import { formatDaysToYMD } from "@/lib/brandMeta";
 import { formatDate } from "@/lib/format";
+import { onboardingStatusMeta } from "@/lib/onboardingMeta";
 
 type SellerRow = {
   id: string;
@@ -16,16 +17,17 @@ type SellerRow = {
   createdAt: string;
   sellerBrands: { brand: { name: string; code: string } }[];
   contracts: { id: string; verified: boolean; fitoutPeriod: string | null; program: { name: string } }[];
-  assignments: { exec: { fullName: string } }[];
+  assignments: { id: string; onboardingStatus: string; exec: { fullName: string }; program: { id: string; name: string } | null }[];
   _count: { consignments: number; localRecords: number };
 };
 
 type SortField = "name" | "membershipId" | "status" | "createdAt" | "fitout";
 
-export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
+export default function SellersTableClient({ rows, newSellerHref }: { rows: SellerRow[]; newSellerHref?: string }) {
   const router = useRouter();
   // Removed view mode toggle; always render table view
   const viewMode = "table";
+  const [viewBy, setViewBy] = useState<"seller" | "program">("seller");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -257,11 +259,40 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
         </div>
       </div>
 
-      {/* Main Table/Card view */}
+      {/* Seller-wise / Program-wise toggle + New Seller */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex w-fit items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {([["seller", "Seller-wise"], ["program", "Program-wise"]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setViewBy(key)}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                viewBy === key ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {newSellerHref && (
+          <button
+            type="button"
+            onClick={() => router.push(newSellerHref)}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+          >
+            + New Seller
+          </button>
+        )}
+      </div>
+
+      {/* Main view */}
       {filteredAndSortedRows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-250 bg-white p-12 text-center text-slate-450 text-sm shadow-sm">
           No matching sellers found for the selected filters.
         </div>
+      ) : viewBy === "program" ? (
+        <ProgramView rows={filteredAndSortedRows} onOpen={(id) => router.push(`/ops/sellers/${id}`)} />
       ) : viewMode === "table" ? (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <table className="w-full table-fixed text-sm">
@@ -275,25 +306,19 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                 </th>
                 <th
                   onClick={() => handleSort("membershipId")}
-                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[11%]"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[12%]"
                 >
                   Membership ID <SortIndicator field="membershipId" />
                 </th>
                 <th
                   onClick={() => handleSort("createdAt")}
-                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[10%]"
+                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[11%]"
                 >
                   Date Created <SortIndicator field="createdAt" />
                 </th>
-                <th className="px-4 py-3 text-left whitespace-nowrap w-[11%]">Brands</th>
-                <th className="px-4 py-3 text-left whitespace-nowrap w-[12%]">Programs</th>
-                <th
-                  onClick={() => handleSort("fitout")}
-                  className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[10%]"
-                >
-                  Fitout <SortIndicator field="fitout" />
-                </th>
-                <th className="px-4 py-3 text-left whitespace-nowrap w-[10%]">Assigned Exec</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[13%]">Brands</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[15%]">Programs</th>
+                <th className="px-4 py-3 text-left whitespace-nowrap w-[12%]">Assigned Exec</th>
                 <th
                   onClick={() => handleSort("status")}
                   className="px-4 py-3 text-left group cursor-pointer hover:bg-slate-100/70 transition-colors select-none whitespace-nowrap w-[8%]"
@@ -341,22 +366,6 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
                             {c.program.name}{c.verified ? " ✓" : ""}
                           </span>
                         ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    {s.contracts.length === 0 ? (
-                      <span className="text-slate-300 text-xs">—</span>
-                    ) : (
-                      <div className="flex flex-col gap-0.5 text-xs text-slate-600">
-                        {s.contracts.map((c) => {
-                          const rawDays = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
-                          return (
-                            <span key={c.id}>
-                              <span className="font-medium text-slate-700">{rawDays ? `${rawDays} days` : "N/A"}</span>
-                            </span>
-                          );
-                        })}
                       </div>
                     )}
                   </td>
@@ -529,6 +538,121 @@ export default function SellersTableClient({ rows }: { rows: SellerRow[] }) {
   );
 }
 
+// Program-wise view: one flat table with a Program column, carrying the same
+// seller details as the seller-wise table (Membership ID, Date Created, Brands,
+// Assigned Exec, Status) plus the Onboarding status.
+type ProgramItem = {
+  program: string;
+  sellerId: string;
+  sellerName: string;
+  sellerCode: string;
+  membershipId: string | null;
+  createdAt: string;
+  brands: string[];
+  exec: string;
+  sellerStatus: string;
+  onboardingStatus: string;
+};
+
+function ProgramView({ rows, onOpen }: { rows: SellerRow[]; onOpen: (id: string) => void }) {
+  const items: ProgramItem[] = [];
+  for (const s of rows) {
+    const base = {
+      sellerId: s.id,
+      sellerName: s.name,
+      sellerCode: s.sellerCode,
+      membershipId: s.membershipId,
+      createdAt: s.createdAt,
+      brands: s.sellerBrands.map((sb) => sb.brand.name),
+      sellerStatus: s.status,
+    };
+    if (s.assignments.length === 0) {
+      items.push({ ...base, program: "—", exec: "—", onboardingStatus: "" });
+      continue;
+    }
+    for (const a of s.assignments) {
+      items.push({
+        ...base,
+        program: a.program?.name ?? "No program",
+        exec: a.exec.fullName,
+        onboardingStatus: a.onboardingStatus,
+      });
+    }
+  }
+  items.sort((a, b) => a.program.localeCompare(b.program) || a.sellerName.localeCompare(b.sellerName));
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden shadow-sm">
+      <table className="w-full table-fixed text-sm">
+        <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-200">
+          <tr>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[16%]">Program</th>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[18%]">Seller</th>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[13%]">Membership ID</th>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[12%]">Date Created</th>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[14%]">Brands</th>
+            <th className="px-4 py-3 text-left whitespace-nowrap w-[14%]">Assigned Exec</th>
+            <th className="px-4 py-3 text-right whitespace-nowrap w-[13%]">Onboarding</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {items.map((it, i) => (
+            <tr
+              key={`${it.sellerId}-${i}`}
+              onClick={() => onOpen(it.sellerId)}
+              className={`cursor-pointer hover:bg-slate-50 transition-colors ${it.sellerStatus !== "active" ? "opacity-60" : ""}`}
+            >
+              <td className="px-4 py-3 align-middle">
+                <span className="font-semibold text-slate-800">{it.program}</span>
+              </td>
+              <td className="px-4 py-3 align-middle">
+                <div className="font-semibold text-slate-800 truncate">{it.sellerName}</div>
+                <div className="font-mono text-[11px] text-slate-400 truncate">{it.sellerCode}</div>
+              </td>
+              <td className="px-4 py-3 align-middle font-mono text-xs text-slate-600">
+                {it.membershipId ?? <span className="text-slate-300">—</span>}
+              </td>
+              <td className="px-4 py-3 align-middle text-xs text-slate-600 font-medium">
+                {formatDate(it.createdAt)}
+              </td>
+              <td className="px-4 py-3 align-middle">
+                {it.brands.length === 0 ? (
+                  <span className="text-slate-300 text-xs">—</span>
+                ) : (
+                  <div className="flex flex-col gap-0.5 text-xs text-slate-600">
+                    {it.brands.map((b, bi) => <span key={`${b}-${bi}`} className="truncate">{b}</span>)}
+                  </div>
+                )}
+              </td>
+              <td className="px-4 py-3 align-middle">
+                {it.exec === "—" ? (
+                  <span className="text-slate-300 text-xs">—</span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600 shrink-0">
+                      {it.exec.trim().slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="text-xs text-slate-700 truncate">{it.exec}</span>
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 align-middle text-right">
+                {it.onboardingStatus ? (
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${onboardingStatusMeta(it.onboardingStatus).badge}`}>
+                    {onboardingStatusMeta(it.onboardingStatus).label}
+                  </span>
+                ) : (
+                  <span className="text-slate-300 text-xs">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SearchableSelect({
   label,
   value,
@@ -544,42 +668,40 @@ function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredOptions = useMemo(() => {
     return options.filter((opt) => opt.toLowerCase().includes(search.toLowerCase()));
   }, [options, search]);
 
-  const handleMouseEnter = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      setTimeoutId(null);
-    }
-    setOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    const id = setTimeout(() => {
-      setOpen(false);
-      setSearch("");
-    }, 200);
-    setTimeoutId(id);
-  };
-
+  // Close when clicking outside or pressing Escape.
   useEffect(() => {
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
     };
-  }, [timeoutId]);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div ref={containerRef} className="relative">
       <button
         type="button"
+        onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shadow-sm select-none cursor-pointer ${
           value
             ? "border-brand-200 bg-brand-50/50 text-brand-700 hover:bg-brand-50"

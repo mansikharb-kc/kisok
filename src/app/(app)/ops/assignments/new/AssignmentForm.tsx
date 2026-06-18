@@ -91,14 +91,7 @@ export default function AssignmentForm({
   return (
     <form onSubmit={submit} className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 space-y-6 shadow-sm">
       <div>
-        <button
-          type="button"
-          onClick={() => router.push("/ops/assignments")}
-          className="text-sm text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          ‹ Back to Assignments
-        </button>
-        <h1 className="text-2xl font-bold mt-1 text-slate-900">Assign Seller</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Assign Seller</h1>
         <p className="text-sm text-slate-500">
           Link a seller operating under your branch to an Onboarding Executive.
         </p>

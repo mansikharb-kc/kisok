@@ -5,6 +5,7 @@ import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import OnboardingList from "@/components/ops/OnboardingList";
 import ClickableRow from "@/components/ops/ClickableRow";
+import OnboardingStatusSelect from "@/components/ops/OnboardingStatusSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +131,7 @@ export default async function OnboardingPage() {
                     <th className="px-5 py-3">Assigned Program</th>
                     <th className="px-5 py-3">Associated Brands</th>
                     <th className="px-5 py-3">Progress</th>
+                    <th className="px-5 py-3">Onboarding Status</th>
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -179,6 +181,9 @@ export default async function OnboardingPage() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <OnboardingStatusSelect assignmentId={a.id} status={a.onboardingStatus} />
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <Link
