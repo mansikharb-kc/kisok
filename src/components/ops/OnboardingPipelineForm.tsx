@@ -435,7 +435,7 @@ export default function OnboardingPipelineForm({
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 animate-led-yellow border border-amber-650/30" />
                   )}
                   {stepStatus === "pending" && (
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-250 border border-slate-300" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 border-2 border-slate-300 bg-white shadow-2xs" />
                   )}
                 </div>
                 <span
