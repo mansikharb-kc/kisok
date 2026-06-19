@@ -12,6 +12,7 @@ export type SelectedProgramRow = {
   status: string;
   approvalStatus: string;
   createdAt: string;
+  isNewProgramRequest?: boolean;
 };
 
 export type AvailableProgramRow = {
@@ -136,8 +137,10 @@ export default function BranchProgramsClient({
                       <StatusPill status={p.approvalStatus} />
                     </td>
                     <td className="px-4 py-3 align-middle text-right">
-                      {p.approvalStatus === "approved" ? (
-                        <span className="text-xs text-slate-400">Locked</span>
+                      {p.isNewProgramRequest ? (
+                        <span className="text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">Pending HO Approval</span>
+                      ) : p.approvalStatus === "approved" ? (
+                        <span className="text-xs text-slate-400 font-medium">Locked</span>
                       ) : (
                         <button
                           onClick={() => remove(p.id)}

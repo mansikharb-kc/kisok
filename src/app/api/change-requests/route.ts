@@ -11,6 +11,7 @@ const createRequestSchema = z.object({
     "NEW_PRODUCT_TYPE",
     "EDIT_MASTER_FIELD",
     "BRANCH_PROGRAM",
+    "NEW_PROGRAM",
     "OTHER",
   ]),
   payload: z.any(),

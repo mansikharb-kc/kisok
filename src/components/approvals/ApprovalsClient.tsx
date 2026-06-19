@@ -43,6 +43,11 @@ function summarize(req: ChangeRequestRow): string {
     const code = req.payload?.brandCode ? ` (${req.payload.brandCode})` : "";
     return `${req.branchName || "Onboarding lead"} requested ${brand}${code}`;
   }
+  if (req.type === "NEW_PROGRAM") {
+    const branch = req.branchName || "A branch";
+    const program = req.payload?.name || "a program";
+    return `${branch} requested to create program "${program}"`;
+  }
   return req.type.replace(/_/g, " ");
 }
 
