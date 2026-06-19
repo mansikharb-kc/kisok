@@ -25,7 +25,7 @@ const patchSchema = z.object({
 });
 
 export const PATCH = handler(async (req: Request, ctx: { params: { id: string } }) => {
-  const session = await requireRole("OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD");
+  const session = await requireRole("OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD", "PROJECT_USER", "CONCIERGE_MANAGER");
   const id = parseId(ctx.params.id);
   if (id === null) return fail("Invalid id", 400);
 
@@ -36,12 +36,14 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
   const ticket = await prisma.ticket.findUnique({ where: { id } });
   if (!ticket) return fail("Ticket not found", 404);
 
-  const branchId = branchOf(session, ["OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD"]);
+  const branchId = branchOf(session, ["OB_EXEC", "CONSIGNMENT_USER", "ONB_LEAD", "PROJECT_USER", "CONCIERGE_MANAGER"]);
   if (!branchId || ticket.branchId !== branchId) return fail("Forbidden", 403);
 
   const isExec = session.roles.some((r) => r.code === "OB_EXEC");
   const isConsign = session.roles.some((r) => r.code === "CONSIGNMENT_USER");
   const isLead = session.roles.some((r) => r.code === "ONB_LEAD");
+  const isProjectUser = session.roles.some((r) => r.code === "PROJECT_USER");
+  const isConcierge = session.roles.some((r) => r.code === "CONCIERGE_MANAGER");
 
   let data: Record<string, unknown> = {};
   let fromRole: string | null = null;
@@ -60,7 +62,10 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
     fromRole = "OB_EXEC";
     toRole = "CONSIGNMENT_USER";
   } else if (action === "resolve") {
-    const ownerOk = (ticket.currentRole === "OB_EXEC" && isExec) || (ticket.currentRole === "CONSIGNMENT_USER" && isConsign);
+    const ownerOk = (ticket.currentRole === "OB_EXEC" && isExec) ||
+                    (ticket.currentRole === "CONSIGNMENT_USER" && isConsign) ||
+                    (ticket.currentRole === "PROJECT_USER" && isProjectUser) ||
+                    (ticket.currentRole === "CONCIERGE_MANAGER" && isConcierge);
     if (!ownerOk) return fail("Only the current holder can resolve this ticket", 403);
     data = { status: "RESOLVED", resolvedAt: new Date(), resolution: resolution ?? null };
     fromRole = ticket.currentRole;

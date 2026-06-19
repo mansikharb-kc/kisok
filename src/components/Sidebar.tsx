@@ -36,6 +36,7 @@ function NavIcon({ href }: { href: string }) {
     users: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
     archived: "M21 8v13H3V8M23 3H1v5h22zM10 12h4",
     flags: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z M4 22v-7",
+    tickets: "M2 9a3 3 0 0 1 0-6h16a3 3 0 0 1 0 6 2 2 0 0 0 0 6 3 3 0 0 1 0 6H2a3 3 0 0 1 0-6 2 2 0 0 0 0-6 M9 9h6 M9 14h6",
   };
   let key = "dashboard";
   if (href.includes("categories")) key = "categories";
@@ -55,6 +56,7 @@ function NavIcon({ href }: { href: string }) {
   else if (href.includes("users")) key = "users";
   else if (href.includes("archived")) key = "archived";
   else if (href.includes("flags")) key = "flags";
+  else if (href.includes("tickets")) key = "tickets";
   else if (href.includes("dashboard")) key = "dashboard";
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

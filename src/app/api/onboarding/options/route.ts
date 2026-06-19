@@ -96,6 +96,68 @@ export const GET = handler(async (req: Request) => {
   const categoryIdRaw = searchParams.get("categoryId");
   const programIdRaw = searchParams.get("programId");
   const catQuery = searchParams.get("q")?.trim();
+  const brandIdRaw = searchParams.get("brandId");
+  const sellerIdRaw = searchParams.get("sellerId");
+
+  // Mode D: categories active for a given (brand + program + seller)
+  if (brandIdRaw && programIdRaw && sellerIdRaw && !categoryIdRaw) {
+    let brandId: bigint;
+    let programId: bigint;
+    let sellerId: bigint;
+    try {
+      brandId = BigInt(brandIdRaw);
+      programId = BigInt(programIdRaw);
+      sellerId = BigInt(sellerIdRaw);
+    } catch {
+      return fail("Invalid brandId, programId, or sellerId", 400);
+    }
+
+    const contract = await prisma.sellerContract.findFirst({
+      where: {
+        sellerId,
+        programId,
+      },
+    });
+
+    if (!contract) {
+      return ok({ categories: [] });
+    }
+
+    const customFields = (contract.customFields || {}) as any;
+    const brandCategoryIds = customFields.brandCategoryIds || {};
+    const catIds = brandCategoryIds[brandId.toString()] || [];
+
+    if (catIds.length === 0) {
+      return ok({ categories: [] });
+    }
+
+    const bigIntCatIds = catIds
+      .map((id: string) => {
+        try {
+          return BigInt(id);
+        } catch {
+          return null;
+        }
+      })
+      .filter((id: bigint | null): id is bigint => id !== null);
+
+    const categories = await prisma.category.findMany({
+      where: {
+        id: { in: bigIntCatIds },
+        status: "active",
+      },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, code: true },
+    });
+
+    return ok({
+      categories: categories.map((c) => ({
+        id: c.id.toString(),
+        name: c.name,
+        code: c.code,
+      })),
+    });
+  }
 
   // Mode A: effective attribute list for (category + program), de-duped.
   if (categoryIdRaw && programIdRaw) {

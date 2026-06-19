@@ -4,6 +4,7 @@ import { prisma, serialize } from "@/lib/prisma";
 import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 import LeadAssignmentsTable from "@/components/ops/LeadAssignmentsTable";
 import RecentActivityClient from "@/components/dashboard/RecentActivityClient";
+import DashboardTicketsList from "@/components/ops/DashboardTicketsList";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   let whereClause = {};
@@ -414,7 +415,7 @@ export default async function DashboardPage() {
     const branch = await prisma.branch.findUnique({ where: { id: opsBranchId }, select: { name: true } });
     opsBranchName = branch?.name || "Branch";
 
-    if (isOnbLead || isProjectUser || isConciergeManager) {
+    if (isOnbLead) {
       onbLeadData = await onbLeadCounts(opsBranchId);
       if (isOnbLead) {
         const assignments = await prisma.sellerAssignment.findMany({
@@ -463,7 +464,7 @@ export default async function DashboardPage() {
     if (isOBExec) {
       obExecData = await obExecCounts(opsBranchId, session.uid);
     }
-    if (isConsignment || isConciergeManager) {
+    if (isConsignment) {
       consignmentData = await consignmentUserCounts(opsBranchId);
     }
   }
@@ -473,6 +474,65 @@ export default async function DashboardPage() {
   if (targetBranchId) {
     occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
   }
+
+  // Fetch tickets for Project User, Concierge Manager, OB Exec, and Onboarding Lead
+  let dashboardTickets: any[] = [];
+  if (targetBranchId) {
+    if (isProjectUser) {
+      dashboardTickets = await prisma.ticket.findMany({
+        where: {
+          branchId: targetBranchId,
+          currentRole: "PROJECT_USER",
+        },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          seller: { select: { name: true, sellerCode: true } },
+          brand: { select: { name: true } },
+          events: { orderBy: { createdAt: "asc" } },
+        },
+      });
+    } else if (isConciergeManager) {
+      dashboardTickets = await prisma.ticket.findMany({
+        where: {
+          branchId: targetBranchId,
+          currentRole: "CONCIERGE_MANAGER",
+        },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          seller: { select: { name: true, sellerCode: true } },
+          brand: { select: { name: true } },
+          events: { orderBy: { createdAt: "asc" } },
+        },
+      });
+    } else if (isOBExec) {
+      dashboardTickets = await prisma.ticket.findMany({
+        where: {
+          branchId: targetBranchId,
+          raisedBy: BigInt(session.uid),
+        },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          seller: { select: { name: true, sellerCode: true } },
+          brand: { select: { name: true } },
+          events: { orderBy: { createdAt: "asc" } },
+        },
+      });
+    } else if (isOnbLead) {
+      dashboardTickets = await prisma.ticket.findMany({
+        where: {
+          branchId: targetBranchId,
+          type: { in: ["SAMPLE_REQUEST", "SPACE_RACK", "KT_REQUEST"] },
+        },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          seller: { select: { name: true, sellerCode: true } },
+          brand: { select: { name: true } },
+          events: { orderBy: { createdAt: "asc" } },
+        },
+      });
+    }
+  }
+  const serializedDashboardTickets = serialize(dashboardTickets) as any[];
 
   // Active flags count for warning banner
   let activeFlagsCount = 0;
@@ -641,9 +701,6 @@ export default async function DashboardPage() {
       ) : (
         // Ops Roles Dashboard
         <div className="space-y-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full font-medium">{opsBranchName}</span>
-          </div>
           {/* ONB_LEAD dashboard */}
           {isOnbLead && onbLeadData && (
             <div className="space-y-6">
@@ -698,6 +755,12 @@ export default async function DashboardPage() {
                   </a>
                 </div>
               </div>
+
+              {/* Onboarding Request Tickets */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Request Tickets</div>
+                <DashboardTicketsList tickets={serializedDashboardTickets} userRoles={session.roles.map(r => r.code)} />
+              </div>
             </div>
           )}
 
@@ -730,6 +793,12 @@ export default async function DashboardPage() {
                     {obExecData.copiesPlaced} placed · {obExecData.copiesUnplaced} unplaced
                   </div>
                 </a>
+              </div>
+
+              {/* My Onboarding Request Tickets */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">My Onboarding Request Tickets</div>
+                <DashboardTicketsList tickets={serializedDashboardTickets} userRoles={session.roles.map(r => r.code)} />
               </div>
             </div>
           )}
@@ -786,89 +855,50 @@ export default async function DashboardPage() {
           )}
 
           {/* PROJECT_USER dashboard */}
-          {isProjectUser && onbLeadData && (
+          {isProjectUser && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Project Overview</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total Sellers</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
+                  <div className="text-xs font-medium text-slate-400">Active Space &amp; Rack Tickets</div>
+                  <div className="text-3xl font-bold mt-1 text-amber-600">
+                    {serializedDashboardTickets.filter(t => t.status !== "RESOLVED" && t.status !== "CLOSED").length}
                   </div>
+                  <div className="text-xs text-slate-500 mt-1">requiring space/rack allocation</div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">active products in branch</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Onboarded SKUs</div>
-                  <div className="text-3xl font-bold mt-1 text-emerald-600">{onbLeadData.productsOnboarded}</div>
-                  <div className="text-xs text-slate-500 mt-1">onboarding records created</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Pending Onboarding</div>
-                  <div className="text-3xl font-bold mt-1 text-amber-600">{onbLeadData.notOnboardedRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">remaining products to onboard</div>
+                  <div className="text-xs font-medium text-slate-400">Resolved Space &amp; Rack Tickets</div>
+                  <div className="text-3xl font-bold mt-1 text-emerald-600">
+                    {serializedDashboardTickets.filter(t => t.status === "RESOLVED" || t.status === "CLOSED").length}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">allocation completed</div>
                 </div>
               </div>
             </div>
           )}
 
           {/* CONCIERGE_MANAGER dashboard */}
-          {isConciergeManager && onbLeadData && consignmentData && (
+          {isConciergeManager && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Concierge Coordination Overview</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total Sellers</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">active in branch</div>
+                  <div className="text-xs font-medium text-slate-400">Active KT Tickets</div>
+                  <div className="text-3xl font-bold mt-1 text-amber-600">
+                    {serializedDashboardTickets.filter(t => t.status !== "RESOLVED" && t.status !== "CLOSED").length}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">requiring coordination</div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">active products in branch</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Total Warehouses</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.warehousesCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">active at branch</div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Open Consignments</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
-                  <div className="text-xs text-slate-500 mt-1">not yet closed</div>
-                </div>
-              </div>
-
-              {/* Consignment Status Breakdown */}
-              <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Consignment Status Breakdown</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {(
-                    [
-                      { key: "initiated", label: "Initiated", color: "bg-blue-50 text-blue-700 border-blue-200" },
-                      { key: "received", label: "Received", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-                      { key: "in_buffer", label: "In Buffer", color: "bg-amber-50 text-amber-700 border-amber-200" },
-                      { key: "fabricating", label: "Fabricating", color: "bg-orange-50 text-orange-700 border-orange-200" },
-                      { key: "qc", label: "In QC", color: "bg-purple-50 text-purple-700 border-purple-200" },
-                      { key: "passed_back", label: "Passed Back", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                    ] as { key: string; label: string; color: string }[]
-                  ).map(({ key, label, color }) => (
-                    <div
-                      key={key}
-                      className={`rounded-xl border p-5 shadow-sm block ${color}`}
-                    >
-                      <div className="text-xs font-medium opacity-80">{label}</div>
-                      <div className="text-3xl font-bold mt-1">{(consignmentData.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
-                    </div>
-                  ))}
+                  <div className="text-xs font-medium text-slate-400">Resolved KT Tickets</div>
+                  <div className="text-3xl font-bold mt-1 text-emerald-600">
+                    {serializedDashboardTickets.filter(t => t.status === "RESOLVED" || t.status === "CLOSED").length}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">session completed</div>
                 </div>
               </div>
             </div>
@@ -887,7 +917,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {occupancyData && (
+      {occupancyData && !isConciergeManager && (
         isOBExec && !isOnbLead ? (
           <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>

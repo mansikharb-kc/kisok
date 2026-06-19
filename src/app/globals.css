@@ -345,12 +345,68 @@ button {
   }
 }
 
+@keyframes blink-green {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8);
+  }
+}
+
+@keyframes blink-yellow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.8);
+  }
+}
+
+@keyframes led-green {
+  0%, 100% {
+    background-color: #059669;
+    box-shadow: 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    background-color: #34d399;
+    box-shadow: 0 0 12px 3px rgba(52, 211, 153, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes led-yellow {
+  0%, 100% {
+    background-color: #d97706;
+    box-shadow: 0 0 2px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    background-color: #fbbf24;
+    box-shadow: 0 0 12px 3px rgba(251, 191, 36, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  }
+}
+
 .animate-blink {
   animation: blink 10000s linear infinite;
 }
 
+.animate-led-green {
+  animation: led-green 1.2s ease-in-out infinite;
+}
+
+.animate-led-yellow {
+  animation: led-yellow 1.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-blink {
+    animation: none;
+  }
+  .animate-led-green,
+  .animate-led-yellow {
     animation: none;
   }
 }

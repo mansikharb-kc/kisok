@@ -24,6 +24,14 @@ function serializeMaster(
       valueDate: Date | null;
       option: { optionValue: string } | null;
     }[];
+    media?: {
+      media: {
+        id: bigint;
+        type: string;
+        url: string;
+        mime: string | null;
+      };
+    }[];
   },
   attributeMap: Map<string, { name: string; code: string; dataType: string; unit: string | null }>
 ) {
@@ -56,27 +64,41 @@ function serializeMaster(
         };
       })
       .filter(Boolean),
+    media: p.media
+      ? p.media.map((m) => ({
+          id: m.media.id.toString(),
+          type: m.media.type,
+          url: m.media.url,
+          mime: m.media.mime,
+        }))
+      : [],
   };
 }
 
-// GET ?brandId=&sku= → existing master (read-only) or { exists: false }.
+// GET ?brandId=&sku= or ?id= → existing master (read-only) or { exists: false }.
 export const GET = handler(async (req: Request) => {
   await requireRole("OB_EXEC");
   const { searchParams } = new URL(req.url);
+  const idRaw = searchParams.get("id");
   const brandIdRaw = searchParams.get("brandId");
   const sku = searchParams.get("sku")?.trim();
-  if (!brandIdRaw || !sku) return fail("brandId and sku are required", 400);
 
-  let brandId: bigint;
-  try {
-    brandId = BigInt(brandIdRaw);
-  } catch {
-    return fail("Invalid brandId", 400);
-  }
+  const [attributes] = await Promise.all([
+    prisma.attribute.findMany({
+      select: { id: true, name: true, code: true, dataType: true, unit: true },
+    }),
+  ]);
+  const attributeMap = new Map(attributes.map((a) => [a.id.toString(), a]));
 
-  const [product, attributes] = await Promise.all([
-    prisma.brandProduct.findUnique({
-      where: { brandId_sku: { brandId, sku } },
+  if (idRaw) {
+    let id: bigint;
+    try {
+      id = BigInt(idRaw);
+    } catch {
+      return fail("Invalid id", 400);
+    }
+    const product = await prisma.brandProduct.findUnique({
+      where: { id },
       include: {
         category: { select: { name: true, code: true } },
         brand: { select: { name: true, code: true } },
@@ -85,16 +107,45 @@ export const GET = handler(async (req: Request) => {
             option: { select: { optionValue: true } },
           },
         },
+        media: {
+          include: {
+            media: true,
+          },
+        },
       },
-    }),
-    prisma.attribute.findMany({
-      select: { id: true, name: true, code: true, dataType: true, unit: true },
-    }),
-  ]);
+    });
+    if (!product) return fail("Product not found", 404);
+    return ok(serializeMaster(product, attributeMap));
+  }
+
+  if (!brandIdRaw || !sku) return fail("brandId and sku, or id, are required", 400);
+
+  let brandId: bigint;
+  try {
+    brandId = BigInt(brandIdRaw);
+  } catch {
+    return fail("Invalid brandId", 400);
+  }
+
+  const product = await prisma.brandProduct.findUnique({
+    where: { brandId_sku: { brandId, sku } },
+    include: {
+      category: { select: { name: true, code: true } },
+      brand: { select: { name: true, code: true } },
+      attrValues: {
+        include: {
+          option: { select: { optionValue: true } },
+        },
+      },
+      media: {
+        include: {
+          media: true,
+        },
+      },
+    },
+  });
 
   if (!product) return ok({ exists: false });
-
-  const attributeMap = new Map(attributes.map((a) => [a.id.toString(), a]));
   return ok(serializeMaster(product, attributeMap));
 });
 
@@ -113,6 +164,12 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(200),
   categoryId: z.coerce.bigint(),
   attributeValues: z.array(valueSchema).optional().default([]),
+  mediaIds: z.array(z.coerce.bigint()).optional().default([]),
+  mediaUrls: z.object({
+    image: z.string().optional().nullable(),
+    video: z.string().optional().nullable(),
+    pdf: z.string().optional().nullable(),
+  }).optional(),
 });
 
 // POST → create a shared BrandProduct master + its ProductAttributeValue rows.
@@ -121,7 +178,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandId, sku, name, categoryId, attributeValues } = parsed.data;
+  const { brandId, sku, name, categoryId, attributeValues, mediaIds, mediaUrls } = parsed.data;
 
   const [brand, category] = await Promise.all([
     prisma.brand.findUnique({ where: { id: brandId }, select: { id: true } }),
@@ -141,6 +198,40 @@ export const POST = handler(async (req: Request) => {
     const product = await tx.brandProduct.create({
       data: { brandId, sku, name, categoryId, status: "active" },
     });
+
+    const importedMediaIds: bigint[] = [];
+    if (mediaUrls) {
+      if (mediaUrls.image) {
+        const m = await tx.media.create({
+          data: { type: "logo", url: mediaUrls.image, mime: "image/png" },
+        });
+        importedMediaIds.push(m.id);
+      }
+      if (mediaUrls.video) {
+        const m = await tx.media.create({
+          data: { type: "video", url: mediaUrls.video, mime: "video/mp4" },
+        });
+        importedMediaIds.push(m.id);
+      }
+      if (mediaUrls.pdf) {
+        const m = await tx.media.create({
+          data: { type: "pdf", url: mediaUrls.pdf, mime: "application/pdf" },
+        });
+        importedMediaIds.push(m.id);
+      }
+    }
+
+    const allMediaIds = [...mediaIds, ...importedMediaIds];
+    if (allMediaIds.length > 0) {
+      await tx.productMedia.createMany({
+        data: allMediaIds.map((mediaId, idx) => ({
+          brandProductId: product.id,
+          mediaId,
+          isPrimary: idx === 0,
+          displayOrder: idx,
+        })),
+      });
+    }
 
     // Only persist attribute values that actually carry a value.
     const rows = attributeValues

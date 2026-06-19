@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS } from "@/lib/categoryLevels";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 type Brand = { id: string; name: string; code: string };
 type Seller = { id: string; name: string; sellerCode: string; brands: Brand[]; categoryIds: string[] };
@@ -66,6 +67,61 @@ export default function OnboardingForm({
   const [category, setCategory] = useState<Category | null>(null);
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
+
+  // Collapse/Expand state for sections 1, 2, 3
+  const [step1Open, setStep1Open] = useState(false);
+  const [step2Open, setStep2Open] = useState(false);
+  const [step3Open, setStep3Open] = useState(false);
+
+  // New Master Uploads state
+  const [videoMediaId, setVideoMediaId] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoBusy, setVideoBusy] = useState(false);
+
+  const [imageMediaId, setImageMediaId] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageBusy, setImageBusy] = useState(false);
+
+  const [pdfMediaId, setPdfMediaId] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, type: "video" | "image" | "pdf") {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (type === "video") setVideoBusy(true);
+    else if (type === "image") setImageBusy(true);
+    else if (type === "pdf") setPdfBusy(true);
+
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `${type} upload failed`);
+        return;
+      }
+      if (type === "video") {
+        setVideoMediaId(data.mediaId);
+        setVideoUrl(data.url);
+      } else if (type === "image") {
+        setImageMediaId(data.mediaId);
+        setImageUrl(data.url);
+      } else if (type === "pdf") {
+        setPdfMediaId(data.mediaId);
+        setPdfUrl(data.url);
+      }
+    } catch {
+      setError(`${type} upload failed`);
+    } finally {
+      if (type === "video") setVideoBusy(false);
+      else if (type === "image") setImageBusy(false);
+      else if (type === "pdf") setPdfBusy(false);
+    }
+  }
 
   // Category cascade selection
   const parents = useMemo(() => buildParentOptions(flatCategories), [flatCategories]);
@@ -196,6 +252,12 @@ export default function OnboardingForm({
     setSkuChecked(false);
     setAttrs([]);
     setValues({});
+    setVideoMediaId(null);
+    setVideoUrl("");
+    setImageMediaId(null);
+    setImageUrl("");
+    setPdfMediaId(null);
+    setPdfUrl("");
   }
 
   // Load effective attributes (category + program) for a NEW master.
@@ -268,12 +330,14 @@ export default function OnboardingForm({
           .map((a) => buildValue(a, values[a.id]))
           .filter((v): v is NonNullable<typeof v> => v !== null);
 
+        const mediaIds = [imageMediaId, videoMediaId, pdfMediaId].filter((id): id is string => id !== null);
         const created = await postJSON("/api/brand-products", {
           brandId,
           sku: sku.trim(),
           name: name.trim(),
           categoryId: category!.id,
           attributeValues,
+          mediaIds,
         });
         brandProductId = created.id;
       }
@@ -322,233 +386,271 @@ export default function OnboardingForm({
 
       {/* Step 1–3: Seller → Brand → Program */}
       <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-800 mb-4">1. Seller, Brand &amp; Program</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Field label="Seller">
-            <select
-              value={sellerId}
-              onChange={(e) => setSellerId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            >
-              <option value="">Select a seller…</option>
-              {sellers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.sellerCode})
-                </option>
-              ))}
-            </select>
-            {sellers.length === 0 && (
-              <p className="mt-1 text-xs text-slate-400">No sellers are assigned to you.</p>
-            )}
-          </Field>
+        <button
+          type="button"
+          onClick={() => setStep1Open(!step1Open)}
+          className="group flex w-full items-center justify-between text-left focus:outline-none"
+        >
+          <h2 className="text-sm font-semibold text-slate-800 group-hover:text-brand-650 transition-colors">1. Seller, Brand &amp; Program</h2>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors select-none">
+            <span>{step1Open ? "Collapse" : "Expand"}</span>
+            {step1Open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </div>
+        </button>
+        {step1Open && (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Field label="Seller">
+              <select
+                value={sellerId}
+                onChange={(e) => setSellerId(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="">Select a seller…</option>
+                {sellers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.sellerCode})
+                  </option>
+                ))}
+              </select>
+              {sellers.length === 0 && (
+                <p className="mt-1 text-xs text-slate-400">No sellers are assigned to you.</p>
+              )}
+            </Field>
 
-          <Field label="Brand">
-            <select
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              disabled={!sellerId}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
-            >
-              <option value="">Select a brand…</option>
-              {brandOptions.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            {sellerId && brandOptions.length === 0 && (
-              <p className="mt-1 text-xs text-slate-400">This seller has no brands.</p>
-            )}
-          </Field>
+            <Field label="Brand">
+              <select
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                disabled={!sellerId}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-50"
+              >
+                <option value="">Select a brand…</option>
+                {brandOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              {sellerId && brandOptions.length === 0 && (
+                <p className="mt-1 text-xs text-slate-400">This seller has no brands.</p>
+              )}
+            </Field>
 
-          <Field label="Program (branch-approved)">
-            <select
-              value={programId}
-              onChange={(e) => setProgramId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            >
-              <option value="">Select a program…</option>
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            {programs.length === 0 && (
-              <p className="mt-1 text-xs text-slate-400">No approved programs for your branch.</p>
-            )}
-          </Field>
-        </div>
+            <Field label="Program (branch-approved)">
+              <select
+                value={programId}
+                onChange={(e) => setProgramId(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <option value="">Select a program…</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {programs.length === 0 && (
+                <p className="mt-1 text-xs text-slate-400">No approved programs for your branch.</p>
+              )}
+            </Field>
+          </div>
+        )}
       </section>
 
       {/* Step 4: Category */}
       <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-800 mb-4">2. Category</h2>
-        <div className="space-y-3">
-          {selectedSeller && selectedSeller.categoryIds && selectedSeller.categoryIds.length > 0 && (
-            <div className="mb-4 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Seller's Operating Categories
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {selectedSeller.categoryIds.map((catId) => {
-                  const node = byId.get(catId);
-                  if (!node) return null;
-                  const isCurrent = category?.id === catId;
-                  return (
-                    <button
-                      key={catId}
-                      type="button"
-                      onClick={() => {
-                        const path: string[] = [];
-                        let currentId: string | null = catId;
-                        while (currentId) {
-                          const n = byId.get(currentId);
-                          if (!n) break;
-                          path.unshift(currentId);
-                          currentId = n.parentId;
-                        }
-                        const newSel: Record<number, string> = {};
-                        path.forEach((id, idx) => {
-                          newSel[idx + 1] = id;
-                        });
-                        setSel(newSel);
-                        setCategory({ id: node.id, name: node.name, code: node.number });
-                      }}
-                      className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all hover:scale-[1.005] duration-150 ${
-                        isCurrent
-                          ? "border-brand-600 bg-brand-50/40 text-brand-950 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300 text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5 ${
+        <button
+          type="button"
+          onClick={() => setStep2Open(!step2Open)}
+          className="group flex w-full items-center justify-between text-left focus:outline-none"
+        >
+          <h2 className="text-sm font-semibold text-slate-800 group-hover:text-brand-650 transition-colors">2. Category</h2>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors select-none">
+            <span>{step2Open ? "Collapse" : "Expand"}</span>
+            {step2Open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </div>
+        </button>
+        {step2Open && (
+          <div className="mt-4 space-y-3">
+            {selectedSeller && selectedSeller.categoryIds && selectedSeller.categoryIds.length > 0 && (
+              <div className="mb-4 bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Seller's Operating Categories
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedSeller.categoryIds.map((catId) => {
+                    const node = byId.get(catId);
+                    if (!node) return null;
+                    const isCurrent = category?.id === catId;
+                    return (
+                      <button
+                        key={catId}
+                        type="button"
+                        onClick={() => {
+                          const path: string[] = [];
+                          let currentId: string | null = catId;
+                          while (currentId) {
+                            const n = byId.get(currentId);
+                            if (!n) break;
+                            path.unshift(currentId);
+                            currentId = n.parentId;
+                          }
+                          const newSel: Record<number, string> = {};
+                          path.forEach((id, idx) => {
+                            newSel[idx + 1] = id;
+                          });
+                          setSel(newSel);
+                          setCategory({ id: node.id, name: node.name, code: node.number });
+                        }}
+                        className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all hover:scale-[1.005] duration-150 ${
                           isCurrent
-                            ? "bg-brand-100 text-brand-700"
-                            : "bg-slate-100 text-slate-500"
+                            ? "border-brand-600 bg-brand-50/40 text-brand-950 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300 text-slate-700 hover:bg-slate-50"
                         }`}
                       >
-                        L{node.level}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-semibold truncate">{node.name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          Code: {node.number}
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5 ${
+                            isCurrent
+                              ? "bg-brand-100 text-brand-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          L{node.level}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold truncate">{node.name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            Code: {node.number}
+                          </div>
                         </div>
-                      </div>
-                      {isCurrent && (
-                        <span className="text-brand-600 font-bold shrink-0">✓</span>
-                      )}
-                    </button>
-                  );
-                })}
+                        {isCurrent && (
+                          <span className="text-brand-600 font-bold shrink-0">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {LEVELS.map((lvl, idx) => {
-            const k = idx + 1;
-            if (k > 1 && !sel[k - 1]) return null;
-            const opts = optionsForLevel(k);
-            return (
-              <div key={k} className="flex items-center gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center shrink-0 ${lvl.badge}`}>
-                  {lvl.label}
-                </span>
-                <select
-                  value={sel[k] ?? ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      selectAt(k, val);
-                      const node = byId.get(val);
-                      if (node) {
-                        setCategory({ id: node.id, name: node.name, code: node.number });
-                      }
-                    } else {
-                      selectAt(k, "");
-                      const parentVal = sel[k - 1];
-                      if (parentVal) {
-                        const node = byId.get(parentVal);
+            {LEVELS.map((lvl, idx) => {
+              const k = idx + 1;
+              if (k > 1 && !sel[k - 1]) return null;
+              const opts = optionsForLevel(k);
+              return (
+                <div key={k} className="flex items-center gap-2">
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center shrink-0 ${lvl.badge}`}>
+                    {lvl.label}
+                  </span>
+                  <select
+                    value={sel[k] ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        selectAt(k, val);
+                        const node = byId.get(val);
                         if (node) {
                           setCategory({ id: node.id, name: node.name, code: node.number });
                         }
                       } else {
-                        setCategory(null);
+                        selectAt(k, "");
+                        const parentVal = sel[k - 1];
+                        if (parentVal) {
+                          const node = byId.get(parentVal);
+                          if (node) {
+                            setCategory({ id: node.id, name: node.name, code: node.number });
+                          }
+                        } else {
+                          setCategory(null);
+                        }
                       }
-                    }
+                    }}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
+                  >
+                    <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
+                    {opts.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.number} · {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+            {category && (
+              <div className="rounded-lg border border-brand-200 bg-brand-50/30 px-4 py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-brand-700">Selected Category:</span>
+                  <div className="text-sm font-bold text-slate-800 mt-0.5">{category.name}</div>
+                  <div className="font-mono text-xs text-slate-500">{category.code}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSel({});
+                    setCategory(null);
                   }}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white"
+                  className="text-xs text-brand-600 font-bold hover:underline"
                 >
-                  <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
-                  {opts.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.number} · {o.name}
-                    </option>
-                  ))}
-                </select>
+                  Reset Selection
+                </button>
               </div>
-            );
-          })}
-          {category && (
-            <div className="rounded-lg border border-brand-200 bg-brand-50/30 px-4 py-2.5 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-brand-700">Selected Category:</span>
-                <div className="text-sm font-bold text-slate-800 mt-0.5">{category.name}</div>
-                <div className="font-mono text-xs text-slate-500">{category.code}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSel({});
-                  setCategory(null);
-                }}
-                className="text-xs text-brand-600 font-bold hover:underline"
-              >
-                Reset Selection
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Step 5: SKU */}
       <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-800 mb-4">3. SKU</h2>
-        <div className="flex items-end gap-3">
-          <Field label="SKU" className="flex-1">
-            <input
-              value={sku}
-              onChange={(e) => {
-                setSku(e.target.value);
-                setSkuChecked(false);
-                setExisting(null);
-              }}
-              onBlur={() => {
-                if (canCheckSku) checkSku();
-              }}
-              placeholder="Enter the brand SKU"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-          </Field>
-          <button
-            type="button"
-            onClick={checkSku}
-            disabled={!canCheckSku || checking}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {checking ? "Checking…" : "Check SKU"}
-          </button>
-        </div>
-        {!canCheckSku && (
-          <p className="mt-2 text-xs text-slate-400">
-            Pick a seller, brand, program, category and enter a SKU to continue.
-          </p>
+        <button
+          type="button"
+          onClick={() => setStep3Open(!step3Open)}
+          className="group flex w-full items-center justify-between text-left focus:outline-none"
+        >
+          <h2 className="text-sm font-semibold text-slate-800 group-hover:text-brand-650 transition-colors">3. SKU</h2>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-brand-600 group-hover:text-brand-800 transition-colors select-none">
+            <span>{step3Open ? "Collapse" : "Expand"}</span>
+            {step3Open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </div>
+        </button>
+        {step3Open && (
+          <div className="mt-4">
+            <div className="flex items-end gap-3">
+              <Field label="SKU" className="flex-1">
+                <input
+                  value={sku}
+                  onChange={(e) => {
+                    setSku(e.target.value);
+                    setSkuChecked(false);
+                    setExisting(null);
+                  }}
+                  onBlur={() => {
+                    if (canCheckSku) checkSku();
+                  }}
+                  placeholder="Enter the brand SKU"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+              </Field>
+              <button
+                type="button"
+                onClick={checkSku}
+                disabled={!canCheckSku || checking}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {checking ? "Checking…" : "Check SKU"}
+              </button>
+            </div>
+            {!canCheckSku && (
+              <p className="mt-2 text-xs text-slate-400">
+                Pick a seller, brand, program, category and enter a SKU to continue.
+              </p>
+            )}
+          </div>
         )}
       </section>
 
       {/* Step 6a: REUSE existing master (read-only) */}
-      {skuChecked && existing && (
+      {step3Open && skuChecked && existing && (
         <section className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
@@ -585,7 +687,7 @@ export default function OnboardingForm({
       )}
 
       {/* Step 6b: NEW master — name + dynamic attributes */}
-      {skuChecked && !existing && (
+      {step3Open && skuChecked && !existing && (
         <section className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <span className="rounded bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
@@ -600,6 +702,66 @@ export default function OnboardingForm({
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
           </Field>
+
+          <div className="mb-5 border-t border-slate-200/80 pt-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Product Media (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Product Image */}
+              <Field label="Product Image">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imageUrl} alt="product" className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px] bg-slate-50 font-semibold h-12">No Image</div>
+                    )}
+                    <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
+                      {imageBusy ? "Uploading…" : imageUrl ? "Change Image" : "Upload Image"}
+                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "image")} className="hidden" disabled={imageBusy} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP, GIF, SVG (max 50 MB)</p>
+                </div>
+              </Field>
+
+              {/* Product Video */}
+              <Field label="Product Video">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {videoUrl ? (
+                      <video src={videoUrl} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" controls />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px] bg-slate-50 font-semibold h-12">No Video</div>
+                    )}
+                    <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
+                      {videoBusy ? "Uploading…" : videoUrl ? "Change Video" : "Upload Video"}
+                      <input type="file" accept="video/*" onChange={(e) => handleFileUpload(e, "video")} className="hidden" disabled={videoBusy} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">MP4, WEBM, OGG, MOV (max 50 MB)</p>
+                </div>
+              </Field>
+
+              {/* Product PDF */}
+              <Field label="Product PDF Brochure">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    {pdfUrl ? (
+                      <a href={pdfUrl} target="_blank" rel="noreferrer" className="w-12 h-12 rounded-lg border border-slate-200 bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs hover:bg-emerald-100 shrink-0 h-12">PDF</a>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-[10px] bg-slate-50 font-semibold h-12">No PDF</div>
+                    )}
+                    <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
+                      {pdfBusy ? "Uploading…" : pdfUrl ? "Change PDF" : "Upload PDF"}
+                      <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, "pdf")} className="hidden" disabled={pdfBusy} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">PDF document (max 50 MB)</p>
+                </div>
+              </Field>
+            </div>
+          </div>
 
           {attrLoading ? (
             <p className="text-sm text-slate-400">Loading attributes…</p>
@@ -628,23 +790,25 @@ export default function OnboardingForm({
       )}
 
       {/* Submit */}
-      <div className="flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => router.push("/ops/onboarding")}
-          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!skuChecked || submitting}
-          className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
-          {submitting ? "Saving…" : existing ? "Onboard (reuse master)" : "Create & Onboard"}
-        </button>
-      </div>
+      {step3Open && (
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/ops/onboarding")}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!skuChecked || submitting}
+            className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {submitting ? "Saving…" : existing ? "Onboard (reuse master)" : "Create & Onboard"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

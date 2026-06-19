@@ -70,6 +70,11 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
               brand: true,
             },
           },
+          sellerCategories: {
+            include: {
+              category: true,
+            },
+          },
         },
       },
       program: true,
@@ -160,49 +165,138 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
     const cStart = contract?.contractStart ? contract.contractStart.toISOString().slice(0, 10) : "N/A";
     const cEnd = contract?.contractEnd ? contract.contractEnd.toISOString().slice(0, 10) : "N/A";
 
+    const brandText = brandInfo ? `${brandInfo.name} (${brandInfo.code})` : "N/A";
+    const categoriesText = assignment.seller.sellerCategories?.map((sc) => sc.category.name).join(", ") || "None";
+
     const ticketTitle = `Consignment Request: ${assignment.seller.name} - ${assignment.program.name}`;
     const ticketDesc = `Sample Target List: ${itemTarget || "Not Specified"}
 Timeline: Fitout Period (${fitoutPeriod} Days), Collaboration Start: ${cStart}, End: ${cEnd}
 SPOC Person: Name: ${spocName}, Phone: ${spocPhone}, Email: ${spocEmail}
 Remarks: ${remarks || "None"}`;
 
+    const spaceRackDesc = `Seller: ${assignment.seller.name} (${assignment.seller.sellerCode})
+Brand: ${brandText}
+Program: ${assignment.program.name} (${assignment.program.code})
+Categories: ${categoriesText}
+SPOC Person: Name: ${spocName}, Phone: ${spocPhone}, Email: ${spocEmail}
+Remarks: ${remarks || "None"}`;
+
+    const ktDesc = `KT coordination request for seller ${assignment.seller.name} (${assignment.seller.sellerCode})
+Brand: ${brandText}
+Program: ${assignment.program.name} (${assignment.program.code})
+SPOC Person: Name: ${spocName}, Phone: ${spocPhone}, Email: ${spocEmail}
+Remarks: ${remarks || "None"}`;
+
     // Execute in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create the Ticket
-      const ticket = await tx.ticket.create({
-        data: {
-          title: ticketTitle,
-          description: ticketDesc,
-          type: "SAMPLE_REQUEST",
-          status: "WITH_CONSIGNMENT",
-          currentRole: "CONSIGNMENT_USER",
-          branchId,
-          sellerId: assignment.sellerId,
-          brandId: targetBrandId!,
-          raisedBy: BigInt(session.uid),
-        },
-      });
+      let primaryTicketId: bigint | null = null;
+      let primaryTicketNo: string | null = null;
 
-      // Generate a ticket number like TKT-XXXXX
-      const ticketNo = `TKT-${String(ticket.id).padStart(5, "0")}`;
-      const updatedTicket = await tx.ticket.update({
-        where: { id: ticket.id },
-        data: { ticketNo },
-      });
+      // 1. If reqSample is checked, generate the primary Sample Request ticket
+      if (reqSample) {
+        const ticket = await tx.ticket.create({
+          data: {
+            title: ticketTitle,
+            description: ticketDesc,
+            type: "SAMPLE_REQUEST",
+            status: "WITH_CONSIGNMENT",
+            currentRole: "CONSIGNMENT_USER",
+            branchId,
+            sellerId: assignment.sellerId,
+            brandId: targetBrandId!,
+            raisedBy: BigInt(session.uid),
+          },
+        });
+        const ticketNo = `TKT-${String(ticket.id).padStart(5, "0")}`;
+        await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { ticketNo },
+        });
+        await tx.ticketEvent.create({
+          data: {
+            ticketId: ticket.id,
+            action: "raise",
+            fromRole: "OB_EXEC",
+            toRole: "CONSIGNMENT_USER",
+            note: `Raised onboarding consignment sample request ticket ${ticketNo}`,
+            byUserId: BigInt(session.uid),
+          },
+        });
+        primaryTicketId = ticket.id;
+        primaryTicketNo = ticketNo;
+      }
 
-      // 2. Create TicketEvent
-      await tx.ticketEvent.create({
-        data: {
-          ticketId: ticket.id,
-          action: "raise",
-          fromRole: "OB_EXEC",
-          toRole: "CONSIGNMENT_USER",
-          note: `Raised onboarding consignment sample request ticket ${ticketNo}`,
-          byUserId: BigInt(session.uid),
-        },
-      });
+      // 2. If reqSpaceAndRack is checked, generate the Space & Rack ticket for PROJECT_USER
+      if (reqSpaceAndRack) {
+        const spaceRackTitle = `Space & Rack Request: ${assignment.seller.name} - ${assignment.program.name}`;
+        const ticket = await tx.ticket.create({
+          data: {
+            title: spaceRackTitle,
+            description: spaceRackDesc,
+            type: "SPACE_RACK",
+            status: "WITH_PROJECT_USER",
+            currentRole: "PROJECT_USER",
+            branchId,
+            sellerId: assignment.sellerId,
+            brandId: targetBrandId!,
+            raisedBy: BigInt(session.uid),
+          },
+        });
+        const ticketNo = `TKT-${String(ticket.id).padStart(5, "0")}`;
+        await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { ticketNo },
+        });
+        await tx.ticketEvent.create({
+          data: {
+            ticketId: ticket.id,
+            action: "raise",
+            fromRole: "OB_EXEC",
+            toRole: "PROJECT_USER",
+            note: `Raised onboarding space & rack allocation request ticket ${ticketNo}`,
+            byUserId: BigInt(session.uid),
+          },
+        });
+      }
 
-      // 3. Upsert OnboardingPipeline
+      // 3. If reqKt is checked, generate the KT Request ticket for CONCIERGE_MANAGER
+      if (reqKt) {
+        const ktTitle = `KT Request: ${assignment.seller.name} - ${assignment.program.name}`;
+        const ticket = await tx.ticket.create({
+          data: {
+            title: ktTitle,
+            description: ktDesc,
+            type: "KT_REQUEST",
+            status: "WITH_CONCIERGE",
+            currentRole: "CONCIERGE_MANAGER",
+            branchId,
+            sellerId: assignment.sellerId,
+            brandId: targetBrandId!,
+            raisedBy: BigInt(session.uid),
+          },
+        });
+        const ticketNo = `TKT-${String(ticket.id).padStart(5, "0")}`;
+        await tx.ticket.update({
+          where: { id: ticket.id },
+          data: { ticketNo },
+        });
+        await tx.ticketEvent.create({
+          data: {
+            ticketId: ticket.id,
+            action: "raise",
+            fromRole: "OB_EXEC",
+            toRole: "CONCIERGE_MANAGER",
+            note: `Raised onboarding knowledge transfer (KT) request ticket ${ticketNo}`,
+            byUserId: BigInt(session.uid),
+          },
+        });
+      }
+
+      // 4. Determine pipeline status:
+      // If reqSample is checked, go to TICKET_RAISED (warehouse receipt flow).
+      // If reqSample is false (but space/rack or KT is checked), go directly to DATA_AND_STICKER.
+      const targetStatus = reqSample ? "TICKET_RAISED" : "DATA_AND_STICKER";
+
       const pipeline = await tx.onboardingPipeline.upsert({
         where: {
           assignmentId_brandId: {
@@ -221,13 +315,13 @@ Remarks: ${remarks || "None"}`;
           nextActionTime,
           remarks,
           dateToRevisit,
-          status: "TICKET_RAISED",
-          ticketId: ticket.id,
+          status: targetStatus,
+          ticketId: primaryTicketId,
         },
         create: {
           assignmentId,
           brandId: targetBrandId!,
-          status: "TICKET_RAISED",
+          status: targetStatus,
           discussionDone,
           reqSpaceAndRack,
           reqData,
@@ -238,16 +332,16 @@ Remarks: ${remarks || "None"}`;
           nextActionTime,
           remarks,
           dateToRevisit,
-          ticketId: ticket.id,
+          ticketId: primaryTicketId,
         },
       });
 
-      return { pipeline, ticket: updatedTicket };
+      return { pipeline, ticketNo: primaryTicketNo };
     });
 
     return ok({
       pipeline: serialize(result.pipeline),
-      ticket: serialize(result.ticket),
+      ticket: result.ticketNo ? { ticketNo: result.ticketNo } : null,
     });
   }
 
@@ -321,7 +415,10 @@ Remarks: ${remarks || "None"}`;
       return fail("Pipeline must be in DATA_AND_STICKER stage to save details", 400);
     }
 
-    const targetStatus = (dataPendingResolved && stickerPasted) ? "VERIFICATION" : "DATA_AND_STICKER";
+    const isStageResolved = dataPendingResolved && (stickerPasted || !existingPipeline.reqSample);
+    const targetStatus = isStageResolved
+      ? (existingPipeline.reqSample ? "VERIFICATION" : "CLOSED")
+      : "DATA_AND_STICKER";
 
     const pipeline = await prisma.onboardingPipeline.update({
       where: {
@@ -329,7 +426,7 @@ Remarks: ${remarks || "None"}`;
       },
       data: {
         dataPendingResolved,
-        stickerPasted,
+        stickerPasted: existingPipeline.reqSample ? stickerPasted : true,
         status: targetStatus,
       },
     });
