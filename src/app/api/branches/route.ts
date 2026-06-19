@@ -10,6 +10,7 @@ const createSchema = z.object({
   city: z.string().trim().max(120).optional().nullable(),
   address: z.string().trim().max(255).optional().nullable(),
   status: z.enum(["active", "inactive"]).optional(),
+  categoryIds: z.array(z.string()).optional(),
 });
 
 export const GET = handler(async () => {
@@ -62,6 +63,9 @@ export const POST = handler(async (req: Request) => {
       city: data.city ?? null,
       address: data.address ?? null,
       status: data.status ?? "active",
+      branchCategories: parsed.data.categoryIds && parsed.data.categoryIds.length > 0 ? {
+        create: parsed.data.categoryIds.map((id: string) => ({ categoryId: BigInt(id) }))
+      } : undefined,
     },
   });
 
