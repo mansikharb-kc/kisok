@@ -41,6 +41,8 @@ const SLUG_TO_ROLE: Record<string, string> = {
   "onb-lead": "ONB_LEAD",
   "consignment-user": "CONSIGNMENT_USER",
   "ob-exec": "OB_EXEC",
+  "project-user": "PROJECT_USER",
+  "concierge-manager": "CONCIERGE_MANAGER",
 };
 
 const ROLE_NAME_MAP: Record<string, string> = {
@@ -49,6 +51,8 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "onb-lead": "Onboarding Leads",
   "consignment-user": "Consignment Users",
   "ob-exec": "Onboarding Execs",
+  "project-user": "Project Users",
+  "concierge-manager": "Concierge Managers",
 };
 
 interface PageProps {

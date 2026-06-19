@@ -156,6 +156,7 @@ export default async function Page({
       {branchTag}
       {programSelector}
       <WarehouseTree
+        key={String(selectedProgram.id)}
         programId={String(selectedProgram.id)}
         programName={selectedProgram.name}
         initial={nodes}

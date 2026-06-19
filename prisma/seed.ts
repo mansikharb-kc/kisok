@@ -14,6 +14,8 @@ const ROLES = [
   { code: "ONB_LEAD", name: "Onboarding Lead", description: "L3 — sellers, membership, assignment" },
   { code: "CONSIGNMENT_USER", name: "Consignment User", description: "L3 — receive, buffer, fabricate, QC" },
   { code: "OB_EXEC", name: "Onboarding Exec", description: "L3 — product onboarding & placement" },
+  { code: "PROJECT_USER", name: "Project User", description: "L3 — project view and reporting" },
+  { code: "CONCIERGE_MANAGER", name: "Concierge Manager", description: "L3 — concierge management and coordination" },
 ];
 
 async function main() {

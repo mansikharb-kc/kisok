@@ -58,6 +58,8 @@ const SLUG_TO_ROLE: Record<string, string> = {
   "onb-lead": "ONB_LEAD",
   "consignment-user": "CONSIGNMENT_USER",
   "ob-exec": "OB_EXEC",
+  "project-user": "PROJECT_USER",
+  "concierge-manager": "CONCIERGE_MANAGER",
 };
 
 const ROLE_NAME_MAP: Record<string, string> = {
@@ -66,6 +68,8 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "onb-lead": "Onboarding Lead",
   "consignment-user": "Consignment User",
   "ob-exec": "Onboarding Exec",
+  "project-user": "Project User",
+  "concierge-manager": "Concierge Manager",
 };
 
 export default function RoleUserForm({

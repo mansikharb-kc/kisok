@@ -129,14 +129,18 @@ async function main() {
   const obExec1     = await upsertUser("Arihant Verma", "arihant@gmail.com", "1234", "arihant");
   const obExec2     = await upsertUser("Sneha Rao", "sneha@kc.local", "Exec@1234", "sneha");
   const csgnUser    = await upsertUser("Navri Patel", "navri@gmail.com", "1234", "navri");
+  const projUser    = await upsertUser("Vikram Malhotra", "vikram@gmail.com", "1234", "vikram");
+  const conciergeMgr = await upsertUser("Rohan Roy", "rohan@gmail.com", "1234", "rohan");
 
   await attachRole(branchAdmin.id, "BRANCH_ADMIN", branch.id);
   await attachRole(onbLead.id,     "ONB_LEAD",     branch.id);
   await attachRole(obExec1.id,     "OB_EXEC",      branch.id);
   await attachRole(obExec2.id,     "OB_EXEC",      branch.id);
   await attachRole(csgnUser.id,    "CONSIGNMENT_USER", branch.id);
+  await attachRole(projUser.id,    "PROJECT_USER", branch.id);
+  await attachRole(conciergeMgr.id, "CONCIERGE_MANAGER", branch.id);
 
-  console.log(`✓ Users: ${[branchAdmin, onbLead, obExec1, obExec2, csgnUser].map(u => u.fullName).join(", ")}`);
+  console.log(`✓ Users: ${[branchAdmin, onbLead, obExec1, obExec2, csgnUser, projUser, conciergeMgr].map(u => u.fullName).join(", ")}`);
 
   // ── 3. HO Masters — Categories ────────────────────────────────────────────
   const catBathware = await prisma.category.upsert({

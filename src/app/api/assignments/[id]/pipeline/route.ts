@@ -13,14 +13,22 @@ function parseId(id: string): bigint | null {
 }
 
 const pipelineSchema = z.object({
-  action: z.enum(["save-initiation", "raise-ticket", "verify-consignment"]),
+  action: z.enum(["save-initiation", "raise-ticket", "verify-consignment", "save-data-sticker", "save-verification"]),
   discussionDone: z.boolean().optional(),
+  reqSpaceAndRack: z.boolean().optional(),
+  reqData: z.boolean().optional(),
+  reqSample: z.boolean().optional(),
+  reqKt: z.boolean().optional(),
   docAttached: z.string().trim().nullable().optional(),
   itemTarget: z.string().trim().nullable().optional(),
   nextActionTime: z.string().trim().nullable().optional(),
   remarks: z.string().trim().nullable().optional(),
   dateToRevisit: z.string().trim().nullable().optional(),
   brandId: z.string().trim().optional(),
+  dataPendingResolved: z.boolean().optional(),
+  stickerPasted: z.boolean().optional(),
+  placedInRack: z.boolean().optional(),
+  verificationPhoto: z.string().trim().nullable().optional(),
 });
 
 export const POST = handler(async (req: Request, ctx: { params: { id: string } }) => {
@@ -35,12 +43,20 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
   const {
     action,
     discussionDone = false,
+    reqSpaceAndRack = false,
+    reqData = false,
+    reqSample = false,
+    reqKt = false,
     docAttached = null,
     itemTarget = null,
     nextActionTime = null,
     remarks = null,
     dateToRevisit = null,
     brandId,
+    dataPendingResolved = false,
+    stickerPasted = false,
+    placedInRack = false,
+    verificationPhoto = null,
   } = parsed.data;
 
   // Retrieve assignment
@@ -100,6 +116,10 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
       },
       update: {
         discussionDone,
+        reqSpaceAndRack,
+        reqData,
+        reqSample,
+        reqKt,
         docAttached,
         itemTarget,
         nextActionTime,
@@ -111,6 +131,10 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
         brandId: targetBrandId,
         status: "INITIATION",
         discussionDone,
+        reqSpaceAndRack,
+        reqData,
+        reqSample,
+        reqKt,
         docAttached,
         itemTarget,
         nextActionTime,
@@ -188,6 +212,10 @@ Remarks: ${remarks || "None"}`;
         },
         update: {
           discussionDone,
+          reqSpaceAndRack,
+          reqData,
+          reqSample,
+          reqKt,
           docAttached,
           itemTarget,
           nextActionTime,
@@ -201,6 +229,10 @@ Remarks: ${remarks || "None"}`;
           brandId: targetBrandId!,
           status: "TICKET_RAISED",
           discussionDone,
+          reqSpaceAndRack,
+          reqData,
+          reqSample,
+          reqKt,
           docAttached,
           itemTarget,
           nextActionTime,
@@ -235,13 +267,13 @@ Remarks: ${remarks || "None"}`;
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Update pipeline to CLOSED
+      // 1. Update pipeline to DATA_AND_STICKER (new Step 3)
       const pipeline = await tx.onboardingPipeline.update({
         where: {
           id: existingPipeline.id,
         },
         data: {
-          status: "CLOSED",
+          status: "DATA_AND_STICKER",
           execVerified: true,
         },
       });
@@ -273,6 +305,70 @@ Remarks: ${remarks || "None"}`;
     });
 
     return ok({ pipeline: serialize(result.pipeline) });
+  }
+
+  if (action === "save-data-sticker") {
+    const existingPipeline = await prisma.onboardingPipeline.findUnique({
+      where: {
+        assignmentId_brandId: {
+          assignmentId,
+          brandId: targetBrandId,
+        },
+      },
+    });
+    if (!existingPipeline) return fail("Pipeline not found", 404);
+    if (existingPipeline.status !== "DATA_AND_STICKER") {
+      return fail("Pipeline must be in DATA_AND_STICKER stage to save details", 400);
+    }
+
+    const targetStatus = (dataPendingResolved && stickerPasted) ? "VERIFICATION" : "DATA_AND_STICKER";
+
+    const pipeline = await prisma.onboardingPipeline.update({
+      where: {
+        id: existingPipeline.id,
+      },
+      data: {
+        dataPendingResolved,
+        stickerPasted,
+        status: targetStatus,
+      },
+    });
+
+    return ok({ pipeline: serialize(pipeline) });
+  }
+
+  if (action === "save-verification") {
+    const existingPipeline = await prisma.onboardingPipeline.findUnique({
+      where: {
+        assignmentId_brandId: {
+          assignmentId,
+          brandId: targetBrandId,
+        },
+      },
+    });
+    if (!existingPipeline) return fail("Pipeline not found", 404);
+    if (existingPipeline.status !== "VERIFICATION") {
+      return fail("Pipeline must be in VERIFICATION stage to save details", 400);
+    }
+
+    if (!verificationPhoto || !verificationPhoto.trim()) {
+      return fail("Verification Photograph is mandatory", 400);
+    }
+
+    const targetStatus = placedInRack ? "CLOSED" : "VERIFICATION";
+
+    const pipeline = await prisma.onboardingPipeline.update({
+      where: {
+        id: existingPipeline.id,
+      },
+      data: {
+        placedInRack,
+        verificationPhoto,
+        status: targetStatus,
+      },
+    });
+
+    return ok({ pipeline: serialize(pipeline) });
   }
 
   return fail("Invalid action", 400);

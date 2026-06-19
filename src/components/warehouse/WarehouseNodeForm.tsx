@@ -32,11 +32,28 @@ export default function WarehouseNodeForm({
   const router = useRouter();
   const backHref = `/branch/warehouse?program=${programId}`;
 
-  const initialType: NodeType = editNode
-    ? (editNode.nodeType as NodeType)
-    : parentNode
-    ? (ALLOWED_CHILDREN[parentNode.nodeType]?.[0] ?? "CUSTOM")
-    : "WAREHOUSE";
+  const flowSteps = useMemo<Array<{ id: string; name: string; level: string; datatype: string }> | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`wh_flow_${programId}`);
+      if (saved) return JSON.parse(saved);
+    }
+    return null;
+  }, [programId]);
+
+  const initialType: NodeType = useMemo(() => {
+    if (editNode) return editNode.nodeType as NodeType;
+    if (flowSteps) {
+      if (!parentNode) {
+        return (flowSteps[0]?.level as NodeType) || "WAREHOUSE";
+      }
+      const parentStepIdx = flowSteps.findIndex((s) => s.level === parentNode.nodeType);
+      return (flowSteps[parentStepIdx + 1]?.level as NodeType) || "CUSTOM";
+    }
+    return parentNode
+      ? (ALLOWED_CHILDREN[parentNode.nodeType]?.[0] ?? "CUSTOM")
+      : "WAREHOUSE";
+  }, [editNode, parentNode, flowSteps]);
+
   const initialFlags = editNode
     ? { isPlacementEligible: editNode.isPlacementEligible, isScreenMountable: editNode.isScreenMountable }
     : DEFAULT_FLAGS[initialType] ?? { isPlacementEligible: false, isScreenMountable: false };
@@ -94,11 +111,25 @@ export default function WarehouseNodeForm({
     setPickCatId("");
   }
 
-  const typeChoices: NodeType[] = editNode
-    ? [...NODE_TYPES]
-    : parentNode
-    ? ALLOWED_CHILDREN[parentNode.nodeType] ?? [...NODE_TYPES]
-    : ALLOWED_ROOT_TYPES;
+  const typeChoices: NodeType[] = useMemo(() => {
+    if (flowSteps) {
+      if (editNode) {
+        return [editNode.nodeType as NodeType];
+      }
+      if (!parentNode) {
+        const rootLevel = flowSteps[0]?.level as NodeType;
+        return rootLevel ? [rootLevel] : ["WAREHOUSE"];
+      }
+      const parentStepIdx = flowSteps.findIndex((s) => s.level === parentNode.nodeType);
+      const nextLevel = flowSteps[parentStepIdx + 1]?.level as NodeType;
+      return nextLevel ? [nextLevel] : ["CUSTOM"];
+    }
+    return editNode
+      ? [...NODE_TYPES]
+      : parentNode
+      ? ALLOWED_CHILDREN[parentNode.nodeType] ?? [...NODE_TYPES]
+      : ALLOWED_ROOT_TYPES;
+  }, [flowSteps, parentNode, editNode]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -159,6 +190,7 @@ export default function WarehouseNodeForm({
           <div className="flex flex-wrap gap-2">
             {typeChoices.map((t) => {
               const m = nodeMeta(t);
+              const customName = flowSteps?.find((s) => s.level === t)?.name || t;
               return (
                 <button
                   key={t}
@@ -172,7 +204,7 @@ export default function WarehouseNodeForm({
                   }`}
                   title={m.desc}
                 >
-                  {t}
+                  {customName}
                 </button>
               );
             })}
@@ -200,10 +232,14 @@ export default function WarehouseNodeForm({
             required
             autoFocus
             placeholder={
-              form.nodeType === "WAREHOUSE" ? "e.g. Immersive Hub" :
-              form.nodeType === "BLOCK" ? "e.g. Block / Docket D1" :
-              form.nodeType === "RACK" ? "e.g. Rack R1" :
-              form.nodeType === "TRAY" ? "e.g. Tray T1" : "e.g. Custom Zone"
+              (() => {
+                const custom = flowSteps?.find((s) => s.level === form.nodeType);
+                if (custom) return `e.g. ${custom.name}`;
+                return form.nodeType === "WAREHOUSE" ? "e.g. Immersive Hub" :
+                  form.nodeType === "BLOCK" ? "e.g. Block / Docket D1" :
+                  form.nodeType === "RACK" ? "e.g. Rack R1" :
+                  form.nodeType === "TRAY" ? "e.g. Tray T1" : "e.g. Custom Zone";
+              })()
             }
             className={I}
           />

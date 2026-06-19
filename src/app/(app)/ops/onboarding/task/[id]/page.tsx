@@ -136,6 +136,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
             status: "pending",
           },
         },
+        flags: true,
       },
     });
 
@@ -154,6 +155,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
               status: "pending",
             },
           },
+          flags: true,
         },
       });
     }
@@ -277,6 +279,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
   let fitoutEnd = "";
   let isTodayInFitout = false;
   let isTodayInCollaboration = false;
+  let fitoutDaysRemaining = 0;
 
   if (c) {
     fitoutStr = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
@@ -288,6 +291,18 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
     const todayStr = new Date().toISOString().slice(0, 10);
     isTodayInFitout = !!(baseStartDate && fitoutEnd && todayStr >= baseStartDate && todayStr <= fitoutEnd);
     isTodayInCollaboration = !!(startStr && endStr && todayStr >= startStr && todayStr <= endStr);
+
+    if (baseStartDate && fitoutEnd) {
+      if (todayStr <= fitoutEnd) {
+        const startCompare = todayStr < baseStartDate ? baseStartDate : todayStr;
+        const date1 = new Date(startCompare + "T00:00:00Z");
+        const date2 = new Date(fitoutEnd + "T00:00:00Z");
+        const diffTime = date2.getTime() - date1.getTime();
+        fitoutDaysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+      } else {
+        fitoutDaysRemaining = 0;
+      }
+    }
   }
 
   const cardStyle = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
@@ -391,9 +406,9 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
               <div className="group-open:hidden flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 sm:border-l sm:border-slate-200 sm:pl-3">
                 {baseStartDate && fitoutEnd && (
                   <span className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Fitout:</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Fitout Remaining:</span>
                     <span className="text-slate-700 font-mono text-[11px] bg-slate-100/80 px-1.5 py-0.5 rounded">
-                      {formatDMY(baseStartDate)} to {formatDMY(fitoutEnd)}
+                      {fitoutDaysRemaining > 0 ? `${fitoutDaysRemaining} ${fitoutDaysRemaining === 1 ? "Day" : "Days"}` : "Ended"}
                     </span>
                   </span>
                 )}
@@ -429,9 +444,20 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
                     <div className="rounded border border-slate-200 p-4 space-y-4 bg-slate-50/30 flex flex-col justify-between">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <span className="font-bold text-slate-700 text-xs uppercase tracking-wider">Fitout Period</span>
-                        <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                          {fitoutStr ? `${fitoutStr} Days` : "Not Set"}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                            {fitoutStr ? `${fitoutStr} Days` : "Not Set"}
+                          </span>
+                          {baseStartDate && fitoutEnd && (
+                            <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded border ${
+                              fitoutDaysRemaining > 0
+                                ? "text-sky-700 bg-sky-50 border-sky-200"
+                                : "text-rose-700 bg-rose-50 border-rose-200"
+                            }`}>
+                              {fitoutDaysRemaining > 0 ? `${fitoutDaysRemaining} Days Left` : "Ended"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-4">

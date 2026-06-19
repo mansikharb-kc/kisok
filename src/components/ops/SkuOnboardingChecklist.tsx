@@ -93,6 +93,10 @@ export default function SkuOnboardingChecklist({
   // Local state to track number of units typed in the quantity column
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
+  // Toolbar filtering state
+  const [filterEnabled, setFilterEnabled] = useState(false);
+  const [filterType, setFilterType] = useState("onboarded");
+
   // Placement modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [targetProduct, setTargetProduct] = useState<Product | null>(null);
@@ -143,6 +147,18 @@ export default function SkuOnboardingChecklist({
 
   const activeBrand = brands.find((b) => b.id === activeBrandId) ?? brands[0];
   const activeProducts = activeBrand ? (productsByBrandId[activeBrand.id] ?? []) : [];
+
+  const filteredProducts = activeProducts.filter((p) => {
+    if (!filterEnabled) return true;
+    const record = onboardingMap[p.id];
+    const isOnboarded = !!record;
+    const hasCopies = record?.copies && record.copies.length > 0;
+    if (filterType === "onboarded") return isOnboarded;
+    if (filterType === "not_onboarded") return !isOnboarded;
+    if (filterType === "location_assigned") return isOnboarded && hasCopies;
+    if (filterType === "location_pending") return isOnboarded && !hasCopies;
+    return true;
+  });
 
   // Helper to trace if a location node belongs to the current program (either directly or via ancestors)
   const isNodeInProgram = (n: LocationOption) => {
@@ -201,6 +217,66 @@ export default function SkuOnboardingChecklist({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Onboarding Template");
     XLSX.writeFile(wb, `${activeBrand.name}_onboarding_template.xlsx`);
+  }
+
+  function handleExportReviewList() {
+    if (!activeBrand) return;
+    const headers = [
+      [
+        "Product Name",
+        "SKU",
+        "Category",
+        "Available in KC (Onboarded)",
+        "Quantity (Units)",
+        "Placement Status",
+        "Locations Assigned"
+      ]
+    ];
+
+    const dataRows = filteredProducts.map((p) => {
+      const record = onboardingMap[p.id];
+      const isOnboarded = !!record;
+      const currentQty = quantities[p.id] ?? record?.copies?.length ?? 1;
+      const hasCopies = record?.copies && record.copies.length > 0;
+      
+      let statusStr = "Not Onboarded";
+      if (isOnboarded) {
+        statusStr = hasCopies ? "Placed (Location Assigned)" : "Pending Placement";
+      }
+
+      const locationsStr = record?.copies
+        ? record.copies.map((c: any) => c.location?.name ?? "Stage Buffer").join(", ")
+        : "—";
+
+      return [
+        p.name,
+        p.sku,
+        p.category.name,
+        isOnboarded ? "Yes" : "No",
+        isOnboarded ? currentQty : 0,
+        statusStr,
+        locationsStr
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([...headers, ...dataRows]);
+    
+    // Auto-fit column widths
+    const maxCols = headers[0].length;
+    const wscols = [];
+    for (let c = 0; c < maxCols; c++) {
+      let maxLen = headers[0][c].length;
+      for (let r = 0; r < dataRows.length; r++) {
+        const val = String(dataRows[r][c] || "");
+        if (val.length > maxLen) maxLen = val.length;
+      }
+      wscols.push({ wch: maxLen + 3 });
+    }
+    ws["!cols"] = wscols;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Filtered Review List");
+    XLSX.writeFile(wb, `${activeBrand.name}_filtered_review_list.xlsx`);
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -469,9 +545,6 @@ export default function SkuOnboardingChecklist({
             <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
               Total SKUs: {totalProductsCount}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-              Onboarded: {onboardedCount}
-            </span>
           </div>
         </div>
         <div className="flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors">
@@ -531,7 +604,43 @@ export default function SkuOnboardingChecklist({
             {activeBrand && (
               <div className="border border-slate-150 rounded-xl overflow-hidden bg-white/40">
                 <div className="bg-slate-50/70 border-b border-slate-150 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Left: Filter control */}
                   <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="toolbarFilterCheckbox"
+                      checked={filterEnabled}
+                      onChange={(e) => setFilterEnabled(e.target.checked)}
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer accent-brand-600"
+                    />
+                    <label htmlFor="toolbarFilterCheckbox" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                      Filter
+                    </label>
+                    {filterEnabled && (
+                      <>
+                        <select
+                          value={filterType}
+                          onChange={(e) => setFilterType(e.target.value)}
+                          className="rounded-lg border border-slate-300 px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-500 font-semibold cursor-pointer"
+                        >
+                          <option value="onboarded">Onboarded</option>
+                          <option value="not_onboarded">Not Onboarded</option>
+                          <option value="location_assigned">Location Assigned</option>
+                          <option value="location_pending">Location Pending</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleExportReviewList}
+                          className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-sm"
+                        >
+                          Download Review List
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     <button
                       type="button"
                       disabled
@@ -572,14 +681,13 @@ export default function SkuOnboardingChecklist({
                       className="hidden"
                     />
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-500 font-mono bg-white border border-slate-200 px-2 py-0.5 rounded">
-                    {activeProducts.length} SKU{activeProducts.length !== 1 ? "s" : ""}
-                  </span>
                 </div>
 
-                {activeProducts.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <div className="p-8 text-center text-xs text-slate-400 italic">
-                    No active products found under this brand.
+                    {activeProducts.length === 0
+                      ? "No active products found under this brand."
+                      : "No products matching the selected filter under this brand."}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -595,7 +703,7 @@ export default function SkuOnboardingChecklist({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {activeProducts.map((p) => {
+                        {filteredProducts.map((p) => {
                           const record = onboardingMap[p.id];
                           const isOnboarded = !!record;
                           const currentQty = quantities[p.id] ?? record?.copies?.length ?? 1;
@@ -708,7 +816,11 @@ export default function SkuOnboardingChecklist({
                                     <button
                                       type="button"
                                       onClick={() => openAssignModal(p, record, currentQty)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition shadow-xs"
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition shadow-xs ${
+                                        record.copies && record.copies.length > 0
+                                          ? "bg-emerald-600 hover:bg-emerald-700"
+                                          : "bg-rose-600 hover:bg-rose-700"
+                                      }`}
                                     >
                                       <MapPin className="w-3.5 h-3.5" />
                                       <span>Assign Location</span>

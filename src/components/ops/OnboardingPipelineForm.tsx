@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Send, Package, CheckCircle2, ChevronRight, HelpCircle, Bell } from "lucide-react";
+import { Check, Send, Package, CheckCircle2, ChevronRight, HelpCircle, Bell, Flag as FlagIcon, AlertTriangle } from "lucide-react";
 
 interface OnboardingPipelineFormProps {
   assignmentId: string;
@@ -79,8 +79,23 @@ export default function OnboardingPipelineForm({
 }: OnboardingPipelineFormProps) {
   const router = useRouter();
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Step 3 checkboxes state
+  const [dataPendingResolved, setDataPendingResolved] = useState(pipeline.dataPendingResolved ?? false);
+  const [stickerPasted, setStickerPasted] = useState(pipeline.stickerPasted ?? false);
+
+  // Step 4 checkboxes/photo state
+  const [placedInRack, setPlacedInRack] = useState(pipeline.placedInRack ?? false);
+  const [verificationPhoto, setVerificationPhoto] = useState(pipeline.verificationPhoto ?? "");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   // Initiation form fields state
   const [discussionDone, setDiscussionDone] = useState(pipeline.discussionDone ?? false);
+  const [reqSpaceAndRack, setReqSpaceAndRack] = useState(pipeline.reqSpaceAndRack ?? false);
+  const [reqData, setReqData] = useState(pipeline.reqData ?? false);
+  const [reqSample, setReqSample] = useState(pipeline.reqSample ?? false);
+  const [reqKt, setReqKt] = useState(pipeline.reqKt ?? false);
   const [docAttached, setDocAttached] = useState(pipeline.docAttached ?? "");
   const [itemTarget, setItemTarget] = useState(pipeline.itemTarget ?? "");
   const [nextActionTime, setNextActionTime] = useState(pipeline.nextActionTime ?? "");
@@ -93,6 +108,68 @@ export default function OnboardingPipelineForm({
   const [savedReminderDate, setSavedReminderDate] = useState<string>(pipeline.reminders?.[0]?.dateToRevisit ?? "");
   const [savingReminder, setSavingReminder] = useState(false);
   const [reminderMsg, setReminderMsg] = useState("");
+
+  // Flag states
+  const [flagReason, setFlagReason] = useState("");
+  const [flagStage, setFlagStage] = useState("INITIATION");
+  const [raisingFlag, setRaisingFlag] = useState(false);
+  const [resolvingFlag, setResolvingFlag] = useState(false);
+  const [showRaiseFlag, setShowRaiseFlag] = useState(false);
+
+  async function handleRaiseFlag(e: React.FormEvent) {
+    e.preventDefault();
+    if (!flagReason.trim()) return;
+    setRaisingFlag(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch("/api/flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          brandId: pipeline.brandId.toString(),
+          reason: flagReason.trim(),
+          stage: flagStage,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to raise flag");
+        return;
+      }
+      setFlagReason("");
+      setShowRaiseFlag(false);
+      setSuccessMsg("Flag successfully raised!");
+      router.refresh();
+    } catch {
+      setError("Failed to raise flag due to a network error.");
+    } finally {
+      setRaisingFlag(false);
+    }
+  }
+
+  async function handleResolveFlag(activeFlagId: string) {
+    setResolvingFlag(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/flags/${activeFlagId}`, {
+        method: "PUT",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to resolve flag");
+        return;
+      }
+      setSuccessMsg("Flag successfully resolved!");
+      router.refresh();
+    } catch {
+      setError("Failed to resolve flag due to a network error.");
+    } finally {
+      setResolvingFlag(false);
+    }
+  }
 
   async function handleSetReminder() {
     if (!dateToRevisit.trim()) return;
@@ -168,6 +245,28 @@ export default function OnboardingPipelineForm({
     }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "File upload failed");
+        return;
+      }
+      setVerificationPhoto(data.url);
+    } catch {
+      setError("File upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
   // Verification checkbox state
   const [execVerified, setExecVerified] = useState(pipeline.execVerified ?? false);
 
@@ -177,7 +276,7 @@ export default function OnboardingPipelineForm({
 
   const status = pipeline.status; // INITIATION | TICKET_RAISED | CONSIGNMENT_RECEIVED | CLOSED
 
-  async function handleAction(actionType: "save-initiation" | "raise-ticket" | "verify-consignment") {
+  async function handleAction(actionType: "save-initiation" | "raise-ticket" | "verify-consignment" | "save-data-sticker" | "save-verification") {
     setError("");
     setSuccessMsg("");
 
@@ -197,18 +296,37 @@ export default function OnboardingPipelineForm({
       return;
     }
 
+    if (actionType === "save-verification" && !verificationPhoto.trim()) {
+      setError("Verification Photograph is mandatory.");
+      return;
+    }
+
     setBusy(true);
 
     try {
       const payload: any = { action: actionType };
       if (actionType === "save-initiation" || actionType === "raise-ticket") {
         payload.discussionDone = discussionDone;
+        payload.reqSpaceAndRack = reqSpaceAndRack;
+        payload.reqData = reqData;
+        payload.reqSample = reqSample;
+        payload.reqKt = reqKt;
         payload.docAttached = docAttached;
         payload.itemTarget = itemTarget;
         payload.nextActionTime = nextActionTime;
         payload.remarks = remarks;
         payload.dateToRevisit = dateToRevisit;
         payload.brandId = brandId;
+      }
+
+      if (actionType === "save-data-sticker") {
+        payload.dataPendingResolved = dataPendingResolved;
+        payload.stickerPasted = stickerPasted;
+      }
+
+      if (actionType === "save-verification") {
+        payload.placedInRack = placedInRack;
+        payload.verificationPhoto = verificationPhoto;
       }
 
       const res = await fetch(`/api/assignments/${assignmentId}/pipeline`, {
@@ -228,7 +346,11 @@ export default function OnboardingPipelineForm({
           ? "Initiation details saved successfully!"
           : actionType === "raise-ticket"
           ? "Ticket successfully raised to consignment user!"
-          : "Consignment successfully verified and closed!"
+          : actionType === "verify-consignment"
+          ? "Consignment successfully verified!"
+          : actionType === "save-data-sticker"
+          ? "Data & Sticker details saved successfully!"
+          : "Verification details saved successfully!"
       );
       router.refresh();
     } catch {
@@ -240,96 +362,119 @@ export default function OnboardingPipelineForm({
 
   // Visual steps
   const steps = [
-    { key: "INITIATION", label: "Initiation", desc: "Discuss & Plan", icon: Check },
-    { key: "TICKET_RAISED", label: "Sample Request", desc: "Awaiting Warehouse", icon: Send },
-    { key: "CONSIGNMENT_RECEIVED", label: "Receipt & QC", desc: "Warehouse Received", icon: Package },
-    { key: "CLOSED", label: "Verification", desc: "Ready to Onboard", icon: CheckCircle2 },
+    { key: "INITIATION", label: "Initiation" },
+    { key: "SAMPLE_REQUEST", label: "Sample Request" },
+    { key: "DATA_AND_STICKER", label: "Data & Sticker" },
+    { key: "CLOSED", label: "Verification" },
   ];
 
   const getStepStatusOrder = (stepKey: string) => {
-    const statusOrder = ["INITIATION", "TICKET_RAISED", "CONSIGNMENT_RECEIVED", "CLOSED"];
-    const currentIdx = statusOrder.indexOf(status);
-    const stepIdx = statusOrder.indexOf(stepKey);
-
-    if (currentIdx > stepIdx) return "completed";
-    if (currentIdx === stepIdx) return "active";
+    if (status === "INITIATION") {
+      if (stepKey === "INITIATION") return "active";
+      return "pending";
+    }
+    if (status === "TICKET_RAISED" || status === "CONSIGNMENT_RECEIVED") {
+      if (stepKey === "INITIATION") return "completed";
+      if (stepKey === "SAMPLE_REQUEST") return "active";
+      return "pending";
+    }
+    if (status === "DATA_AND_STICKER") {
+      if (stepKey === "INITIATION" || stepKey === "SAMPLE_REQUEST") return "completed";
+      if (stepKey === "DATA_AND_STICKER") return "active";
+      return "pending";
+    }
+    if (status === "VERIFICATION") {
+      if (stepKey === "INITIATION" || stepKey === "SAMPLE_REQUEST" || stepKey === "DATA_AND_STICKER") return "completed";
+      if (stepKey === "CLOSED") return "active";
+      return "pending";
+    }
+    if (status === "CLOSED") {
+      return "completed";
+    }
     return "pending";
   };
 
   const cardStyle = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
 
   return (
-    <details className="group space-y-3">
-      <summary className="flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:opacity-85 transition-opacity py-1">
-        <div className="flex items-center gap-3">
+    <div className="space-y-3">
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer select-none py-1 hover:opacity-85 transition-opacity"
+      >
+        <div className="flex items-center gap-3 shrink-0">
           <h2 className="text-base font-bold text-slate-800">Onboarding Pipeline</h2>
           <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
+            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
               status === "CLOSED"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-250"
                 : status === "CONSIGNMENT_RECEIVED"
                 ? "bg-indigo-50 text-indigo-700 border-indigo-255"
-                : "bg-brand-50 text-brand-700 border-brand-200 animate-pulse"
+                : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
             }`}
           >
             Stage: {status.replace(/_/g, " ")}
           </span>
         </div>
-        <div className="flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors">
-          <span className="group-open:hidden">Expand</span>
-          <span className="hidden group-open:inline">Collapse</span>
-          <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </summary>
-      <div className="space-y-6 pt-1">
-        {/* Visual Pipeline Tracker */}
-        <div className={`${cardStyle} py-4 px-6`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+        {/* Inline steps tracker */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 lg:border-l lg:border-slate-200 lg:pl-4 flex-1 justify-start lg:justify-end pr-4">
           {steps.map((step, idx) => {
             const stepStatus = getStepStatusOrder(step.key);
-            const Icon = step.icon;
 
             return (
-              <div key={step.key} className="flex-1 flex items-center gap-3">
-                <div className="flex items-center gap-2">
+              <div key={step.key} className="flex items-center gap-2">
+                <div className="relative flex items-center justify-center shrink-0">
+                  {/* Glowing blink effect for completed steps */}
+                  {stepStatus === "completed" && (
+                    <span className="absolute -inset-1 rounded-full bg-emerald-400/40 blur-xxs animate-pulse" />
+                  )}
+                  {/* Glowing ring for active step */}
+                  {stepStatus === "active" && (
+                    <span className="absolute -inset-0.5 rounded-full bg-amber-400/35 blur-xxs animate-pulse" />
+                  )}
+                  {/* Dot status indicator (instead of tick icon) */}
                   <div
-                    className={`h-8 w-8 rounded-full flex items-center justify-center border transition-all ${
+                    className={`h-2.5 w-2.5 rounded-full transition-all duration-300 relative ${
                       stepStatus === "completed"
-                        ? "bg-emerald-50 border-emerald-300 text-emerald-600 shadow-xs"
+                        ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
                         : stepStatus === "active"
-                        ? "bg-brand-50 border-brand-300 text-brand-600 shadow-sm font-bold scale-105"
-                        : "bg-slate-50 border-slate-200 text-slate-400"
+                        ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] scale-110"
+                        : "bg-slate-300"
                     }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div
-                      className={`text-xs font-bold ${
-                        stepStatus === "active" ? "text-slate-900" : "text-slate-500"
-                      }`}
-                    >
-                      {step.label}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
-                      {step.desc}
-                    </div>
-                  </div>
+                  />
                 </div>
+                <span
+                  className={`text-[11px] font-bold tracking-wide transition-colors ${
+                    stepStatus === "active"
+                      ? "text-amber-700"
+                      : stepStatus === "completed"
+                      ? "text-slate-700"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {step.label}
+                </span>
                 {idx < steps.length - 1 && (
-                  <ChevronRight className="hidden md:block h-4 w-4 text-slate-300 ml-auto shrink-0" />
+                  <ChevronRight className="h-3 w-3 text-slate-350 shrink-0 ml-1" />
                 )}
               </div>
             );
           })}
         </div>
+
+        <div className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-855 transition-colors shrink-0">
+          <span>{isExpanded ? "Collapse" : "Expand"}</span>
+          <svg className={`w-4 h-4 transform transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
-      {/* State details & interactive form card */}
-      <div className={cardStyle}>
-        <div className="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+      {/* Interactive Form Content (Collapsible) */}
+      {isExpanded && (
+        <div className={`${cardStyle} space-y-6`}>
+          <div className="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-slate-950 text-sm">Onboarding Pipeline Stage</h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -397,21 +542,7 @@ export default function OnboardingPipelineForm({
                 </div>
               ) : null}
 
-              {/* 2. Discussion with Brand Done */}
-              <div className="flex flex-col justify-end">
-                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-                  <input
-                    type="checkbox"
-                    id="discussCheck"
-                    checked={discussionDone}
-                    onChange={(e) => setDiscussionDone(e.target.checked)}
-                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                  />
-                  <label htmlFor="discussCheck" className="font-semibold text-slate-700 cursor-pointer">
-                    Discussion with Brand Done
-                  </label>
-                </div>
-              </div>
+              {/* Discussion checkbox moved to checkboxes row at the bottom of the grid */}
 
               {/* 3. Next Action Item */}
               <div>
@@ -573,6 +704,74 @@ export default function OnboardingPipelineForm({
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Checkboxes Row */}
+              <div className="sm:col-span-2 md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2">
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="discussCheck"
+                    checked={discussionDone}
+                    onChange={(e) => setDiscussionDone(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="discussCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Discussion with Brand Done
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="reqSpaceCheck"
+                    checked={reqSpaceAndRack}
+                    onChange={(e) => setReqSpaceAndRack(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="reqSpaceCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Request Space &amp; Rack
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="reqDataCheck"
+                    checked={reqData}
+                    onChange={(e) => setReqData(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="reqDataCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Request Data
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="reqSampleCheck"
+                    checked={reqSample}
+                    onChange={(e) => setReqSample(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="reqSampleCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Request Sample
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <input
+                    type="checkbox"
+                    id="reqKtCheck"
+                    checked={reqKt}
+                    onChange={(e) => setReqKt(e.target.checked)}
+                    className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="reqKtCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Request KT
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -770,6 +969,152 @@ export default function OnboardingPipelineForm({
           </div>
         )}
 
+        {/* Phase 3: Data Verification & Sticker Pasting */}
+        {status === "DATA_AND_STICKER" && (
+          <div className="space-y-4 text-xs animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+              <Package className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-amber-900 block">Pending Data &amp; Sticker Verification</span>
+                <p className="text-amber-800 mt-1">
+                  Please verify that all technical data is complete and correct (resolving any pending data flags), and that the physical layout stickers have been pasted on the samples.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
+              <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Verification Checklist</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                  <input
+                    type="checkbox"
+                    id="dataPendingResolvedCheck"
+                    checked={dataPendingResolved}
+                    onChange={(e) => setDataPendingResolved(e.target.checked)}
+                    className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="dataPendingResolvedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                    Data Pending Resolved / Data Done
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                  <input
+                    type="checkbox"
+                    id="stickerPastedCheck"
+                    checked={stickerPasted}
+                    onChange={(e) => setStickerPasted(e.target.checked)}
+                    className="rounded border-slate-355 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="stickerPastedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                    Sticker Pasted on Sample
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => handleAction("save-data-sticker")}
+                disabled={busy}
+                className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
+              >
+                {busy ? "Saving..." : "Save & Update Stage"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Phase 4: Placement & Photo Verification */}
+        {status === "VERIFICATION" && (
+          <div className="space-y-4 text-xs animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
+              <Package className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-indigo-900 block">Placement &amp; Photograph Verification</span>
+                <p className="text-indigo-700 mt-1">
+                  Please verify that the samples have been physically placed in the rack, and upload a photograph of the placement (mandatory) to complete the onboarding pipeline.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
+              <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Placement Verification Checklist</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                  <input
+                    type="checkbox"
+                    id="placedInRackCheck"
+                    checked={placedInRack}
+                    onChange={(e) => setPlacedInRack(e.target.checked)}
+                    className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                  <label htmlFor="placedInRackCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                    Placed in Rack
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-1 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Verification Photograph <span className="text-red-500 font-extrabold">*</span>
+                  </label>
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="text"
+                      placeholder="e.g. /api/uploads/photo.jpg"
+                      value={verificationPhoto}
+                      onChange={(e) => setVerificationPhoto(e.target.value)}
+                      required
+                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold"
+                    />
+                    <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPhoto ? "opacity-60 cursor-not-allowed" : ""}`}>
+                      {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        disabled={uploadingPhoto}
+                      />
+                    </label>
+                  </div>
+                  {verificationPhoto && (
+                    <div className="mt-1 flex items-center gap-2">
+                      <a
+                        href={verificationPhoto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
+                      >
+                        View Verification Photo
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setVerificationPhoto("")}
+                        className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => handleAction("save-verification")}
+                disabled={busy}
+                className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
+              >
+                {busy ? "Completing..." : "Complete Onboarding Verification"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Phase 4: Closed / Completed */}
         {status === "CLOSED" && (
           <div className="space-y-3 text-xs">
@@ -833,12 +1178,153 @@ export default function OnboardingPipelineForm({
                     "—"
                   )}
                 </div>
+                <div>
+                  <span className="font-semibold text-slate-400">Data Status:</span>{" "}
+                  <span className="text-emerald-600 font-bold">Data Completed</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400">Sticker Status:</span>{" "}
+                  <span className="text-emerald-600 font-bold">Stickers Pasted</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400">Rack Status:</span>{" "}
+                  <span className="text-emerald-600 font-bold">{pipeline.placedInRack ? "Placed in Rack" : "Not Placed"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-400">Verification Photo:</span>{" "}
+                  {pipeline.verificationPhoto ? (
+                    <a
+                      href={pipeline.verificationPhoto}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-600 hover:text-brand-850 hover:underline font-bold"
+                    >
+                      View Photo
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* Flags Management Section */}
+        {(() => {
+          const activeFlag = (pipeline.flags || []).find((f: any) => !f.isResolved);
+          const stageLabels: Record<string, string> = {
+            INITIATION: "Initiation",
+            SAMPLE_REQUEST: "Sample Request",
+            TICKET_RAISED: "Sample Request (Raised)",
+            CONSIGNMENT_RECEIVED: "Sample Request (Received)",
+            DATA_AND_STICKER: "Data & Sticker",
+            VERIFICATION: "Verification",
+            CLOSED: "Verification",
+          };
+
+          return (
+            <div className="border-t border-slate-200 mt-6 pt-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <FlagIcon className="h-4 w-4 text-slate-500" />
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">Pipeline Flags</h4>
+              </div>
+
+              {activeFlag ? (
+                <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-amber-900 block text-xs">
+                        Active Flag Raised at Stage: {stageLabels[activeFlag.stage] || activeFlag.stage}
+                      </span>
+                      <p className="text-amber-850 text-xs mt-1 font-medium">{activeFlag.reason}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-100/50 border border-amber-200 rounded-lg shrink-0">
+                    <input
+                      type="checkbox"
+                      id="resolveFlagCheck"
+                      checked={resolvingFlag}
+                      onChange={() => handleResolveFlag(activeFlag.id)}
+                      disabled={resolvingFlag}
+                      className="rounded border-slate-350 h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <label htmlFor="resolveFlagCheck" className="font-bold text-slate-700 text-xs cursor-pointer select-none">
+                      {resolvingFlag ? "Resolving..." : "Mark as Resolved"}
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {!showRaiseFlag ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowRaiseFlag(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition"
+                    >
+                      <FlagIcon className="h-3.5 w-3.5" />
+                      Raise Flag for Attention
+                    </button>
+                  ) : (
+                    <form onSubmit={handleRaiseFlag} className="space-y-3 bg-slate-50/50 border border-slate-200 rounded-xl p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                            Flag Raised At Stage
+                          </label>
+                          <select
+                            value={flagStage}
+                            onChange={(e) => setFlagStage(e.target.value)}
+                            className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white font-semibold text-xs"
+                          >
+                            <option value="INITIATION">Initiation</option>
+                            <option value="SAMPLE_REQUEST">Sample Request</option>
+                            <option value="DATA_AND_STICKER">Data & Sticker</option>
+                            <option value="VERIFICATION">Verification</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                            Reason for Flag
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Design details missing, sample damaged..."
+                            value={flagReason}
+                            onChange={(e) => setFlagReason(e.target.value)}
+                            className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2 border-t border-slate-250/60">
+                        <button
+                          type="button"
+                          onClick={() => setShowRaiseFlag(false)}
+                          className="rounded border border-slate-300 text-slate-700 bg-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={raisingFlag || !flagReason.trim()}
+                          className="rounded bg-slate-900 text-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 transition"
+                        >
+                          {raisingFlag ? "Submitting..." : "Submit Flag"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
-    </div>
-  </details>
+    )}
+  </div>
   );
 }

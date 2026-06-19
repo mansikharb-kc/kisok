@@ -383,10 +383,12 @@ export default async function DashboardPage() {
   const isOnbLead = hasRole(session.roles, "ONB_LEAD");
   const isOBExec = hasRole(session.roles, "OB_EXEC");
   const isConsignment = hasRole(session.roles, "CONSIGNMENT_USER");
+  const isProjectUser = hasRole(session.roles, "PROJECT_USER");
+  const isConciergeManager = hasRole(session.roles, "CONCIERGE_MANAGER");
 
   // Get branchId for ops roles
   const opsRole = session.roles.find(
-    (r) => ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER"].includes(r.code) && r.branchId
+    (r) => ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER", "PROJECT_USER", "CONCIERGE_MANAGER"].includes(r.code) && r.branchId
   );
   const opsBranchId = opsRole?.branchId ? BigInt(opsRole.branchId) : null;
 
@@ -412,54 +414,58 @@ export default async function DashboardPage() {
     const branch = await prisma.branch.findUnique({ where: { id: opsBranchId }, select: { name: true } });
     opsBranchName = branch?.name || "Branch";
 
-    if (isOnbLead) {
+    if (isOnbLead || isProjectUser || isConciergeManager) {
       onbLeadData = await onbLeadCounts(opsBranchId);
-      const assignments = await prisma.sellerAssignment.findMany({
-        where: { seller: { branchId: opsBranchId } },
-        orderBy: { assignedAt: "desc" },
-        include: {
-          seller: {
-            select: {
-              id: true,
-              name: true,
-              sellerCode: true,
-              membershipId: true,
-              status: true,
-              sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
+      if (isOnbLead) {
+        const assignments = await prisma.sellerAssignment.findMany({
+          where: { seller: { branchId: opsBranchId } },
+          orderBy: { assignedAt: "desc" },
+          include: {
+            seller: {
+              select: {
+                id: true,
+                name: true,
+                sellerCode: true,
+                membershipId: true,
+                status: true,
+                sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
+              },
             },
+            program: { select: { id: true, name: true, code: true } },
+            exec: { select: { id: true, fullName: true, email: true } },
           },
-          program: { select: { id: true, name: true, code: true } },
-          exec: { select: { id: true, fullName: true, email: true } },
-        },
-      });
-      const detailed = await Promise.all(
-        assignments.map(async (a) => {
-          const onboardedCount = await prisma.localOnboardingRecord.count({
-            where: {
-              sellerId: a.sellerId,
-              branchId: opsBranchId,
-              ...(a.programId ? { programId: a.programId } : {}),
-            },
-          });
-          const brandIds = a.seller.sellerBrands.map((sb: any) => sb.brandId);
-          const totalSKUs = brandIds.length > 0
-            ? await prisma.brandProduct.count({
-                where: { brandId: { in: brandIds }, status: "active" },
-              })
-            : 0;
-          return {
-            ...a,
-            onboardedCount,
-            totalSKUs,
-          };
-        })
-      );
-      onbLeadAssignmentsList = serialize(detailed);
+        });
+        const detailed = await Promise.all(
+          assignments.map(async (a) => {
+            const onboardedCount = await prisma.localOnboardingRecord.count({
+              where: {
+                sellerId: a.sellerId,
+                branchId: opsBranchId,
+                ...(a.programId ? { programId: a.programId } : {}),
+              },
+            });
+            const brandIds = a.seller.sellerBrands.map((sb: any) => sb.brandId);
+            const totalSKUs = brandIds.length > 0
+              ? await prisma.brandProduct.count({
+                  where: { brandId: { in: brandIds }, status: "active" },
+                })
+              : 0;
+            return {
+              ...a,
+              onboardedCount,
+              totalSKUs,
+            };
+          })
+        );
+        onbLeadAssignmentsList = serialize(detailed);
+      }
     }
     if (isOBExec) {
       obExecData = await obExecCounts(opsBranchId, session.uid);
     }
-    if (isConsignment) consignmentData = await consignmentUserCounts(opsBranchId);
+    if (isConsignment || isConciergeManager) {
+      consignmentData = await consignmentUserCounts(opsBranchId);
+    }
   }
 
   const targetBranchId = branchId ?? opsBranchId;
@@ -468,18 +474,39 @@ export default async function DashboardPage() {
     occupancyData = await getBranchWarehouseOccupancy(targetBranchId);
   }
 
+  // Active flags count for warning banner
+  let activeFlagsCount = 0;
+  if (isHo) {
+    activeFlagsCount = await prisma.flag.count({
+      where: { isResolved: false },
+    });
+  } else if (targetBranchId) {
+    activeFlagsCount = await prisma.flag.count({
+      where: {
+        isResolved: false,
+        pipeline: {
+          assignment: {
+            seller: {
+              branchId: targetBranchId,
+            },
+          },
+        },
+      },
+    });
+  }
+
   // Recent-activity visibility:
   //  - HO Admin       → everything (all branches, all roles)
   //  - Branch Admin   → their branch's Onboarding Lead / Onboarding Exec / Consignment activity
-  //  - Onboarding Lead→ their branch's Onboarding Executives
+  //  - Onboarding Lead / Project User / Concierge Manager → their branch's operational activity
   //  - OB Exec / Consignment → their own branch-role activity
   let activity;
   if (isHo) {
     activity = await recentActivity(null, []);
   } else if (branchId) {
-    activity = await recentActivity(branchId, ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER"]);
-  } else if (isOnbLead) {
-    activity = await recentActivity(opsBranchId, ["OB_EXEC"]);
+    activity = await recentActivity(branchId, ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER", "PROJECT_USER", "CONCIERGE_MANAGER"]);
+  } else if (isOnbLead || isProjectUser || isConciergeManager) {
+    activity = await recentActivity(opsBranchId, ["ONB_LEAD", "OB_EXEC", "CONSIGNMENT_USER", "PROJECT_USER", "CONCIERGE_MANAGER"]);
   } else {
     const ownRoles = session.roles.map((r) => r.code).filter((c) => ["OB_EXEC", "CONSIGNMENT_USER"].includes(c));
     activity = await recentActivity(targetBranchId, ownRoles);
@@ -490,12 +517,38 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Signed in as {roleLabels.join(", ")} {displayBranchName && `· ${displayBranchName}`}
+          </p>
+        </div>
       </div>
+
+      {activeFlagsCount > 0 && (
+        <div className="rounded-xl border border-amber-250 bg-amber-50/60 backdrop-blur-md p-4 shadow-sm flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600 shrink-0">
+              <svg className="w-5 h-5 text-amber-650" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </span>
+            <div>
+              <h4 className="text-sm font-bold text-amber-900">Active Pipeline Flags</h4>
+              <p className="text-xs text-amber-805 mt-0.5 font-medium">
+                There {activeFlagsCount === 1 ? "is 1 active flag" : `are ${activeFlagsCount} active flags`} requiring attention in your branch.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/ops/flags"
+            className="px-3.5 py-2 rounded-lg bg-amber-800 hover:bg-amber-900 text-white text-xs font-semibold shadow-sm transition shrink-0"
+          >
+            Review Flags
+          </a>
+        </div>
+      )}
 
       {/* Status colour legend — single line */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
@@ -728,6 +781,95 @@ export default async function DashboardPage() {
                 <a href="/ops/consignments?tab=consignments" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
                   View all consignments →
                 </a>
+              </div>
+            </div>
+          )}
+
+          {/* PROJECT_USER dashboard */}
+          {isProjectUser && onbLeadData && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Project Overview</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total Sellers</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">active products in branch</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Onboarded SKUs</div>
+                  <div className="text-3xl font-bold mt-1 text-emerald-600">{onbLeadData.productsOnboarded}</div>
+                  <div className="text-xs text-slate-500 mt-1">onboarding records created</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Pending Onboarding</div>
+                  <div className="text-3xl font-bold mt-1 text-amber-600">{onbLeadData.notOnboardedRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">remaining products to onboard</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CONCIERGE_MANAGER dashboard */}
+          {isConciergeManager && onbLeadData && consignmentData && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Concierge Coordination Overview</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total Sellers</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">active in branch</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
+                  <div className="text-xs text-slate-500 mt-1">active products in branch</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Total Warehouses</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.warehousesCount}</div>
+                  <div className="text-xs text-slate-500 mt-1">active at branch</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
+                  <div className="text-xs font-medium text-slate-400">Open Consignments</div>
+                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
+                  <div className="text-xs text-slate-500 mt-1">not yet closed</div>
+                </div>
+              </div>
+
+              {/* Consignment Status Breakdown */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Consignment Status Breakdown</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(
+                    [
+                      { key: "initiated", label: "Initiated", color: "bg-blue-50 text-blue-700 border-blue-200" },
+                      { key: "received", label: "Received", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+                      { key: "in_buffer", label: "In Buffer", color: "bg-amber-50 text-amber-700 border-amber-200" },
+                      { key: "fabricating", label: "Fabricating", color: "bg-orange-50 text-orange-700 border-orange-200" },
+                      { key: "qc", label: "In QC", color: "bg-purple-50 text-purple-700 border-purple-200" },
+                      { key: "passed_back", label: "Passed Back", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                    ] as { key: string; label: string; color: string }[]
+                  ).map(({ key, label, color }) => (
+                    <div
+                      key={key}
+                      className={`rounded-xl border p-5 shadow-sm block ${color}`}
+                    >
+                      <div className="text-xs font-medium opacity-80">{label}</div>
+                      <div className="text-3xl font-bold mt-1">{(consignmentData.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

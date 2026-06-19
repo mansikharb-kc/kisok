@@ -881,6 +881,10 @@ model OnboardingPipeline {
 
   // Initiation details
   discussionDone  Boolean  @default(false) @map("discussion_done")
+  reqSpaceAndRack Boolean  @default(false) @map("req_space_and_rack")
+  reqData         Boolean  @default(false) @map("req_data")
+  reqSample       Boolean  @default(false) @map("req_sample")
+  reqKt           Boolean  @default(false) @map("req_kt")
   docAttached     String?  @map("doc_attached") @db.VarChar(255)
   itemTarget      String?  @map("item_target") @db.VarChar(255)
   nextActionTime  String?  @map("next_action_time") @db.VarChar(100)
@@ -899,6 +903,14 @@ model OnboardingPipeline {
   // Executive checkbox validation
   execVerified    Boolean   @default(false) @map("exec_verified")
 
+  // Step 3 (Data & Sticker verification)
+  dataPendingResolved Boolean  @default(false) @map("data_pending_resolved")
+  stickerPasted       Boolean  @default(false) @map("sticker_pasted")
+
+  // Step 4 (Rack Placement & Photograph verification)
+  placedInRack        Boolean  @default(false) @map("placed_in_rack")
+  verificationPhoto   String?  @map("verification_photo") @db.VarChar(255)
+
   // Ticket association
   ticketId        BigInt?   @unique @map("ticket_id") @db.UnsignedBigInt
 
@@ -906,6 +918,7 @@ model OnboardingPipeline {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   reminders       Reminder[]
+  flags           Flag[]
 
   assignment      SellerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
@@ -913,6 +926,22 @@ model OnboardingPipeline {
 
   @@unique([assignmentId, brandId])
   @@map("onboarding_pipelines")
+}
+
+model Flag {
+  id         BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  pipelineId BigInt             @map("pipeline_id") @db.UnsignedBigInt
+  reason     String             @db.Text
+  stage      String             @db.VarChar(50) // INITIATION | TICKET_RAISED | CONSIGNMENT_RECEIVED | CLOSED
+  isResolved Boolean            @default(false) @map("is_resolved")
+  resolvedAt DateTime?          @map("resolved_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  pipeline   OnboardingPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId])
+  @@map("onboarding_flags")
 }
 
 model Reminder {

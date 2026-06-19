@@ -25,6 +25,34 @@ export default function WarehouseTree({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
+  const [flowSteps, setFlowSteps] = useState<Array<{ id: string; name: string; level: string; datatype: string }>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`wh_flow_${programId}`);
+      if (saved) return JSON.parse(saved);
+    }
+    if (programName.toLowerCase().includes("catalogue") || programName.toLowerCase().includes("library")) {
+      return [
+        { id: "L1", name: "Cabinet", level: "WAREHOUSE", datatype: "Container (Parent)" },
+        { id: "L2", name: "Shelf", level: "RACK", datatype: "Placement (Stores Samples)" },
+        { id: "L3", name: "Folder", level: "TRAY", datatype: "Placement (Stores Samples)" }
+      ];
+    }
+    return [
+      { id: "L1", name: "Warehouse", level: "WAREHOUSE", datatype: "Container (Parent)" },
+      { id: "L2", name: "Block / Area", level: "BLOCK", datatype: "Screen Mount (Digital RMS)" },
+      { id: "L3", name: "Rack / Shelf", level: "RACK", datatype: "Placement (Stores Samples)" },
+      { id: "L4", name: "Tray / Bin", level: "TRAY", datatype: "Placement (Stores Samples)" }
+    ];
+  });
+
+  const [flowDefined, setFlowDefined] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`wh_flow_defined_${programId}`);
+      return saved === "true";
+    }
+    return false;
+  });
+
   const newHref = (params: Record<string, string>) =>
     `/branch/warehouse/new?${new URLSearchParams({ program: programId, ...params }).toString()}`;
 
@@ -139,7 +167,7 @@ export default function WarehouseTree({
 
             {/* Type badge */}
             <span className={`text-[10px] px-2 py-0.5 rounded font-semibold shrink-0 ${meta.badge}`}>
-              {n.nodeType}
+              {flowSteps.find((s) => s.level === n.nodeType)?.name || n.nodeType}
             </span>
 
             {/* Name + code */}
@@ -245,16 +273,196 @@ export default function WarehouseTree({
     });
   }
 
+  if (!flowDefined) {
+    return (
+      <div className="space-y-5">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Warehouse &amp; Locations</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Specify the hierarchical nomenclature flow for program <span className="font-semibold text-slate-700">{programName}</span>.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm space-y-6">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Configure Onboarding Nomenclature &amp; Flow</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              First define what the flow levels are (with Step ID, Name, Level and Datatype), and then proceed to define actual physical locations.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-150 bg-white/30">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 w-16">ID</th>
+                  <th className="px-4 py-3">Level Name</th>
+                  <th className="px-4 py-3 w-48">Node Level / Type</th>
+                  <th className="px-4 py-3 w-64">Datatype / Function</th>
+                  <th className="px-4 py-3 text-right w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-150 bg-white/40">
+                {flowSteps.map((step, idx) => (
+                  <tr key={step.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-4 py-3 font-mono text-slate-500 font-semibold">{step.id}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={step.name}
+                        onChange={(e) => {
+                          const next = [...flowSteps];
+                          next[idx].name = e.target.value;
+                          setFlowSteps(next);
+                        }}
+                        placeholder="e.g. Warehouse, Block, Rack..."
+                        className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={step.level}
+                        onChange={(e) => {
+                          const next = [...flowSteps];
+                          next[idx].level = e.target.value;
+                          if (e.target.value === "BLOCK") {
+                            next[idx].datatype = "Screen Mount (Digital RMS)";
+                          } else if (e.target.value === "RACK" || e.target.value === "TRAY") {
+                            next[idx].datatype = "Placement (Stores Samples)";
+                          } else if (e.target.value === "WAREHOUSE") {
+                            next[idx].datatype = "Container (Parent)";
+                          }
+                          setFlowSteps(next);
+                        }}
+                        className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold cursor-pointer"
+                      >
+                        <option value="WAREHOUSE">WAREHOUSE</option>
+                        <option value="BLOCK">BLOCK</option>
+                        <option value="RACK">RACK</option>
+                        <option value="TRAY">TRAY</option>
+                        <option value="CUSTOM">CUSTOM</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={step.datatype}
+                        onChange={(e) => {
+                          const next = [...flowSteps];
+                          next[idx].datatype = e.target.value;
+                          setFlowSteps(next);
+                        }}
+                        className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold cursor-pointer"
+                      >
+                        <option value="Container (Parent)">Container (Parent)</option>
+                        <option value="Placement (Stores Samples)">Placement (Stores Samples)</option>
+                        <option value="Screen Mount (Digital RMS)">Screen Mount (Digital RMS)</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = flowSteps.filter((x) => x.id !== step.id).map((x, i) => ({ ...x, id: `L${i + 1}` }));
+                          setFlowSteps(next);
+                        }}
+                        disabled={flowSteps.length <= 1}
+                        className="text-xs text-red-500 hover:text-red-700 font-bold disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => {
+                const nextId = `L${flowSteps.length + 1}`;
+                setFlowSteps([...flowSteps, { id: nextId, name: "", level: "CUSTOM", datatype: "Placement (Stores Samples)" }]);
+              }}
+              className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
+            >
+              + Add Level
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (flowSteps.some(s => !s.name.trim())) {
+                  alert("Please enter names for all flow levels.");
+                  return;
+                }
+                localStorage.setItem(`wh_flow_${programId}`, JSON.stringify(flowSteps));
+                localStorage.setItem(`wh_flow_defined_${programId}`, "true");
+                setFlowDefined(true);
+              }}
+              className="rounded-md bg-brand-600 text-white px-5 py-2.5 text-xs font-bold hover:bg-brand-700 transition"
+            >
+              Confirm Flow &amp; Define Locations
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Warehouse & Locations</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Warehouse &amp; Locations</h1>
         <p className="text-sm text-slate-500 mt-1">
           Building the location tree for program{" "}
-          <span className="font-semibold text-slate-700">{programName}</span>. Hierarchy:
-          Warehouse → Block → Rack → Tray. Each node can be flagged for product placement and/or screen mounting.
+          <span className="font-semibold text-slate-700">{programName}</span>. Hierarchy:{" "}
+          <span className="font-semibold text-slate-700">{flowSteps.map((s) => s.name).join(" → ")}</span>. Each node can be flagged for product placement and/or screen mounting.
         </p>
+      </div>
+
+      {/* Visual Flow Indicator */}
+      <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Active Nomenclature &amp; Onboarding Flow
+          </span>
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to adjust the nomenclature flow? Your created locations will remain, but you can adjust the flow level structure.")) {
+                localStorage.setItem(`wh_flow_defined_${programId}`, "false");
+                setFlowDefined(false);
+              }
+            }}
+            className="text-[11px] text-brand-600 hover:text-brand-855 font-bold hover:underline"
+          >
+            Adjust Flow Setup
+          </button>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3 py-1">
+          {flowSteps.map((step, idx) => (
+            <div key={step.id} className="flex items-center gap-3">
+              <div className="flex flex-col bg-slate-55 border border-slate-200 rounded-lg p-2.5 shadow-xxs max-w-[200px]">
+                <div className="text-[10px] font-bold text-slate-400 font-mono leading-none">{step.id}</div>
+                <div className="text-xs font-bold text-slate-800 mt-1">{step.name}</div>
+                <div className="flex gap-1.5 mt-1">
+                  <span className="text-[9px] font-semibold text-brand-700 bg-brand-50 border border-brand-100 rounded px-1.5 py-0.25 uppercase">
+                    {step.level}
+                  </span>
+                  <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.25">
+                    {step.datatype.split(" ")[0]}
+                  </span>
+                </div>
+              </div>
+              {idx < flowSteps.length - 1 && (
+                <span className="text-slate-400 font-bold text-sm">➔</span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Stats */}
@@ -300,15 +508,18 @@ export default function WarehouseTree({
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        {Object.entries(NODE_META).map(([type, meta]) => (
-          <span key={type} className={`px-2 py-0.5 rounded font-semibold ${meta.badge}`} title={meta.desc}>
-            {meta.icon} {type}
-          </span>
-        ))}
-        <span className="ml-2 text-slate-400">· Hover rows for actions · BLOCK = screen · RACK/TRAY = placement</span>
+        {flowSteps.map((step) => {
+          const meta = nodeMeta(step.level);
+          return (
+            <span key={step.id} className={`px-2 py-0.5 rounded font-semibold ${meta.badge}`} title={step.datatype}>
+              {step.name}
+            </span>
+          );
+        })}
+        <span className="ml-2 text-slate-400">· Hover rows for actions</span>
       </div>
 
-      {/* Tree */}
+      {/* Main Container */}
       <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md overflow-hidden">
         {roots.length === 0 ? (
           <div className="px-4 py-16 text-center text-slate-400 text-sm">
@@ -316,7 +527,9 @@ export default function WarehouseTree({
             No locations yet. Click <strong>Add Warehouse</strong> to build your location tree.
           </div>
         ) : (
-          renderNodes(roots)
+          <div className="divide-y divide-slate-100">
+            {renderNodes(roots)}
+          </div>
         )}
       </div>
 

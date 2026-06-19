@@ -6,7 +6,9 @@ export type RoleCode =
   | "BRANCH_ADMIN"
   | "ONB_LEAD"
   | "CONSIGNMENT_USER"
-  | "OB_EXEC";
+  | "OB_EXEC"
+  | "PROJECT_USER"
+  | "CONCIERGE_MANAGER";
 
 export const ROLE_LABELS: Record<RoleCode, string> = {
   HO_ADMIN: "KC HO Admin",
@@ -14,6 +16,8 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   ONB_LEAD: "Onboarding Lead",
   CONSIGNMENT_USER: "Consignment User",
   OB_EXEC: "Onboarding Exec",
+  PROJECT_USER: "Project User",
+  CONCIERGE_MANAGER: "Concierge Manager",
 };
 
 export type NavItem = {
@@ -25,7 +29,7 @@ export type NavItem = {
 
 // Sidebar navigation — each item lists which roles may see it.
 export const NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC"] },
+  { href: "/dashboard", label: "Dashboard", group: "Overview", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "CONSIGNMENT_USER", "OB_EXEC", "PROJECT_USER", "CONCIERGE_MANAGER"] },
   { href: "/archived", label: "Archived", group: "Overview", roles: ["HO_ADMIN"] },
 
   // L1 — HO masters (Branch Admin: view only, enforced in each page)
@@ -53,6 +57,7 @@ export const NAV: NavItem[] = [
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
   { href: "/ops/activity",      label: "Activity",         group: "Operations", roles: ["OB_EXEC", "ONB_LEAD"] },
+  { href: "/ops/flags",         label: "Flags",            group: "Operations", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"] },
 
   // Admin
   { href: "/users/role/ho-admin", label: "HO Admins", group: "Users", roles: ["HO_ADMIN"] },
@@ -60,6 +65,8 @@ export const NAV: NavItem[] = [
   { href: "/users/role/onb-lead", label: "Onboarding Leads", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/consignment-user", label: "Consignment Users", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/ob-exec", label: "Onboarding Execs", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/project-user", label: "Project Users", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/concierge-manager", label: "Concierge Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export type SessionRole = { code: RoleCode; branchId: string | null };
