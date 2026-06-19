@@ -21,6 +21,7 @@ export default async function Page({ params }: { params: { id: string } }) {
   const branch = await prisma.branch.findUnique({
     where: { id },
     include: {
+      branchCategories: { include: { category: { select: { name: true, parentId: true } } } },
       _count: {
         select: {
           branchPrograms: true,
@@ -67,6 +68,22 @@ export default async function Page({ params }: { params: { id: string } }) {
         <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Branch Master</div>
           <div className="mt-2 text-lg font-semibold text-slate-900">Core record</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm md:col-span-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assigned Categories</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {b.branchCategories?.filter((bc: any) => !bc.category?.parentId).length > 0 ? (
+              b.branchCategories
+                .filter((bc: any) => !bc.category?.parentId)
+                .map((bc: any) => (
+                  <span key={String(bc.categoryId)} className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+                    {bc.category?.name ?? String(bc.categoryId)}
+                  </span>
+                ))
+            ) : (
+              <span className="text-sm italic text-slate-400">No L1 categories assigned to this branch.</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

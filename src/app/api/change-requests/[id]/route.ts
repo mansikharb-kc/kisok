@@ -5,6 +5,15 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
+function slugify(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
 // Accept both the task-spec shape ({ decision }) and the legacy shape
 // ({ status }) so existing callers keep working.
 const decideSchema = z
@@ -109,6 +118,31 @@ async function decide(req: Request, ctx: { params: { id: string } }): Promise<Ne
             status: decision === "approved" ? "active" : "inactive",
           },
         });
+      }
+    }
+
+    if (decision === "approved" && request.type === "NEW_PROGRAM") {
+      const p = request.payload as { name?: string; remarks?: string } | null;
+      if (p?.name) {
+        let code = slugify(p.name);
+        let k = 2;
+        while (await tx.program.findUnique({ where: { code } })) {
+          code = `${slugify(p.name)}-${k++}`;
+        }
+        
+        const newProg = await tx.program.create({
+          data: { name: p.name, code, status: "active" },
+        });
+
+        if (request.branchId) {
+          await tx.branchProgram.create({
+            data: {
+              branchId: request.branchId,
+              programId: newProg.id,
+              approvalStatus: "approved",
+            },
+          });
+        }
       }
     }
 

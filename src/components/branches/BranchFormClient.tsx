@@ -36,6 +36,7 @@ export default function BranchFormClient({
   mode,
   branchId,
   initialValues,
+  initialCategories,
   title,
   description,
   submitLabel,
@@ -44,6 +45,7 @@ export default function BranchFormClient({
   mode: "create" | "edit";
   branchId?: string;
   initialValues: BranchFormValues;
+  initialCategories?: string[];
   title: string;
   description: string;
   submitLabel: string;
@@ -55,7 +57,7 @@ export default function BranchFormClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories ?? []);
 
   useEffect(() => {
     setForm(initialValues);
@@ -182,9 +184,27 @@ export default function BranchFormClient({
           </select>
         </div>
  
-        {mode === "create" && (
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-900">Categories</label>
+        <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-slate-900">Categories</label>
+              {l1Domains.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const activeIds = categories.filter((c) => c.status === "active").map((c) => c.id);
+                    const allSelected = l1Domains.length > 0 && l1Domains.every((l1) => selectedCategories.includes(l1.id));
+                    if (allSelected) {
+                      setSelectedCategories([]);
+                    } else {
+                      setSelectedCategories(activeIds);
+                    }
+                  }}
+                  className="text-xs font-semibold text-brand-600 hover:text-brand-700 uppercase tracking-wider"
+                >
+                  {l1Domains.length > 0 && l1Domains.every((l1) => selectedCategories.includes(l1.id)) ? "Deselect All Categories" : "Select All Categories"}
+                </button>
+              )}
+            </div>
             <div className="rounded-xl border border-slate-300 bg-white/60 backdrop-blur-md p-4 space-y-3 max-h-72 overflow-y-auto shadow-inner">
               {l1Domains.length === 0 ? (
                 <span className="text-xs text-slate-400">Loading categories...</span>
@@ -266,7 +286,6 @@ export default function BranchFormClient({
               )}
             </div>
           </div>
-        )}
 
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           Branch master follows BRD: name, branch code, and status only. Warehouse and location setup live separately in Branch Setup.

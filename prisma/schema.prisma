@@ -58,10 +58,11 @@ model Branch {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  userRoles      UserRole[]
-  branchPrograms BranchProgram[]
-  branchBrands   BranchBrand[]
-  locationNodes  LocationNode[]
+  userRoles        UserRole[]
+  branchPrograms   BranchProgram[]
+  branchBrands     BranchBrand[]
+  branchCategories BranchCategory[]
+  locationNodes    LocationNode[]
   sampleSizes    SampleSize[]
   sellers        Seller[]
   localRecords   LocalOnboardingRecord[]
@@ -132,9 +133,10 @@ model Category {
   stickerTemplates   StickerTemplate[]
   locationNodes      LocationNode[]
   brandProducts      BrandProduct[]
-  brandCategories       BrandCategory[]
-  sellerCategories      SellerCategory[]
+  brandCategories        BrandCategory[]
+  sellerCategories       SellerCategory[]
   locationNodeCategories LocationNodeCategory[]
+  branchCategories       BranchCategory[]
 
   @@index([parentId])
   @@map("categories")
@@ -243,6 +245,19 @@ model BrandCategory {
 
   @@unique([brandId, categoryId])
   @@map("brand_categories")
+}
+
+model BranchCategory {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  branchId   BigInt   @map("branch_id") @db.UnsignedBigInt
+  categoryId BigInt   @map("category_id") @db.UnsignedBigInt
+
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, categoryId])
+  @@index([categoryId])
+  @@map("branch_categories")
 }
 
 model Program {

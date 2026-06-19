@@ -10,6 +10,7 @@ const updateSchema = z.object({
   city: z.string().trim().max(120).optional().nullable(),
   address: z.string().trim().max(255).optional().nullable(),
   status: z.enum(["active", "inactive"]).optional(),
+  categoryIds: z.array(z.string()).optional(),
 });
 
 function parseId(id: string): bigint | null {
@@ -58,12 +59,18 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
   const before = await prisma.branch.findUnique({ where: { id } });
   if (!before) return fail("Branch not found", 404);
 
+  const { categoryIds, ...branchData } = parsed.data;
+
   const branch = await prisma.branch.update({
     where: { id },
     data: {
-      ...parsed.data,
-      city: parsed.data.city === undefined ? undefined : parsed.data.city ?? null,
-      address: parsed.data.address === undefined ? undefined : parsed.data.address ?? null,
+      ...branchData,
+      city: branchData.city === undefined ? undefined : branchData.city ?? null,
+      address: branchData.address === undefined ? undefined : branchData.address ?? null,
+      branchCategories: categoryIds ? {
+        deleteMany: {},
+        create: categoryIds.map((cid: string) => ({ categoryId: BigInt(cid) }))
+      } : undefined,
     },
   });
 

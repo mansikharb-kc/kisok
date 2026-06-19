@@ -18,15 +18,20 @@ export default async function Page({ params }: { params: { id: string } }) {
   const id = parseId(params.id);
   if (id === null) notFound();
 
-  const branch = await prisma.branch.findUnique({ where: { id } });
+  const branch = await prisma.branch.findUnique({
+    where: { id },
+    include: { branchCategories: true },
+  });
   if (!branch) notFound();
 
   const b = serialize(branch) as any;
+  const initialCategories = b.branchCategories?.map((bc: any) => String(bc.categoryId)) ?? [];
 
   return (
     <BranchFormClient
       mode="edit"
       branchId={b.id}
+      initialCategories={initialCategories}
       initialValues={{
         name: b.name,
         branchCode: b.branchCode,
