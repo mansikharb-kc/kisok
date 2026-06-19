@@ -259,7 +259,7 @@ export default function OnboardingPipelineForm({
   const cardStyle = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
 
   return (
-    <details className="group space-y-3" open>
+    <details className="group space-y-3">
       <summary className="flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:opacity-85 transition-opacity py-1">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-bold text-slate-800">Onboarding Pipeline</h2>

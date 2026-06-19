@@ -28,6 +28,10 @@ interface LocationOption {
   locationId: string | null;
   path: string | null;
   programId: string | null;
+  parentId: string | null;
+  nodeType: string;
+  isPlacementEligible: boolean;
+  depth: number;
 }
 
 interface SizeOption {
@@ -76,6 +80,11 @@ export default function SkuOnboardingChecklist({
   locations = [],
   sizes = [],
 }: SkuOnboardingChecklistProps) {
+  console.log("CHECKLIST PROPS: locations length:", locations.length, "programId:", programId);
+  if (locations.length > 0) {
+    console.log("first location node:", JSON.stringify(locations[0]));
+    console.log("all locations:", JSON.stringify(locations.map(l => ({ id: l.id, name: l.name, nodeType: l.nodeType, depth: l.depth, parentId: l.parentId, programId: l.programId }))));
+  }
   const [activeBrandId, setActiveBrandId] = useState<string>(brands[0]?.id ?? "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -90,6 +99,9 @@ export default function SkuOnboardingChecklist({
   const [targetRecord, setTargetRecord] = useState<any | null>(null);
   const [modalQuantity, setModalQuantity] = useState<number>(1);
   const [modalLocationNodeId, setModalLocationNodeId] = useState<string>("");
+  const [selectedParentId, setSelectedParentId] = useState<string>("");
+  const [selectedLevel2Id, setSelectedLevel2Id] = useState<string>("");
+  const [selectedLevel3Id, setSelectedLevel3Id] = useState<string>("");
   const [modalRows, setModalRows] = useState<{ sampleSizeId: string; isMaster: boolean }[]>([]);
   const [modalError, setModalError] = useState("");
   const [modalBusy, setModalBusy] = useState(false);
@@ -97,11 +109,18 @@ export default function SkuOnboardingChecklist({
   // Local state to track which product is currently onboarding directly
   const [onboardingBusyMap, setOnboardingBusyMap] = useState<Record<string, boolean>>({});
 
-  const handleOnboardDirectly = async (productId: string) => {
+  const handleToggleOnboarding = async (productId: string, currentlyOnboarded: boolean) => {
+    if (currentlyOnboarded) {
+      const confirmOffboard = window.confirm(
+        "Are you sure you want to offboard this product? This will delete all placed unit copies and locations."
+      );
+      if (!confirmOffboard) return;
+    }
+
     setOnboardingBusyMap((prev) => ({ ...prev, [productId]: true }));
     try {
       const res = await fetch("/api/onboarding", {
-        method: "POST",
+        method: currentlyOnboarded ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           brandProductId: productId,
@@ -111,12 +130,12 @@ export default function SkuOnboardingChecklist({
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Onboarding failed");
+        alert(data.error || `${currentlyOnboarded ? "Offboarding" : "Onboarding"} failed`);
         return;
       }
       window.location.reload();
     } catch {
-      alert("Network error occurred during onboarding.");
+      alert(`Network error occurred during ${currentlyOnboarded ? "offboarding" : "onboarding"}.`);
     } finally {
       setOnboardingBusyMap((prev) => ({ ...prev, [productId]: false }));
     }
@@ -124,6 +143,52 @@ export default function SkuOnboardingChecklist({
 
   const activeBrand = brands.find((b) => b.id === activeBrandId) ?? brands[0];
   const activeProducts = activeBrand ? (productsByBrandId[activeBrand.id] ?? []) : [];
+
+  // Helper to trace if a location node belongs to the current program (either directly or via ancestors)
+  const isNodeInProgram = (n: LocationOption) => {
+    if (n.programId?.toString() === programId.toString()) return true;
+    if (n.path) {
+      const parts = n.path.split("/").filter(Boolean);
+      return parts.some((parentId) => {
+        const parent = locations.find((loc) => loc.id === parentId);
+        return parent?.programId?.toString() === programId.toString();
+      });
+    }
+    return false;
+  };
+
+  // Level 1 parent options (Warehouses or Blocks) that belong to the active program.
+  // We filter to get the top-most BLOCKs or WAREHOUSEs (depth 1 or depth 0 with no BLOCK children)
+  const level1Options = locations
+    .filter((n) => (n.nodeType === "BLOCK" || n.nodeType === "WAREHOUSE") && isNodeInProgram(n))
+    .filter(
+      (n) => n.depth === 1 || (n.depth === 0 && !locations.some((child) => child.parentId === n.id && child.nodeType === "BLOCK"))
+    )
+    .map((n) => {
+      // Add warehouse prefix to Block names for clarity
+      if (n.nodeType === "BLOCK" && n.parentId) {
+        const grandparent = locations.find((p) => p.id === n.parentId);
+        if (grandparent) {
+          return { ...n, name: `${grandparent.name} › ${n.name}` };
+        }
+      }
+      return n;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Level 2 options: immediate children of selectedParentId
+  const level2Options = [];
+  if (selectedParentId) {
+    const children = locations.filter((n) => n.parentId === selectedParentId && isNodeInProgram(n));
+    level2Options.push(...children);
+  }
+
+  // Level 3 options: immediate children of selectedLevel2Id
+  const level3Options = [];
+  if (selectedLevel2Id) {
+    const children = locations.filter((n) => n.parentId === selectedLevel2Id && isNodeInProgram(n));
+    level3Options.push(...children);
+  }
 
   function handleExportTemplate() {
     if (!activeBrand) return;
@@ -259,6 +324,54 @@ export default function SkuOnboardingChecklist({
     const firstCopyLocId = existingCopies[0]?.locationNodeId ?? "";
     setModalLocationNodeId(firstCopyLocId);
 
+    if (firstCopyLocId) {
+      const node = locations.find((l) => l.id.toString() === firstCopyLocId.toString());
+      if (node) {
+        const ancestorIds = node.path ? node.path.split("/").filter(Boolean) : [];
+        const ancestors = locations.filter((loc) => ancestorIds.includes(loc.id));
+        const blockAncestor = ancestors.find((loc) => loc.nodeType === "BLOCK");
+        const warehouseAncestor = ancestors.find((loc) => loc.nodeType === "WAREHOUSE");
+        const zoneNode = blockAncestor || warehouseAncestor || ancestors[0];
+        
+        if (zoneNode) {
+          setSelectedParentId(zoneNode.id);
+          
+          const descendants = [
+            ...ancestors.filter((n) => Number(n.depth) > Number(zoneNode.depth)),
+            node
+          ].sort((a, b) => Number(a.depth) - Number(b.depth));
+          
+          const uniqueDescendants = descendants.filter(
+            (n, index, self) => self.findIndex((t) => t.id === n.id) === index && n.id !== zoneNode.id
+          );
+          
+          if (uniqueDescendants[0]) {
+            setSelectedLevel2Id(uniqueDescendants[0].id);
+          } else {
+            setSelectedLevel2Id(node.id);
+          }
+          
+          if (uniqueDescendants[1]) {
+            setSelectedLevel3Id(uniqueDescendants[1].id);
+          } else {
+            setSelectedLevel3Id("");
+          }
+        } else {
+          setSelectedParentId("direct");
+          setSelectedLevel2Id("");
+          setSelectedLevel3Id("");
+        }
+      } else {
+        setSelectedParentId("direct");
+        setSelectedLevel2Id("");
+        setSelectedLevel3Id("");
+      }
+    } else {
+      setSelectedParentId("");
+      setSelectedLevel2Id("");
+      setSelectedLevel3Id("");
+    }
+
     const initialRows = [];
     for (let i = 0; i < qty; i++) {
       const existing = existingCopies[i];
@@ -306,14 +419,16 @@ export default function SkuOnboardingChecklist({
     e.preventDefault();
     setModalError("");
     if (!targetRecord) return;
-    if (!modalLocationNodeId) return setModalError("Please select a placement location.");
+    
+    const finalLocationId = selectedLevel3Id || selectedLevel2Id || selectedParentId;
+    if (!finalLocationId) return setModalError("Please select a placement location.");
 
     const masterCount = modalRows.filter((r) => r.isMaster).length;
     if (masterCount !== 1) return setModalError("Exactly one copy must be marked MASTER.");
 
     const payload = {
       localRecordId: targetRecord.id,
-      locationNodeId: modalLocationNodeId,
+      locationNodeId: finalLocationId,
       copies: modalRows.map((r) => ({
         sampleSizeId: r.sampleSizeId || undefined,
         role: r.isMaster ? "MASTER" : "SLAVE",
@@ -473,7 +588,7 @@ export default function SkuOnboardingChecklist({
                         <tr className="border-b border-slate-150 bg-slate-50/40 text-[10px] font-bold uppercase tracking-wider text-slate-450">
                           <th className="px-4 py-3 font-semibold">Product</th>
                           <th className="px-4 py-3 font-semibold">SKU</th>
-                          <th className="px-4 py-3 font-semibold">Availability</th>
+                          <th className="px-4 py-3 font-semibold">Available in KC</th>
                           <th className="px-4 py-3 font-semibold">Quantity (Units)</th>
                           <th className="px-4 py-3 font-semibold">Location</th>
                           <th className="px-4 py-3 font-semibold">Placed Units &amp; QR</th>
@@ -505,27 +620,53 @@ export default function SkuOnboardingChecklist({
 
                               {/* Onboarding Availability */}
                               <td className="px-4 py-3.5">
-                                <div className="inline-flex items-center gap-1.5">
+                                <div className="inline-flex items-center gap-2">
                                   {isOnboarded ? (
-                                    <div className="flex items-center gap-1.5">
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-150 px-2 py-0.5 text-xs font-semibold">
-                                        Onboarded
-                                      </span>
-                                    </div>
+                                    isExec ? (
+                                      <>
+                                        <input
+                                          type="checkbox"
+                                          checked={true}
+                                          disabled={onboardingBusyMap[p.id]}
+                                          onChange={() => handleToggleOnboarding(p.id, true)}
+                                          className="rounded border-slate-350 h-5 w-5 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                                        />
+                                        {onboardingBusyMap[p.id] && (
+                                          <span className="text-[10px] text-slate-400 font-medium animate-pulse">
+                                            Offboarding...
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <input
+                                        type="checkbox"
+                                        checked={true}
+                                        disabled
+                                        className="rounded border-slate-350 h-5 w-5 text-emerald-600 bg-slate-50 focus:ring-emerald-500 cursor-default accent-emerald-600"
+                                      />
+                                    )
                                   ) : isExec ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOnboardDirectly(p.id)}
-                                      disabled={onboardingBusyMap[p.id]}
-                                      className="inline-flex items-center gap-1.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-750 px-2.5 py-1 text-xs font-bold hover:bg-indigo-100 disabled:opacity-60 transition shadow-xs"
-                                    >
-                                      {onboardingBusyMap[p.id] ? "Onboarding…" : "Onboard Product"}
-                                    </button>
+                                    <>
+                                      <input
+                                        type="checkbox"
+                                        checked={false}
+                                        disabled={onboardingBusyMap[p.id]}
+                                        onChange={() => handleToggleOnboarding(p.id, false)}
+                                        className="rounded border-slate-350 h-5 w-5 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                      />
+                                      {onboardingBusyMap[p.id] && (
+                                        <span className="text-[10px] text-slate-400 font-medium animate-pulse">
+                                          Onboarding...
+                                        </span>
+                                      )}
+                                    </>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 rounded bg-slate-100 text-slate-400 px-2 py-0.5 text-xs font-semibold">
-                                      Pending
-                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={false}
+                                      disabled
+                                      className="rounded border-slate-200 h-5 w-5 text-slate-400 bg-slate-55 cursor-not-allowed"
+                                    />
                                   )}
                                 </div>
                               </td>
@@ -548,7 +689,15 @@ export default function SkuOnboardingChecklist({
                                     <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">pcs</span>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-350 font-bold">—</span>
+                                  <div className="flex items-center gap-1 opacity-45 select-none">
+                                    <input
+                                      type="text"
+                                      disabled
+                                      value="—"
+                                      className="w-16 rounded-lg border border-slate-200 px-2.5 py-1 text-center font-bold text-slate-400 bg-slate-50 cursor-not-allowed"
+                                    />
+                                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">pcs</span>
+                                  </div>
                                 )}
                               </td>
 
@@ -566,7 +715,16 @@ export default function SkuOnboardingChecklist({
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-355 font-bold">—</span>
+                                  <div className="space-y-1.5 opacity-45 select-none">
+                                    <button
+                                      type="button"
+                                      disabled
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-400 text-xs font-semibold cursor-not-allowed"
+                                    >
+                                      <MapPin className="w-3.5 h-3.5" />
+                                      <span>Assign Location</span>
+                                    </button>
+                                  </div>
                                 )}
                               </td>
 
@@ -606,7 +764,7 @@ export default function SkuOnboardingChecklist({
                                     <span className="text-slate-400 italic font-medium">No units placed yet</span>
                                   )
                                 ) : (
-                                  <span className="text-slate-350 font-bold">—</span>
+                                  <span className="text-slate-350 font-bold select-none">—</span>
                                 )}
                               </td>
                             </tr>
@@ -665,20 +823,64 @@ export default function SkuOnboardingChecklist({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Location Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Level 1: Zone / Block Selection */}
                 <div>
-                  <label className={L}>Placement Location *</label>
+                  <label className={L}>Zone / Block *</label>
                   <select
-                    value={modalLocationNodeId}
-                    onChange={(e) => setModalLocationNodeId(e.target.value)}
+                    value={selectedParentId}
+                    onChange={(e) => {
+                      setSelectedParentId(e.target.value);
+                      setSelectedLevel2Id("");
+                      setSelectedLevel3Id("");
+                    }}
                     required
                     className={I}
                   >
-                    <option value="">— Choose location —</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name} {l.locationId ? `(${l.locationId})` : ""}
+                    <option value="">— Select Zone/Block —</option>
+                    {level1Options.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Level 2: Rack Selection */}
+                <div>
+                  <label className={L}>Rack / Location *</label>
+                  <select
+                    value={selectedLevel2Id}
+                    onChange={(e) => {
+                      setSelectedLevel2Id(e.target.value);
+                      setSelectedLevel3Id("");
+                    }}
+                    required
+                    disabled={!selectedParentId || level2Options.length === 0}
+                    className={`${I} disabled:opacity-50 disabled:bg-slate-50`}
+                  >
+                    <option value="">— Select Rack —</option>
+                    {level2Options.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.name} {opt.locationId ? `(${opt.locationId})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Level 3: Tray Selection */}
+                <div>
+                  <label className={L}>Tray / Position</label>
+                  <select
+                    value={selectedLevel3Id}
+                    onChange={(e) => setSelectedLevel3Id(e.target.value)}
+                    disabled={!selectedLevel2Id || level3Options.length === 0}
+                    className={`${I} disabled:opacity-50 disabled:bg-slate-50`}
+                  >
+                    <option value="">— Select Tray (Optional) —</option>
+                    {level3Options.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.name} {opt.locationId ? `(${opt.locationId})` : ""}
                       </option>
                     ))}
                   </select>
@@ -693,7 +895,7 @@ export default function SkuOnboardingChecklist({
                     max={100}
                     value={modalQuantity}
                     onChange={(e) => handleModalQuantityChange(parseInt(e.target.value || "1", 10))}
-                    className={`${I} max-w-[140px] font-semibold text-slate-800`}
+                    className={`${I} font-semibold text-slate-800`}
                   />
                 </div>
               </div>

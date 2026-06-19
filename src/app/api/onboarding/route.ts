@@ -131,3 +131,64 @@ export const POST = handler(async (req: Request) => {
 
   return ok({ id: record.id.toString() }, { status: 201 });
 });
+
+const deleteSchema = z.object({
+  brandProductId: z.coerce.bigint(),
+  sellerId: z.coerce.bigint(),
+  programId: z.coerce.bigint(),
+});
+
+export const DELETE = handler(async (req: Request) => {
+  const session = await requireRole("OB_EXEC");
+  const uid = BigInt(session.uid);
+  const branchId = execBranchId(session);
+  if (!branchId) return fail("No branch assigned to your OB_EXEC role", 403);
+
+  const parsed = deleteSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
+  const { brandProductId, sellerId, programId } = parsed.data;
+
+  // Seller must be assigned to this executive for this program.
+  const assignment = await prisma.sellerAssignment.findUnique({
+    where: { sellerId_programId: { sellerId, programId } },
+    include: { seller: { select: { branchId: true } } },
+  });
+  if (!assignment || assignment.obExecUserId !== uid) return fail("Seller is not assigned to you for this program", 403);
+
+  const sellerBranchId = assignment.seller.branchId;
+  if (sellerBranchId !== branchId) return fail("Seller belongs to a different branch", 403);
+
+  const record = await prisma.localOnboardingRecord.findUnique({
+    where: {
+      brandProductId_sellerId_branchId_programId: {
+        brandProductId,
+        sellerId,
+        branchId: sellerBranchId,
+        programId,
+      },
+    },
+    select: { id: true },
+  });
+
+  if (!record) return fail("Onboarding record not found", 404);
+
+  await prisma.localOnboardingRecord.delete({
+    where: { id: record.id },
+  });
+
+  await writeAudit({
+    actorUserId: session.uid,
+    action: "onboarding.delete",
+    entityType: "LocalOnboardingRecord",
+    entityId: record.id,
+    before: {
+      brandProductId: brandProductId.toString(),
+      sellerId: sellerId.toString(),
+      branchId: sellerBranchId.toString(),
+      programId: programId.toString(),
+    },
+  });
+
+  return ok({ success: true });
+});
+
