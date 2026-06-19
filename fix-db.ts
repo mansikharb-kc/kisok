@@ -5,7 +5,7 @@ async function main() {
     await prisma.$executeRawUnsafe('CREATE INDEX seller_assignments_seller_id_idx ON seller_assignments(seller_id)');
     console.log('Created missing index');
   } catch (e) {
-    console.error('Index might already exist:', e.message);
+    console.error('Index might already exist:', e instanceof Error ? e.message : e);
   }
 }
 main().catch(console.error).finally(() => prisma.$disconnect());
