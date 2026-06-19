@@ -35,6 +35,7 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
+
 /* Dark theme: keep it glassy/translucent over the dark body */
 html.dark .glass-dark {
   background-color: rgba(20, 20, 22, 0.55);
@@ -52,48 +53,109 @@ html.dark body {
   color: #e7e7ea;
   background: linear-gradient(135deg, #0b0b0d 0%, #161618 45%, #0b0b0d 100%);
 }
+
 html.dark .glass {
   background-color: rgba(28, 28, 30, 0.55);
   border-color: rgba(255, 255, 255, 0.08);
 }
+
 /* glassy cards from the sweep */
-html.dark .bg-white\/60 { background-color: rgba(28, 28, 30, 0.55) !important; }
-html.dark .bg-white\/70 { background-color: rgba(28, 28, 30, 0.6) !important; }
+html.dark .bg-white\/60 {
+  background-color: rgba(28, 28, 30, 0.55) !important;
+}
+
+html.dark .bg-white\/70 {
+  background-color: rgba(28, 28, 30, 0.6) !important;
+}
+
 /* solid + translucent white surfaces (stat cards, modals) → dark */
-html.dark .bg-white { background-color: rgba(24, 24, 27, 0.9) !important; }
-html.dark .bg-white\/95 { background-color: rgba(24, 24, 27, 0.95) !important; }
-html.dark .bg-white\/90 { background-color: rgba(24, 24, 27, 0.9) !important; }
-html.dark .bg-white\/80 { background-color: rgba(24, 24, 27, 0.85) !important; }
-html.dark .bg-white\/50 { background-color: rgba(24, 24, 27, 0.7) !important; }
+html.dark .bg-white {
+  background-color: rgba(24, 24, 27, 0.9) !important;
+}
+
+html.dark .bg-white\/95 {
+  background-color: rgba(24, 24, 27, 0.95) !important;
+}
+
+html.dark .bg-white\/90 {
+  background-color: rgba(24, 24, 27, 0.9) !important;
+}
+
+html.dark .bg-white\/80 {
+  background-color: rgba(24, 24, 27, 0.85) !important;
+}
+
+html.dark .bg-white\/50 {
+  background-color: rgba(24, 24, 27, 0.7) !important;
+}
+
 html.dark .bg-slate-50\/50,
-html.dark .bg-slate-50\/60 { background-color: rgba(255, 255, 255, 0.03) !important; }
+html.dark .bg-slate-50\/60 {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
 /* gradient cards (from-white / from-*-50) → flat dark */
 html.dark [class*="bg-gradient-to-"] {
   background-image: none !important;
   background-color: rgba(28, 28, 30, 0.6) !important;
 }
+
 /* coloured surfaces → neutral dark (status conveyed via coloured text + dots) */
-html.dark .bg-emerald-50, html.dark .bg-emerald-100,
-html.dark .bg-green-50, html.dark .bg-green-100,
-html.dark .bg-blue-50, html.dark .bg-blue-100,
-html.dark .bg-indigo-50, html.dark .bg-indigo-100,
-html.dark .bg-amber-50, html.dark .bg-amber-100,
-html.dark .bg-orange-50, html.dark .bg-orange-100,
-html.dark .bg-purple-50, html.dark .bg-purple-100,
-html.dark .bg-violet-50, html.dark .bg-violet-100,
-html.dark .bg-rose-50, html.dark .bg-rose-100,
-html.dark .bg-red-50, html.dark .bg-red-100,
-html.dark .bg-yellow-50, html.dark .bg-yellow-100 { background-color: rgba(255, 255, 255, 0.05) !important; }
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100,
+html.dark .bg-green-50,
+html.dark .bg-green-100,
+html.dark .bg-blue-50,
+html.dark .bg-blue-100,
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100,
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html.dark .bg-orange-50,
+html.dark .bg-orange-100,
+html.dark .bg-purple-50,
+html.dark .bg-purple-100,
+html.dark .bg-violet-50,
+html.dark .bg-violet-100,
+html.dark .bg-rose-50,
+html.dark .bg-rose-100,
+html.dark .bg-red-50,
+html.dark .bg-red-100,
+html.dark .bg-yellow-50,
+html.dark .bg-yellow-100 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
 /* coloured card borders → neutral */
-html.dark .border-emerald-200, html.dark .border-green-200, html.dark .border-blue-200,
-html.dark .border-blue-100, html.dark .border-indigo-200, html.dark .border-amber-200,
-html.dark .border-orange-200, html.dark .border-purple-200, html.dark .border-violet-200,
-html.dark .border-rose-200, html.dark .border-red-200, html.dark .border-yellow-200 { border-color: rgba(255, 255, 255, 0.1) !important; }
+html.dark .border-emerald-200,
+html.dark .border-green-200,
+html.dark .border-blue-200,
+html.dark .border-blue-100,
+html.dark .border-indigo-200,
+html.dark .border-amber-200,
+html.dark .border-orange-200,
+html.dark .border-purple-200,
+html.dark .border-violet-200,
+html.dark .border-rose-200,
+html.dark .border-red-200,
+html.dark .border-yellow-200 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 /* light surfaces → dark */
 html.dark .bg-slate-50,
-html.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.04) !important; }
-html.dark .bg-brand-50 { background-color: rgba(255, 255, 255, 0.05) !important; }
-html.dark .bg-brand-100 { background-color: rgba(255, 255, 255, 0.08) !important; }
+html.dark .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+html.dark .bg-brand-50 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark .bg-brand-100 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Neutral light hover backgrounds → subtle dark overlay (never white) */
 html.dark .hover\:bg-slate-50:hover,
 html.dark .hover\:bg-slate-100:hover,
@@ -118,15 +180,29 @@ html.dark .hover\:bg-white\/60:hover,
 html.dark .hover\:bg-brand-50:hover,
 html.dark .hover\:bg-brand-50\/40:hover,
 html.dark .hover\:bg-brand-50\/50:hover,
-html.dark .hover\:bg-brand-100:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
+html.dark .hover\:bg-brand-100:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
 /* Native <select> / dropdown options — readable in dark mode (no faint grey) */
-html.dark select { background-color: #1c1c1e; color: #ededed; }
-html.dark option { background-color: #1c1c1e; color: #ededed; }
+html.dark select {
+  background-color: #1c1c1e;
+  color: #ededed;
+}
+
+html.dark option {
+  background-color: #1c1c1e;
+  color: #ededed;
+}
+
 /* borders */
 html.dark .border-slate-100,
 html.dark .border-slate-200,
 html.dark .border-slate-300,
-html.dark .border-brand-200 { border-color: rgba(255, 255, 255, 0.1) !important; }
+html.dark .border-brand-200 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 /* text */
 html.dark .text-slate-950,
 html.dark .text-slate-900,
@@ -135,11 +211,20 @@ html.dark .text-slate-700,
 html.dark .text-brand-900,
 html.dark .text-brand-700,
 html.dark .text-brand-600,
-html.dark .text-brand-500 { color: #ededed !important; }
+html.dark .text-brand-500 {
+  color: #ededed !important;
+}
+
 html.dark .text-slate-600,
-html.dark .text-slate-500 { color: #b6b6bb !important; }
+html.dark .text-slate-500 {
+  color: #b6b6bb !important;
+}
+
 html.dark .text-slate-400,
-html.dark .text-slate-300 { color: #8b8b90 !important; }
+html.dark .text-slate-300 {
+  color: #8b8b90 !important;
+}
+
 /* form controls */
 html.dark input,
 html.dark select,
@@ -154,23 +239,28 @@ html.dark textarea {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.18);
   border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.32);
   background-clip: content-box;
 }
+
 html.dark * {
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
+
 html.dark ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
   background-clip: content-box;
@@ -180,6 +270,7 @@ html.dark ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.85);
   color: #fff;
 }
+
 html.dark ::selection {
   background: rgba(255, 255, 255, 0.85);
   color: #000;
@@ -195,6 +286,7 @@ h3 {
 :focus {
   outline: none;
 }
+
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
@@ -203,6 +295,7 @@ textarea:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.65);
 }
+
 html.dark a:focus-visible,
 html.dark button:focus-visible,
 html.dark input:focus-visible,
@@ -223,6 +316,7 @@ button {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -233,6 +327,30 @@ button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 .no-spinner {
   -moz-appearance: textfield;
+}
+
+/* Blink animation for green elements */
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 10000s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink {
+    animation: none;
+  }
 }

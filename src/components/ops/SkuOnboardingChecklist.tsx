@@ -157,6 +157,7 @@ export default function SkuOnboardingChecklist({
     if (filterType === "not_onboarded") return !isOnboarded;
     if (filterType === "location_assigned") return isOnboarded && hasCopies;
     if (filterType === "location_pending") return isOnboarded && !hasCopies;
+    if (filterType === "select_all") return true;
     return true;
   });
 
@@ -275,8 +276,8 @@ export default function SkuOnboardingChecklist({
     ws["!cols"] = wscols;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Filtered Review List");
-    XLSX.writeFile(wb, `${activeBrand.name}_filtered_review_list.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Filtered Product List");
+    XLSX.writeFile(wb, `${activeBrand.name}_filtered_product_list.xlsx`);
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -614,7 +615,7 @@ export default function SkuOnboardingChecklist({
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer accent-brand-600"
                     />
                     <label htmlFor="toolbarFilterCheckbox" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                      Filter
+                      Select
                     </label>
                     {filterEnabled && (
                       <>
@@ -627,13 +628,14 @@ export default function SkuOnboardingChecklist({
                           <option value="not_onboarded">Not Onboarded</option>
                           <option value="location_assigned">Location Assigned</option>
                           <option value="location_pending">Location Pending</option>
+                          <option value="select_all">Select All</option>
                         </select>
                         <button
                           type="button"
                           onClick={handleExportReviewList}
                           className="inline-flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-sm"
                         >
-                          Download Review List
+                          Download Product List
                         </button>
                       </>
                     )}
