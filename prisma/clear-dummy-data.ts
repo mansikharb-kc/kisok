@@ -56,6 +56,16 @@ async function main() {
       console.log(`info: consignment/QC delete skipped - ${e.message}`);
     }
 
+    // 4b. Onboarding pipelines, flags & reminders (children of assignments)
+    try {
+      await prisma.flag.deleteMany();
+      await prisma.reminder.deleteMany();
+      await prisma.onboardingPipeline.deleteMany();
+      console.log("✓ Deleted onboarding pipelines, flags, and reminders");
+    } catch (e: any) {
+      console.log(`info: pipeline/flag/reminder delete skipped - ${e.message}`);
+    }
+
     // 5. Sellers & Assignments
     try {
       await prisma.sellerAssignment.deleteMany();
@@ -86,13 +96,7 @@ async function main() {
       console.log(`info: branch linkages delete skipped - ${e.message}`);
     }
 
-    // 8. Sticker Templates
-    try {
-      await prisma.stickerTemplate.deleteMany();
-      console.log("✓ Deleted sticker templates");
-    } catch (e: any) {
-      console.log(`info: stickerTemplate delete skipped - ${e.message}`);
-    }
+    // 8. Sticker Templates — KEPT (these are masters/config, not dummy data).
 
     // 9. Programs
     try {
@@ -134,7 +138,7 @@ async function main() {
       console.log(`info: logs delete skipped - ${e.message}`);
     }
 
-    console.log("\n✨ Dummy data cleared successfully! Users, branch, categories, and attributes have been preserved.");
+    console.log("\n✨ Dummy data cleared successfully! Users, branch, categories, attributes, and sticker templates have been preserved.");
   } catch (error) {
     console.error("❌ Error during database cleaning:", error);
     process.exit(1);
