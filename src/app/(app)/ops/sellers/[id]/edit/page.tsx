@@ -33,7 +33,7 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   const brandIds = seller.sellerBrands.map((sb) => sb.brandId);
 
-  const [brandRows, branchPrograms, execRows, categoryRows] = await Promise.all([
+  const [brandRows, branchPrograms, execRows, categoryRows, salespersonRows] = await Promise.all([
     prisma.brand.findMany({
       where: { status: "active", approvalStatus: "approved" },
       select: {
@@ -72,6 +72,16 @@ export default async function Page({ params }: { params: { id: string } }) {
       where: { status: "active" },
       select: { id: true, name: true, parentId: true },
     }),
+    prisma.seller.findMany({
+      where: {
+        branchId,
+        salesperson: { not: null },
+      },
+      select: {
+        salesperson: true,
+      },
+      distinct: ["salesperson"],
+    }),
   ]);
 
   const brands = serialize(brandRows);
@@ -79,10 +89,20 @@ export default async function Page({ params }: { params: { id: string } }) {
   const execs = serialize(execRows);
   const flatCategories = serialize(categoryRows);
   const sellerData = serialize(seller);
+  const salespersons = Array.from(new Set(
+    salespersonRows.map((r) => r.salesperson ?? "").map((s) => s.trim()).filter(Boolean)
+  )).sort();
 
   return (
     <div className="space-y-6">
-      <SellerForm brands={brands} programs={programs} execs={execs} flatCategories={flatCategories} seller={sellerData} />
+      <SellerForm
+        brands={brands}
+        programs={programs}
+        execs={execs}
+        flatCategories={flatCategories}
+        seller={sellerData}
+        salespersons={salespersons}
+      />
     </div>
   );
 }

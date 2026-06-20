@@ -17,7 +17,7 @@ export default async function Page() {
 
   // Brands = all HO-approved active brands (availability flows through sellers,
   // not through any Branch-Admin step). Programs = branch's HO-approved programs.
-  const [brandRows, branchPrograms, execRows, categoryRows] = await Promise.all([
+  const [brandRows, branchPrograms, execRows, categoryRows, salespersonRows] = await Promise.all([
     prisma.brand.findMany({
       where: { status: "active", approvalStatus: "approved" },
       select: {
@@ -56,16 +56,35 @@ export default async function Page() {
       where: { status: "active" },
       select: { id: true, name: true, parentId: true },
     }),
+    prisma.seller.findMany({
+      where: {
+        branchId,
+        salesperson: { not: null },
+      },
+      select: {
+        salesperson: true,
+      },
+      distinct: ["salesperson"],
+    }),
   ]);
 
   const brands = serialize(brandRows);
   const programs = serialize(branchPrograms.map((bp) => bp.program));
   const execs = serialize(execRows);
   const flatCategories = serialize(categoryRows);
+  const salespersons = Array.from(new Set(
+    salespersonRows.map((r) => r.salesperson ?? "").map((s) => s.trim()).filter(Boolean)
+  )).sort();
 
   return (
     <div className="space-y-6">
-      <SellerForm brands={brands} programs={programs} execs={execs} flatCategories={flatCategories} />
+      <SellerForm
+        brands={brands}
+        programs={programs}
+        execs={execs}
+        flatCategories={flatCategories}
+        salespersons={salespersons}
+      />
     </div>
   );
 }

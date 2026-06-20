@@ -4,12 +4,10 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
-
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/).optional().nullable(),
-  nodeType: z.enum(NODE_TYPES).optional(),
+  nodeType: z.string().trim().min(1).max(20).optional(),
   categoryId: z.coerce.bigint().optional().nullable(),
   categoryIds: z.array(z.coerce.bigint()).optional(),
   isPlacementEligible: z.boolean().optional(),

@@ -110,12 +110,14 @@ export default function SellerForm({
   execs,
   flatCategories = [],
   seller,
+  salespersons = [],
 }: {
   brands: BrandOption[];
   programs: ProgramOption[];
   execs: ExecOption[];
   flatCategories?: FlatCat[];
   seller?: SellerEdit;
+  salespersons?: string[];
 }) {
   const router = useRouter();
   const editing = !!seller;
@@ -193,6 +195,8 @@ export default function SellerForm({
         contractMediaUrl: string | null;
         categoryIds: string[];
         brandCategoryIds: Record<string, string[]>;
+        freeCollaboration: boolean;
+        kcSalesperson: string;
       }
     >
   >(() => {
@@ -216,6 +220,9 @@ export default function SellerForm({
           }
         }
 
+        const freeCollab = (c.customFields as any)?.freeCollaboration ?? false;
+        const kcSales = (c.customFields as any)?.kcSalesperson ?? "";
+
         initial[c.programId] = {
           collaborationTenure: rawTenure,
           fitoutPeriod: rawFitout,
@@ -230,6 +237,8 @@ export default function SellerForm({
           contractMediaUrl: c.contractMedia?.url ?? null,
           categoryIds: savedFlatCats,
           brandCategoryIds,
+          freeCollaboration: freeCollab,
+          kcSalesperson: kcSales,
         };
       }
     }
@@ -450,6 +459,8 @@ export default function SellerForm({
           contractMediaUrl: null,
           categoryIds: [],
           brandCategoryIds: {},
+          freeCollaboration: false,
+          kcSalesperson: "",
         };
         added = true;
       }
@@ -508,6 +519,8 @@ export default function SellerForm({
         obExecUserId: "",
         contractMediaId: null,
         contractMediaUrl: null,
+        freeCollaboration: false,
+        kcSalesperson: "",
       };
       
       const updated = {
@@ -597,6 +610,16 @@ export default function SellerForm({
       return;
     }
 
+    // Validate KC Salesperson if freeCollaboration is checked
+    for (const [pid, details] of Object.entries(activeContracts)) {
+      if (details.freeCollaboration && !details.kcSalesperson?.trim()) {
+        const prog = programs.find((p) => String(p.id) === String(pid));
+        const progName = prog ? prog.name : "Selected Program";
+        setError(`KC Salesperson is required for Free Collaboration in ${progName} Contract`);
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const contractPayload = Object.entries(activeContracts).map(([pid, details]) => ({
@@ -612,6 +635,8 @@ export default function SellerForm({
         customFields: {
           categoryIds: details.categoryIds || [],
           brandCategoryIds: details.brandCategoryIds || {},
+          freeCollaboration: details.freeCollaboration || false,
+          kcSalesperson: details.freeCollaboration ? (details.kcSalesperson || "").trim() : "",
         },
       }));
 
@@ -1231,6 +1256,42 @@ export default function SellerForm({
                         </label>
                       </div>
 
+                      <div className="pt-2 flex flex-col gap-4 border-t border-slate-100/60 mt-3 pt-3">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-sm text-slate-750 cursor-pointer font-semibold select-none">
+                            <input
+                              type="checkbox"
+                              checked={details.freeCollaboration || false}
+                              onChange={(e) => {
+                                updateContract(p.id, "freeCollaboration", e.target.checked);
+                                if (!e.target.checked) {
+                                  updateContract(p.id, "kcSalesperson", "");
+                                }
+                              }}
+                              className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            Free Collaboration
+                          </label>
+                        </div>
+
+                        {details.freeCollaboration && (
+                          <div className="space-y-1">
+                            <label className={L}>KC Salesperson *</label>
+                            <input
+                              type="text"
+                              list="salesperson-suggestions"
+                              value={details.kcSalesperson || ""}
+                              onChange={(e) =>
+                                updateContract(p.id, "kcSalesperson", e.target.value)
+                              }
+                              required
+                              className={I}
+                              placeholder="Type or select KC Salesperson"
+                            />
+                          </div>
+                        )}
+                      </div>
+
                       <div>
                         <label className={L}>Remarks / Notes</label>
                         <textarea
@@ -1508,6 +1569,11 @@ export default function SellerForm({
         brandId={selectedBrandDetailsId}
         onClose={() => setSelectedBrandDetailsId(null)}
       />
+      <datalist id="salesperson-suggestions">
+        {salespersons.map((sp) => (
+          <option key={sp} value={sp} />
+        ))}
+      </datalist>
     </form>
   );
 }

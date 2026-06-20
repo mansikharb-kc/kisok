@@ -10,14 +10,18 @@ export type { LocationNode } from "@/lib/warehouseMeta";
 type TreeNode = LocationNode & { children: TreeNode[] };
 
 export default function WarehouseTree({
+  branchId,
   programId,
   programName,
   initial,
+  initialFlowSteps,
   canEdit = false,
 }: {
+  branchId: string;
   programId: string;
   programName: string;
   initial: LocationNode[];
+  initialFlowSteps: Array<{ id: string; name: string; level: string; datatype: string }> | null;
   canEdit?: boolean;
 }) {
   const router = useRouter();
@@ -26,26 +30,28 @@ export default function WarehouseTree({
   const [busy, setBusy] = useState(false);
 
   const [flowSteps, setFlowSteps] = useState<Array<{ id: string; name: string; level: string; datatype: string }>>(() => {
+    if (initialFlowSteps && initialFlowSteps.length > 0) return initialFlowSteps;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`wh_flow_${programId}`);
       if (saved) return JSON.parse(saved);
     }
     if (programName.toLowerCase().includes("catalogue") || programName.toLowerCase().includes("library")) {
       return [
-        { id: "L1", name: "Cabinet", level: "WAREHOUSE", datatype: "String" },
-        { id: "L2", name: "Shelf", level: "RACK", datatype: "String" },
-        { id: "L3", name: "Folder", level: "TRAY", datatype: "String" }
+        { id: "L1", name: "Cabinet", level: "L0", datatype: "String" },
+        { id: "L2", name: "Shelf", level: "L1", datatype: "String" },
+        { id: "L3", name: "Folder", level: "L2", datatype: "String" }
       ];
     }
     return [
-      { id: "L1", name: "Warehouse", level: "WAREHOUSE", datatype: "String" },
-      { id: "L2", name: "Block / Area", level: "BLOCK", datatype: "String" },
-      { id: "L3", name: "Rack / Shelf", level: "RACK", datatype: "String" },
-      { id: "L4", name: "Tray / Bin", level: "TRAY", datatype: "String" }
+      { id: "L1", name: "Warehouse", level: "L0", datatype: "String" },
+      { id: "L2", name: "Block / Area", level: "L1", datatype: "String" },
+      { id: "L3", name: "Rack / Shelf", level: "L2", datatype: "String" },
+      { id: "L4", name: "Tray / Bin", level: "L3", datatype: "String" }
     ];
   });
 
   const [flowDefined, setFlowDefined] = useState<boolean>(() => {
+    if (initialFlowSteps && initialFlowSteps.length > 0) return true;
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`wh_flow_defined_${programId}`);
       return saved === "true";
@@ -142,7 +148,12 @@ export default function WarehouseTree({
       const hasChildren = n.children.length > 0;
       const isOpen = query ? true : expanded.has(n.id);
       const isInactive = n.status === "inactive";
-      const allowedChildren = ALLOWED_CHILDREN[n.nodeType] ?? [];
+      let allowedChildren: string[] = ALLOWED_CHILDREN[n.nodeType] ?? [];
+      if (flowSteps) {
+        const currentStepIdx = flowSteps.findIndex((s) => s.level === n.nodeType);
+        const hasNextStep = currentStepIdx !== -1 && currentStepIdx < flowSteps.length - 1;
+        allowedChildren = hasNextStep ? [flowSteps[currentStepIdx + 1].level] : [];
+      }
 
       return (
         <div key={n.id}>
@@ -292,6 +303,11 @@ export default function WarehouseTree({
             </p>
           </div>
 
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-650 flex items-center gap-2 shadow-sm">
+            <span className="font-bold text-slate-800">Note:</span>
+            <span>&quot;String&quot; refers to text, and &quot;Number&quot; refers to digits.</span>
+          </div>
+
           <div className="overflow-x-auto rounded-lg border border-slate-150 bg-white/30">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -320,23 +336,8 @@ export default function WarehouseTree({
                         className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold"
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={step.level}
-                        onChange={(e) => {
-                          const next = [...flowSteps];
-                          next[idx].level = e.target.value;
-                          next[idx].datatype = "String";
-                          setFlowSteps(next);
-                        }}
-                        className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold cursor-pointer"
-                      >
-                        <option value="WAREHOUSE">WAREHOUSE</option>
-                        <option value="BLOCK">BLOCK</option>
-                        <option value="RACK">RACK</option>
-                        <option value="TRAY">TRAY</option>
-                        <option value="CUSTOM">CUSTOM</option>
-                      </select>
+                    <td className="px-4 py-3 font-mono text-slate-700 font-bold text-sm">
+                      L{idx}
                     </td>
                     <td className="px-4 py-3">
                       <select
@@ -356,7 +357,9 @@ export default function WarehouseTree({
                       <button
                         type="button"
                         onClick={() => {
-                          const next = flowSteps.filter((x) => x.id !== step.id).map((x, i) => ({ ...x, id: `L${i + 1}` }));
+                          const next = flowSteps
+                            .filter((x) => x.id !== step.id)
+                            .map((x, i) => ({ ...x, id: `L${i + 1}`, level: `L${i}` }));
                           setFlowSteps(next);
                         }}
                         disabled={flowSteps.length <= 1}
@@ -376,7 +379,7 @@ export default function WarehouseTree({
               type="button"
               onClick={() => {
                 const nextId = `L${flowSteps.length + 1}`;
-                setFlowSteps([...flowSteps, { id: nextId, name: "", level: "CUSTOM", datatype: "String" }]);
+                setFlowSteps([...flowSteps, { id: nextId, name: "", level: `L${flowSteps.length}`, datatype: "String" }]);
               }}
               className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
             >
@@ -385,18 +388,46 @@ export default function WarehouseTree({
 
             <button
               type="button"
-              onClick={() => {
-                if (flowSteps.some(s => !s.name.trim())) {
+              disabled={busy}
+              onClick={async () => {
+                if (flowSteps.some((s) => !s.name.trim())) {
                   alert("Please enter names for all flow levels.");
                   return;
                 }
-                localStorage.setItem(`wh_flow_${programId}`, JSON.stringify(flowSteps));
-                localStorage.setItem(`wh_flow_defined_${programId}`, "true");
-                setFlowDefined(true);
+                setBusy(true);
+                const cleanedSteps = flowSteps.map((s, i) => ({
+                  ...s,
+                  level: `L${i}`,
+                }));
+                try {
+                  const res = await fetch("/api/branch-programs/flow", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      branchId,
+                      programId,
+                      flowSteps: cleanedSteps,
+                    }),
+                  });
+                  if (!res.ok) {
+                    const data = await res.json();
+                    alert(data.error || "Failed to save flow nomenclature.");
+                    return;
+                  }
+                  localStorage.setItem(`wh_flow_${programId}`, JSON.stringify(cleanedSteps));
+                  localStorage.setItem(`wh_flow_defined_${programId}`, "true");
+                  setFlowSteps(cleanedSteps);
+                  setFlowDefined(true);
+                  router.refresh();
+                } catch {
+                  alert("Failed to save flow nomenclature.");
+                } finally {
+                  setBusy(false);
+                }
               }}
-              className="rounded-md bg-brand-600 text-white px-5 py-2.5 text-xs font-bold hover:bg-brand-700 transition"
+              className="rounded-md bg-brand-600 text-white px-5 py-2.5 text-xs font-bold hover:bg-brand-700 transition disabled:opacity-50"
             >
-              Confirm Flow &amp; Define Locations
+              {busy ? "Saving..." : "Confirm Flow & Define Locations"}
             </button>
           </div>
         </div>

@@ -329,6 +329,7 @@ model BranchProgram {
   branchId       BigInt   @map("branch_id") @db.UnsignedBigInt
   programId      BigInt   @map("program_id") @db.UnsignedBigInt
   approvalStatus String   @default("pending") @map("approval_status") @db.VarChar(20)
+  flowSteps      Json?    @map("flow_steps")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

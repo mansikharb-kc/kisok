@@ -33,7 +33,7 @@ export const NAV: NavItem[] = [
   { href: "/archived", label: "Archived", group: "Overview", roles: ["HO_ADMIN"] },
 
   // L1 — HO masters (Branch Admin: view only, enforced in each page)
-  { href: "/masters/categories",       label: "Categories",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/masters/categories",       label: "Categories",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC", "PROJECT_USER", "CONCIERGE_MANAGER"] },
   { href: "/masters/attributes",       label: "Attributes",       group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/masters/brands",           label: "Brands",           group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/masters/programs",         label: "Programs",         group: "HO Masters", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },

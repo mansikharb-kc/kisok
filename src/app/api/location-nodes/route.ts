@@ -4,13 +4,11 @@ import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
-const NODE_TYPES = ["WAREHOUSE", "BLOCK", "RACK", "TRAY", "CUSTOM"] as const;
-
 const createSchema = z.object({
   branchId: z.coerce.bigint(),
   programId: z.coerce.bigint(),
   parentId: z.coerce.bigint().optional().nullable(),
-  nodeType: z.enum(NODE_TYPES),
+  nodeType: z.string().trim().min(1).max(20),
   name: z.string().trim().min(1).max(120),
   code: z.string().trim().max(60).regex(/^[A-Za-z0-9_-]*$/, "code: letters, numbers, - and _ only").optional().nullable(),
   categoryId: z.coerce.bigint().optional().nullable(),

@@ -257,7 +257,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-slate-800">Brand Created Successfully!</h2>
           <p className="text-sm text-slate-500 max-w-sm mx-auto">
-            The brand <span className="font-semibold text-slate-900">{name}</span> has been sent to HO approval. It will appear in seller onboarding after approval.
+            The brand <span className="font-semibold text-slate-900">{name}</span> has been created. It is now active and available for association under seller onboarding.
           </p>
         </div>
         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 w-full">
@@ -286,7 +286,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
           <div>
             <div className="font-semibold text-slate-900 dark:text-white">Adding Brand to Seller Onboarding</div>
             <div className="text-xs text-slate-500 mt-0.5 dark:text-slate-400">
-              After you submit this brand, it will be sent for HO admin approval. Once approved, the brand will appear in the associated brands list on the seller onboarding page.
+              Once submitted, the brand will be created immediately as active and will appear in the associated brands list on the seller onboarding page.
             </div>
           </div>
         </div>
