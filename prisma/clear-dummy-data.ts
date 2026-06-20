@@ -56,6 +56,16 @@ async function main() {
       console.log(`info: consignment/QC delete skipped - ${e.message}`);
     }
 
+    // 4b. Onboarding pipelines, flags & reminders (children of assignments)
+    try {
+      await prisma.flag.deleteMany();
+      await prisma.reminder.deleteMany();
+      await prisma.onboardingPipeline.deleteMany();
+      console.log("✓ Deleted onboarding pipelines, flags, and reminders");
+    } catch (e: any) {
+      console.log(`info: pipeline/flag/reminder delete skipped - ${e.message}`);
+    }
+
     // 5. Sellers & Assignments
     try {
       await prisma.sellerAssignment.deleteMany();

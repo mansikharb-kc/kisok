@@ -12,8 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "setup": "prisma db push && npm run db:patch && npm run db:seed",
-    "db:seed-demo": "tsx prisma/seed-demo.ts",
-    "db:clear-demo": "tsx prisma/clear-demo.ts"
+    "db:clear": "tsx prisma/clear-dummy-data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
