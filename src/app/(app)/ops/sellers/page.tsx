@@ -52,11 +52,11 @@ export default async function Page() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <h1 className="text-2xl font-bold text-slate-900">Sellers</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Sellers</h1>
 
       {/* Interactive Sellers List with Filter & Sort */}
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 backdrop-blur-md p-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-12 text-center text-slate-900 dark:text-slate-300">
           <p className="text-sm text-slate-400">No sellers yet.</p>
           <Link href="/ops/sellers/new" className="mt-3 inline-flex items-center gap-1 text-brand-600 hover:underline">
             + Add the first seller
