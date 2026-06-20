@@ -69,6 +69,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   // categories operated in
   const [sel, setSel] = useState<Record<number, string>>({});
   const [picked, setPicked] = useState<string[]>(brand?.categoryIds ?? []); // category ids
+  const [categorySearch, setCategorySearch] = useState("");
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -92,10 +93,24 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
 
   // ---- category cascade ----
   function optionsForLevel(k: number) {
-    if (k === 1) return parents.filter((p) => p.level === 1);
-    const parentSel = sel[k - 1];
-    if (!parentSel) return [];
-    return parents.filter((p) => p.level === k && p.parentId === parentSel);
+    let opts;
+    if (k === 1) opts = parents.filter((p) => p.level === 1);
+    else {
+      const parentSel = sel[k - 1];
+      if (!parentSel) return [];
+      opts = parents.filter((p) => p.level === k && p.parentId === parentSel);
+    }
+
+    // Apply search filter
+    if (categorySearch.trim()) {
+      const query = categorySearch.toLowerCase();
+      opts = opts.filter(o =>
+        o.name.toLowerCase().includes(query) ||
+        o.number.toLowerCase().includes(query)
+      );
+    }
+
+    return opts;
   }
   function selectAt(k: number, id: string) {
     setSel((prev) => {
@@ -355,6 +370,29 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
       <div className={card}>
         <StepHeader n={2} title="Categories Operated In" sub="Link the brand to categories in your taxonomy" />
         <div className="space-y-3">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={categorySearch}
+              onChange={(e) => setCategorySearch(e.target.value)}
+              placeholder="Search categories by name or code..."
+              className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            />
+            {categorySearch && (
+              <button
+                type="button"
+                onClick={() => setCategorySearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           {LEVELS.map((lvl, idx) => {
             const k = idx + 1;
             if (k > 1 && !sel[k - 1]) return null;

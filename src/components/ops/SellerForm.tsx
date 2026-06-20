@@ -8,6 +8,7 @@ import { isNonEmptyString } from "@/lib/validation";
 import { buildParentOptions, FlatCat } from "@/lib/categoryTree";
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 import BrandDetailsModal from "@/components/brands/BrandDetailsModal";
+import BrandCategoryEditModal from "@/components/brands/BrandCategoryEditModal";
 
 function addDays(dateStr: string, fitoutStr: string): string {
   if (!dateStr) return "";
@@ -133,9 +134,25 @@ export default function SellerForm({
   // Member / SPOC details
   const [memberType, setMemberType] = useState(seller?.memberType ?? "");
   const [salesperson, setSalesperson] = useState(seller?.salesperson ?? "");
-  const [spocName, setSpocName] = useState(seller?.spocName ?? "");
-  const [spocPhone, setSpocPhone] = useState(seller?.spocPhone ?? "");
-  const [spocEmail, setSpocEmail] = useState(seller?.spocEmail ?? "");
+
+  // Multiple Brand SPOCs
+  type BrandSpoc = {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+  };
+  const [brandSpocs, setBrandSpocs] = useState<BrandSpoc[]>(() => {
+    if (seller?.spocName || seller?.spocPhone || seller?.spocEmail) {
+      return [{
+        id: '1',
+        name: seller.spocName ?? '',
+        phone: seller.spocPhone ?? '',
+        email: seller.spocEmail ?? '',
+      }];
+    }
+    return [];
+  });
 
   // HO-defined custom fields
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomField[]>([]);
@@ -340,6 +357,7 @@ export default function SellerForm({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [selectedBrandDetailsId, setSelectedBrandDetailsId] = useState<string | null>(null);
+  const [selectedBrandForCategoryEdit, setSelectedBrandForCategoryEdit] = useState<string | null>(null);
 
   const [localBrands, setLocalBrands] = useState<BrandOption[]>(brands);
   const [brandSearch, setBrandSearch] = useState("");
@@ -604,6 +622,12 @@ export default function SellerForm({
       return;
     }
 
+    // Must have at least one brand selected
+    if (selectedBrandIds.length === 0) {
+      setError("Please select at least one brand");
+      return;
+    }
+
     // Optional membershipId validation: if provided, must be non‑empty
     if (membershipId && !isNonEmptyString(membershipId)) {
       setError("Membership ID cannot be empty");
@@ -647,10 +671,17 @@ export default function SellerForm({
         status,
         memberType: memberType || null,
         salesperson: salesperson.trim() || null,
-        spocName: spocName.trim() || null,
-        spocPhone: spocPhone.trim() || null,
-        spocEmail: spocEmail.trim() || null,
-        customFields: customValues,
+        spocName: brandSpocs.length > 0 ? brandSpocs[0].name.trim() || null : null,
+        spocPhone: brandSpocs.length > 0 ? brandSpocs[0].phone.trim() || null : null,
+        spocEmail: brandSpocs.length > 0 ? brandSpocs[0].email.trim() || null : null,
+        customFields: {
+          ...customValues,
+          brandSpocs: brandSpocs.map(s => ({
+            name: s.name.trim(),
+            phone: s.phone.trim(),
+            email: s.email.trim(),
+          })).filter(s => s.name || s.phone || s.email),
+        },
         brandIds: selectedBrandIds,
         categoryIds: pickedCategoryIds,
         contracts: contractPayload,
@@ -792,17 +823,83 @@ export default function SellerForm({
             <label className={L}>KC Salesperson</label>
             <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={I} placeholder="KC salesperson" />
           </div>
-          <div>
-            <label className={L}>Brand SPOC name</label>
-            <input value={spocName} onChange={(e) => setSpocName(e.target.value)} className={I} placeholder="Contact person" />
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-3">
+            <label className={L}>Brand SPOCs</label>
+            <button
+              type="button"
+              onClick={() => setBrandSpocs(prev => [...prev, { id: Date.now().toString(), name: '', phone: '', email: '' }])}
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700"
+            >
+              + Add SPOC
+            </button>
           </div>
-          <div>
-            <label className={L}>Brand SPOC phone Number</label>
-            <input value={spocPhone} onChange={(e) => setSpocPhone(e.target.value)} className={I} placeholder="+91…" />
-          </div>
-          <div className="col-span-2">
-            <label className={L}>Brand SPOC email</label>
-            <input type="email" value={spocEmail} onChange={(e) => setSpocEmail(e.target.value)} className={I} placeholder="name@company.com" />
+          <div className="space-y-3">
+            {brandSpocs.length === 0 ? (
+              <div className="text-center py-4 border border-dashed border-slate-200 rounded-xl bg-slate-50 text-slate-400 text-xs">
+                No Brand SPOCs added yet. Click "+ Add SPOC" to add contact persons.
+              </div>
+            ) : (
+              brandSpocs.map((spoc, idx) => (
+                <div key={spoc.id} className="grid grid-cols-3 gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 block">Name</label>
+                    <input
+                      value={spoc.name}
+                      onChange={(e) => {
+                        const updated = [...brandSpocs];
+                        updated[idx].name = e.target.value;
+                        setBrandSpocs(updated);
+                      }}
+                      className={I}
+                      placeholder="Contact person"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 block">Phone</label>
+                    <input
+                      value={spoc.phone}
+                      onChange={(e) => {
+                        const updated = [...brandSpocs];
+                        updated[idx].phone = e.target.value;
+                        setBrandSpocs(updated);
+                      }}
+                      className={I}
+                      placeholder="+91…"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 block">Email</label>
+                      <input
+                        type="email"
+                        value={spoc.email}
+                        onChange={(e) => {
+                          const updated = [...brandSpocs];
+                          updated[idx].email = e.target.value;
+                          setBrandSpocs(updated);
+                        }}
+                        className={I}
+                        placeholder="name@company.com"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => setBrandSpocs(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                        title="Remove SPOC"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -912,6 +1009,19 @@ export default function SellerForm({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           </button>
+                          <button
+                            type="button"
+                            title="Add Categories to this Brand"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBrandForCategoryEdit(b.id);
+                            }}
+                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded p-0.5"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                          </button>
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate uppercase tracking-wider">{b.code}</div>
                       </div>
@@ -935,68 +1045,77 @@ export default function SellerForm({
 
       {/* 3. Categories Operated In */}
       <div className={card}>
-        <StepHeader n={3} title="Categories Operated In" sub="Link the seller to categories in your taxonomy" />
+        <StepHeader n={3} title="Categories Operated In" sub="Categories are automatically added based on selected brands" />
         <div className="space-y-3">
-          {LEVELS.slice(0, 4).map((lvl, idx) => {
-            const k = idx + 1;
-            if (k > 1 && !sel[k - 1]) return null;
-            const opts = optionsForLevel(k);
-            return (
-              <div key={k} className="flex items-center gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded font-medium w-24 text-center ${lvl.badge}`}>{lvl.label}</span>
-                <select
-                  value={sel[k] ?? ""}
-                  onChange={(e) => e.target.value ? selectAt(k, e.target.value) : null}
-                  className={`${I} flex-1`}
-                >
-                  <option value="">{k === 1 ? "Select Domain" : `Select ${lvl.label} (optional)`}</option>
-                  {opts.map((o) => <option key={o.id} value={o.id}>{o.number} · {o.name}</option>)}
-                </select>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={addAssociation}
-              disabled={!deepest}
-              className="rounded-md bg-slate-800 text-white px-3 py-1.5 text-xs font-medium disabled:opacity-40"
-            >
-              + Add this category
-            </button>
-            <span className="text-xs text-slate-400">Pick a Domain, drill down as deep as you want, then add. Repeat for multiple.</span>
+        {selectedBrandIds.length === 0 ? (
+          <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50 text-slate-500 text-sm">
+            Select brands in Step 2 first. Categories will automatically populate from the selected brands.
           </div>
-
-          {pickedCategoryIds.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {pickedCategoryIds.map((id) => {
-                const node = byId.get(id);
-                return (
-                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">
-                    <span className="text-[9px] px-1 rounded bg-white">{node ? levelMeta(node.level).label : ""}</span>
-                    {node?.name ?? id}
-                    <button type="button" onClick={() => removeAssociation(id)} className="text-brand-500 hover:text-brand-800">✕</button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        {/* display categories per selected brand */}
-        {selectedBrandIds.length > 0 && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
-            <h3 className="text-sm font-bold text-slate-800 mb-1">Select Operating Categories per Brand</h3>
-            <p className="text-xs text-slate-500 mb-3">Check or uncheck the categories this seller is active in for each brand.</p>
+        ) : (
+          <>
+          {/* display categories per selected brand */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-800 mb-1">Operating Categories by Brand</h3>
+            <p className="text-xs text-slate-500 mb-3">These categories are automatically pulled from your selected brands. Check the ones this seller operates in.</p>
             <div className="grid gap-3">
               {selectedBrandIds.map((bid) => {
                 const brand = brands.find((b) => String(b.id) === String(bid));
                 const catIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
                 const uniqueCatIds = Array.from(new Set(catIds));
-                if (uniqueCatIds.length === 0) return null;
+                if (uniqueCatIds.length === 0) {
+                  return (
+                    <div key={bid} className="bg-amber-50/50 border border-amber-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span className="font-bold text-amber-800 text-sm">{brand?.name}</span>
+                      </div>
+                      <p className="text-xs text-amber-700">No categories defined for this brand. Please configure categories for this brand in the brand master.</p>
+                    </div>
+                  );
+                }
                 return (
                   <div key={bid} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-2.5">
                       <span className="w-2 h-2 rounded-full bg-brand-500"></span>
                       <span className="font-bold text-slate-700 text-sm">{brand?.name} Categories</span>
+                      <span className="text-[10px] text-slate-400 ml-auto">{uniqueCatIds.filter(cid => pickedCategoryIds.includes(cid)).length}/{uniqueCatIds.length} selected</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allSelected = uniqueCatIds.every(cid => pickedCategoryIds.includes(cid));
+                          if (allSelected) {
+                            // Deselect all brand categories
+                            setPickedCategoryIds((prev) => prev.filter((x) => !uniqueCatIds.includes(x)));
+                            setActiveContracts((prev) => {
+                              const next: typeof prev = {};
+                              for (const [programId, contract] of Object.entries(prev)) {
+                                const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => !uniqueCatIds.includes(id));
+                                const nextBrandCategoryIds: Record<string, string[]> = {};
+                                for (const [bId, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
+                                  nextBrandCategoryIds[bId] = cats.filter((id) => !uniqueCatIds.includes(id));
+                                }
+                                next[programId] = {
+                                  ...contract,
+                                  categoryIds: nextCategoryIds,
+                                  brandCategoryIds: nextBrandCategoryIds,
+                                };
+                              }
+                              return next;
+                            });
+                          } else {
+                            // Select all brand categories
+                            setPickedCategoryIds((prev) => {
+                              const newIds = uniqueCatIds.filter(cid => !prev.includes(cid));
+                              return [...prev, ...newIds];
+                            });
+                          }
+                        }}
+                        className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                      >
+                        {uniqueCatIds.every(cid => pickedCategoryIds.includes(cid)) ? 'Deselect All' : 'Select All'}
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {uniqueCatIds.map((cid) => {
@@ -1049,6 +1168,7 @@ export default function SellerForm({
               })}
             </div>
           </div>
+          </>
         )}
         </div>
       </div>
@@ -1353,11 +1473,14 @@ export default function SellerForm({
 
                       {/* Map categories to this program */}
                       <div className="pt-3 border-t border-slate-100/60">
-                        <label className={L}>Map Categories to {p.name} <span className="text-[10px] text-slate-400 normal-case font-normal">(select all that apply)</span></label>
+                        <label className={L}>Map Categories to {p.name} <span className="text-[10px] text-slate-400 normal-case font-normal">(select categories per brand)</span></label>
                         {pickedCategoryIds.length === 0 ? (
-                          <p className="text-xs text-amber-600 font-medium italic mt-1">
+                          <div className="text-center py-4 border border-dashed border-amber-200 rounded-xl bg-amber-50/30 text-amber-700 text-xs font-medium mt-2">
+                            <svg className="w-5 h-5 mx-auto mb-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
                             Please select categories in Step 3 first.
-                          </p>
+                          </div>
                         ) : (
                           <div className="space-y-3 mt-2">
                             {selectedBrandIds.map((bid) => {
@@ -1568,6 +1691,16 @@ export default function SellerForm({
       <BrandDetailsModal
         brandId={selectedBrandDetailsId}
         onClose={() => setSelectedBrandDetailsId(null)}
+      />
+      <BrandCategoryEditModal
+        brandId={selectedBrandForCategoryEdit}
+        flatCategories={flatCategories}
+        onClose={() => setSelectedBrandForCategoryEdit(null)}
+        onSave={() => {
+          // Refresh the brand list to show updated categories
+          router.refresh();
+          setSelectedBrandForCategoryEdit(null);
+        }}
       />
       <datalist id="salesperson-suggestions">
         {salespersons.map((sp) => (
