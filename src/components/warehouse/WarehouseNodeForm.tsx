@@ -217,7 +217,11 @@ export default function WarehouseNodeForm({
           <input
             value={form.name}
             onChange={(e) => {
-              const newName = e.target.value;
+              let newName = e.target.value;
+              const currentStep = flowSteps?.find((s) => s.level === form.nodeType);
+              if (currentStep?.datatype?.toLowerCase() === "string") {
+                newName = newName.toUpperCase();
+              }
               setForm((f) => {
                 const next = { ...f, name: newName };
                 if (!editNode && !isCodeManual) {
@@ -253,7 +257,15 @@ export default function WarehouseNodeForm({
           </label>
           <input
             value={form.code}
-            onChange={(e) => { setIsCodeManual(true); setForm((f) => ({ ...f, code: e.target.value })); }}
+            onChange={(e) => {
+              setIsCodeManual(true);
+              let val = e.target.value;
+              const currentStep = flowSteps?.find((s) => s.level === form.nodeType);
+              if (currentStep?.datatype?.toLowerCase() === "string") {
+                val = val.toUpperCase();
+              }
+              setForm((f) => ({ ...f, code: val }));
+            }}
             required
             placeholder="e.g. WH-01, BLK-A, RCK-1, TRY-1"
             className={`${I} font-mono`}

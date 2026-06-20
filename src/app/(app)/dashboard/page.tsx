@@ -794,12 +794,6 @@ export default async function DashboardPage() {
                   </div>
                 </a>
               </div>
-
-              {/* My Onboarding Request Tickets */}
-              <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">My Onboarding Request Tickets</div>
-                <DashboardTicketsList tickets={serializedDashboardTickets} userRoles={session.roles.map(r => r.code)} />
-              </div>
             </div>
           )}
 

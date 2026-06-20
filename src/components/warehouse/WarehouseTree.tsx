@@ -32,16 +32,16 @@ export default function WarehouseTree({
     }
     if (programName.toLowerCase().includes("catalogue") || programName.toLowerCase().includes("library")) {
       return [
-        { id: "L1", name: "Cabinet", level: "WAREHOUSE", datatype: "Container (Parent)" },
-        { id: "L2", name: "Shelf", level: "RACK", datatype: "Placement (Stores Samples)" },
-        { id: "L3", name: "Folder", level: "TRAY", datatype: "Placement (Stores Samples)" }
+        { id: "L1", name: "Cabinet", level: "WAREHOUSE", datatype: "String" },
+        { id: "L2", name: "Shelf", level: "RACK", datatype: "String" },
+        { id: "L3", name: "Folder", level: "TRAY", datatype: "String" }
       ];
     }
     return [
-      { id: "L1", name: "Warehouse", level: "WAREHOUSE", datatype: "Container (Parent)" },
-      { id: "L2", name: "Block / Area", level: "BLOCK", datatype: "Screen Mount (Digital RMS)" },
-      { id: "L3", name: "Rack / Shelf", level: "RACK", datatype: "Placement (Stores Samples)" },
-      { id: "L4", name: "Tray / Bin", level: "TRAY", datatype: "Placement (Stores Samples)" }
+      { id: "L1", name: "Warehouse", level: "WAREHOUSE", datatype: "String" },
+      { id: "L2", name: "Block / Area", level: "BLOCK", datatype: "String" },
+      { id: "L3", name: "Rack / Shelf", level: "RACK", datatype: "String" },
+      { id: "L4", name: "Tray / Bin", level: "TRAY", datatype: "String" }
     ];
   });
 
@@ -326,13 +326,7 @@ export default function WarehouseTree({
                         onChange={(e) => {
                           const next = [...flowSteps];
                           next[idx].level = e.target.value;
-                          if (e.target.value === "BLOCK") {
-                            next[idx].datatype = "Screen Mount (Digital RMS)";
-                          } else if (e.target.value === "RACK" || e.target.value === "TRAY") {
-                            next[idx].datatype = "Placement (Stores Samples)";
-                          } else if (e.target.value === "WAREHOUSE") {
-                            next[idx].datatype = "Container (Parent)";
-                          }
+                          next[idx].datatype = "String";
                           setFlowSteps(next);
                         }}
                         className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold cursor-pointer"
@@ -354,9 +348,8 @@ export default function WarehouseTree({
                         }}
                         className="w-full rounded border border-slate-300 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold cursor-pointer"
                       >
-                        <option value="Container (Parent)">Container (Parent)</option>
-                        <option value="Placement (Stores Samples)">Placement (Stores Samples)</option>
-                        <option value="Screen Mount (Digital RMS)">Screen Mount (Digital RMS)</option>
+                        <option value="String">String</option>
+                        <option value="Number">Number</option>
                       </select>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -383,7 +376,7 @@ export default function WarehouseTree({
               type="button"
               onClick={() => {
                 const nextId = `L${flowSteps.length + 1}`;
-                setFlowSteps([...flowSteps, { id: nextId, name: "", level: "CUSTOM", datatype: "Placement (Stores Samples)" }]);
+                setFlowSteps([...flowSteps, { id: nextId, name: "", level: "CUSTOM", datatype: "String" }]);
               }}
               className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
             >
