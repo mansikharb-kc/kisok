@@ -220,7 +220,7 @@ export default function BrandCategoryEditModal({
                   )}
                 </div>
 
-                {LEVELS.map((lvl, idx) => {
+                {LEVELS.slice(0, 4).map((lvl, idx) => {
                   const k = idx + 1;
                   if (k > 1 && !sel[k - 1]) return null;
                   const opts = optionsForLevel(k);

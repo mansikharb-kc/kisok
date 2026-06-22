@@ -66,12 +66,24 @@ export const GET = handler(async (_req: Request, ctx: { params: { id: string } }
 });
 
 export const PATCH = handler(async (req: Request, ctx: { params: { id: string } }) => {
-  const session = await requireRole("HO_ADMIN");
+  const session = await requireRole("HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD");
   const id = parseId(ctx.params.id);
   if (id === null) return fail("Invalid id", 400);
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
+
+  const isHO = session.roles.some((r) => r.code === "HO_ADMIN");
+  if (!isHO) {
+    const keys = Object.keys(parsed.data).filter(
+      (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
+    );
+    const nonCategoryKeys = keys.filter((k) => k !== "categoryIds");
+    if (nonCategoryKeys.length > 0) {
+      return fail("Only HO Admins can edit other brand master details", 403);
+    }
+  }
+
   const { categoryIds, contractStart, contractEnd, ...data } = parsed.data;
 
   const brand = await prisma.$transaction(async (tx) => {

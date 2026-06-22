@@ -134,6 +134,10 @@ export default function SellerForm({
   // Member / SPOC details
   const [memberType, setMemberType] = useState(seller?.memberType ?? "");
   const [salesperson, setSalesperson] = useState(seller?.salesperson ?? "");
+  const [salespersonDesignation, setSalespersonDesignation] = useState(() => {
+    const cf = seller?.customFields as any;
+    return cf?.salespersonDesignation ?? "";
+  });
 
   // Multiple Brand SPOCs
   type BrandSpoc = {
@@ -141,14 +145,26 @@ export default function SellerForm({
     name: string;
     phone: string;
     email: string;
+    designation?: string;
   };
   const [brandSpocs, setBrandSpocs] = useState<BrandSpoc[]>(() => {
+    const cf = seller?.customFields as any;
+    if (cf && Array.isArray(cf.brandSpocs)) {
+      return cf.brandSpocs.map((s: any, i: number) => ({
+        id: String(i),
+        name: s.name ?? '',
+        phone: s.phone ?? '',
+        email: s.email ?? '',
+        designation: s.designation ?? '',
+      }));
+    }
     if (seller?.spocName || seller?.spocPhone || seller?.spocEmail) {
       return [{
         id: '1',
         name: seller.spocName ?? '',
         phone: seller.spocPhone ?? '',
         email: seller.spocEmail ?? '',
+        designation: '',
       }];
     }
     return [];
@@ -676,11 +692,13 @@ export default function SellerForm({
         spocEmail: brandSpocs.length > 0 ? brandSpocs[0].email.trim() || null : null,
         customFields: {
           ...customValues,
+          salespersonDesignation: salespersonDesignation.trim(),
           brandSpocs: brandSpocs.map(s => ({
             name: s.name.trim(),
             phone: s.phone.trim(),
             email: s.email.trim(),
-          })).filter(s => s.name || s.phone || s.email),
+            designation: s.designation ? s.designation.trim() : "",
+          })).filter(s => s.name || s.phone || s.email || s.designation),
         },
         brandIds: selectedBrandIds,
         categoryIds: pickedCategoryIds,
@@ -824,13 +842,17 @@ export default function SellerForm({
             <label className={L}>KC Salesperson</label>
             <input value={salesperson} onChange={(e) => setSalesperson(e.target.value)} className={I} placeholder="KC salesperson" />
           </div>
+          <div>
+            <label className={L}>KC Salesperson Designation</label>
+            <input value={salespersonDesignation} onChange={(e) => setSalespersonDesignation(e.target.value)} className={I} placeholder="Salesperson designation" />
+          </div>
         </div>
         <div className="mt-4 pt-4 border-t border-slate-100">
           <div className="flex items-center justify-between mb-3">
             <label className={L}>Brand SPOCs</label>
             <button
               type="button"
-              onClick={() => setBrandSpocs(prev => [...prev, { id: Date.now().toString(), name: '', phone: '', email: '' }])}
+              onClick={() => setBrandSpocs(prev => [...prev, { id: Date.now().toString(), name: '', phone: '', email: '', designation: '' }])}
               className="text-xs font-semibold text-brand-600 hover:text-brand-700"
             >
               + Add SPOC
@@ -843,7 +865,7 @@ export default function SellerForm({
               </div>
             ) : (
               brandSpocs.map((spoc, idx) => (
-                <div key={spoc.id} className="grid grid-cols-3 gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                <div key={spoc.id} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
                   <div>
                     <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 block">Name</label>
                     <input
@@ -855,6 +877,19 @@ export default function SellerForm({
                       }}
                       className={I}
                       placeholder="Contact person"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 block">Designation</label>
+                    <input
+                      value={spoc.designation || ""}
+                      onChange={(e) => {
+                        const updated = [...brandSpocs];
+                        updated[idx].designation = e.target.value;
+                        setBrandSpocs(updated);
+                      }}
+                      className={I}
+                      placeholder="e.g. Manager"
                     />
                   </div>
                   <div>
@@ -1063,6 +1098,16 @@ export default function SellerForm({
                 const brand = brands.find((b) => String(b.id) === String(bid));
                 const catIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
                 const uniqueCatIds = Array.from(new Set(catIds));
+
+                // Group brand categories by level (up to L4)
+                const categoriesByLevel = [1, 2, 3, 4].map((levelNum) => {
+                  const levelMetaInfo = levelMeta(levelNum);
+                  const nodes = uniqueCatIds
+                    .map((cid) => byId.get(cid))
+                    .filter((node) => node && node.level === levelNum) as any[];
+                  return { levelNum, levelMetaInfo, nodes };
+                }).filter((group) => group.nodes.length > 0);
+
                 if (uniqueCatIds.length === 0) {
                   return (
                     <div key={bid} className="bg-amber-50/50 border border-amber-200 rounded-xl p-4">
@@ -1072,30 +1117,67 @@ export default function SellerForm({
                         </svg>
                         <span className="font-bold text-amber-800 text-sm">{brand?.name}</span>
                       </div>
-                      <p className="text-xs text-amber-700">No categories defined for this brand. Please configure categories for this brand in the brand master.</p>
+                      <p className="text-xs text-amber-700 mb-2">No categories defined for this brand. Please configure categories for this brand in the brand master.</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBrandForCategoryEdit(bid)}
+                        className="text-xs font-semibold text-amber-800 hover:text-amber-950 hover:underline"
+                      >
+                        + Manage Brand Categories
+                      </button>
                     </div>
                   );
                 }
+
+                if (categoriesByLevel.length === 0) {
+                  return (
+                    <div key={bid} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+                        <span className="font-bold text-slate-800 text-sm">{brand?.name} Categories</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-2">No L1-L4 categories mapped to this brand.</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBrandForCategoryEdit(bid)}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                      >
+                        + Manage Brand Categories
+                      </button>
+                    </div>
+                  );
+                }
+
+                const l1ToL4CatIds = categoriesByLevel.flatMap((g) => g.nodes.map((n) => n.id));
+
                 return (
-                  <div key={bid} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <span className="w-2 h-2 rounded-full bg-brand-500"></span>
-                      <span className="font-bold text-slate-700 text-sm">{brand?.name} Categories</span>
-                      <span className="text-[10px] text-slate-400 ml-auto">{uniqueCatIds.filter(cid => pickedCategoryIds.includes(cid)).length}/{uniqueCatIds.length} selected</span>
+                  <div key={bid} className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2 border-b border-slate-200/60 pb-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+                      <span className="font-bold text-slate-800 text-sm">{brand?.name} Categories</span>
+                      <span className="text-[10px] text-slate-400 ml-auto">{l1ToL4CatIds.filter(cid => pickedCategoryIds.includes(cid)).length}/{l1ToL4CatIds.length} selected</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBrandForCategoryEdit(bid)}
+                        className="text-[10px] font-semibold text-brand-600 hover:text-brand-850 hover:underline"
+                      >
+                        + Manage Brand Categories
+                      </button>
+                      <span className="text-[10px] text-slate-300">|</span>
                       <button
                         type="button"
                         onClick={() => {
-                          const allSelected = uniqueCatIds.every(cid => pickedCategoryIds.includes(cid));
+                          const allSelected = l1ToL4CatIds.every((cid) => pickedCategoryIds.includes(cid));
                           if (allSelected) {
-                            // Deselect all brand categories
-                            setPickedCategoryIds((prev) => prev.filter((x) => !uniqueCatIds.includes(x)));
+                            // Deselect all matching brand categories
+                            setPickedCategoryIds((prev) => prev.filter((x) => !l1ToL4CatIds.includes(x)));
                             setActiveContracts((prev) => {
                               const next: typeof prev = {};
                               for (const [programId, contract] of Object.entries(prev)) {
-                                const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => !uniqueCatIds.includes(id));
+                                const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => !l1ToL4CatIds.includes(id));
                                 const nextBrandCategoryIds: Record<string, string[]> = {};
                                 for (const [bId, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
-                                  nextBrandCategoryIds[bId] = cats.filter((id) => !uniqueCatIds.includes(id));
+                                  nextBrandCategoryIds[bId] = cats.filter((id) => !l1ToL4CatIds.includes(id));
                                 }
                                 next[programId] = {
                                   ...contract,
@@ -1106,63 +1188,74 @@ export default function SellerForm({
                               return next;
                             });
                           } else {
-                            // Select all brand categories
+                            // Select all matching brand categories
                             setPickedCategoryIds((prev) => {
-                              const newIds = uniqueCatIds.filter(cid => !prev.includes(cid));
+                              const newIds = l1ToL4CatIds.filter((cid) => !prev.includes(cid));
                               return [...prev, ...newIds];
                             });
                           }
                         }}
                         className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 hover:underline"
                       >
-                        {uniqueCatIds.every(cid => pickedCategoryIds.includes(cid)) ? 'Deselect All' : 'Select All'}
+                        {l1ToL4CatIds.every((cid) => pickedCategoryIds.includes(cid)) ? 'Deselect All' : 'Select All'}
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {uniqueCatIds.map((cid) => {
-                        const cat = flatCategories.find((c) => String(c.id) === cid);
-                        if (!cat) return null;
-                        const isChecked = pickedCategoryIds.includes(cid);
-                        return (
-                          <button
-                            key={cid}
-                            type="button"
-                            onClick={() => {
-                              if (isChecked) {
-                                setPickedCategoryIds((prev) => prev.filter((x) => x !== cid));
-                                setActiveContracts((prev) => {
-                                  let changed = false;
-                                  const next: typeof prev = {};
-                                  for (const [programId, contract] of Object.entries(prev)) {
-                                    const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => id !== cid);
-                                    const nextBrandCategoryIds: Record<string, string[]> = {};
-                                    for (const [bId, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
-                                      nextBrandCategoryIds[bId] = cats.filter((id) => id !== cid);
+
+                    <div className="space-y-3.5">
+                      {categoriesByLevel.map(({ levelNum, levelMetaInfo, nodes }) => (
+                        <div key={levelNum} className="space-y-2">
+                          <div className="flex items-center gap-1.5 select-none">
+                            <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${levelMetaInfo.badge}`}>
+                              {levelMetaInfo.label}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {nodes.map((node) => {
+                              const cid = node.id;
+                              const isChecked = pickedCategoryIds.includes(cid);
+                              return (
+                                <button
+                                  key={cid}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isChecked) {
+                                      setPickedCategoryIds((prev) => prev.filter((x) => x !== cid));
+                                      setActiveContracts((prev) => {
+                                        let changed = false;
+                                        const next: typeof prev = {};
+                                        for (const [programId, contract] of Object.entries(prev)) {
+                                          const nextCategoryIds = (contract.categoryIds ?? []).filter((id) => id !== cid);
+                                          const nextBrandCategoryIds: Record<string, string[]> = {};
+                                          for (const [bId, cats] of Object.entries(contract.brandCategoryIds ?? {})) {
+                                            nextBrandCategoryIds[bId] = cats.filter((id) => id !== cid);
+                                          }
+                                          if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
+                                          next[programId] = {
+                                            ...contract,
+                                            categoryIds: nextCategoryIds,
+                                            brandCategoryIds: nextBrandCategoryIds,
+                                          };
+                                        }
+                                        return changed ? next : prev;
+                                      });
+                                    } else {
+                                      setPickedCategoryIds((prev) => [...prev, cid]);
                                     }
-                                    if (nextCategoryIds.length !== (contract.categoryIds ?? []).length) changed = true;
-                                    next[programId] = {
-                                      ...contract,
-                                      categoryIds: nextCategoryIds,
-                                      brandCategoryIds: nextBrandCategoryIds,
-                                    };
-                                  }
-                                  return changed ? next : prev;
-                                });
-                              } else {
-                                setPickedCategoryIds((prev) => [...prev, cid]);
-                              }
-                            }}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition active:scale-[0.98] ${
-                              isChecked
-                                ? "bg-brand-600 text-white border-brand-600 shadow-sm"
-                                : "bg-white/80 backdrop-blur-sm text-slate-750 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
-                            }`}
-                          >
-                            {isChecked && <span className="text-[10px]">✓</span>}
-                            <span>{cat.name}</span>
-                          </button>
-                        );
-                      })}
+                                  }}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition active:scale-[0.98] ${
+                                    isChecked
+                                      ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                      : "bg-white/80 backdrop-blur-sm text-slate-750 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                                  }`}
+                                >
+                                  {isChecked && <span className="text-[10px]">✓</span>}
+                                  <span>{node.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -1487,7 +1580,7 @@ export default function SellerForm({
                             {selectedBrandIds.map((bid) => {
                               const brand = brands.find((b) => String(b.id) === String(bid));
                               const brandCatIds = brand?.brandCategories?.map((bc) => String(bc.categoryId)) ?? [];
-                              const activeBrandCats = brandCatIds.filter((cid) => pickedCategoryIds.includes(cid));
+                              const activeBrandCats = brandCatIds.filter((cid) => pickedCategoryIds.includes(cid) && (byId.get(cid)?.level ?? 0) <= 4);
                               
                               if (activeBrandCats.length === 0) return null;
 
@@ -1528,7 +1621,7 @@ export default function SellerForm({
                                 const brand = brands.find((b) => String(b.id) === String(bid));
                                 brand?.brandCategories?.forEach((bc) => allBrandCatIds.add(String(bc.categoryId)));
                               });
-                              const otherCats = pickedCategoryIds.filter((cid) => !allBrandCatIds.has(cid));
+                              const otherCats = pickedCategoryIds.filter((cid) => !allBrandCatIds.has(cid) && (byId.get(cid)?.level ?? 0) <= 4);
 
                               if (otherCats.length === 0) return null;
 
