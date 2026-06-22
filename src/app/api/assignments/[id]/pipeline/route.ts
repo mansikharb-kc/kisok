@@ -181,7 +181,7 @@ Categories: ${categoriesText}
 SPOC Person: Name: ${spocName}, Phone: ${spocPhone}, Email: ${spocEmail}
 Remarks: ${remarks || "None"}`;
 
-    const ktDesc = `KT coordination request for seller ${assignment.seller.name} (${assignment.seller.sellerCode})
+    const ktDesc = `Knowledge Transfer coordination request for seller ${assignment.seller.name} (${assignment.seller.sellerCode})
 Brand: ${brandText}
 Program: ${assignment.program.name} (${assignment.program.code})
 SPOC Person: Name: ${spocName}, Phone: ${spocPhone}, Email: ${spocEmail}
@@ -261,7 +261,7 @@ Remarks: ${remarks || "None"}`;
 
       // 3. If reqKt is checked, generate the KT Request ticket for CONCIERGE_MANAGER
       if (reqKt) {
-        const ktTitle = `KT Request: ${assignment.seller.name} - ${assignment.program.name}`;
+        const ktTitle = `Knowledge Transfer Request: ${assignment.seller.name} - ${assignment.program.name}`;
         const ticket = await tx.ticket.create({
           data: {
             title: ktTitle,
@@ -286,7 +286,7 @@ Remarks: ${remarks || "None"}`;
             action: "raise",
             fromRole: "OB_EXEC",
             toRole: "CONCIERGE_MANAGER",
-            note: `Raised onboarding knowledge transfer (KT) request ticket ${ticketNo}`,
+            note: `Raised onboarding knowledge transfer request ticket ${ticketNo}`,
             byUserId: BigInt(session.uid),
           },
         });

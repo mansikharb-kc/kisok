@@ -84,14 +84,14 @@ export default function PlacementForm({
     setError("");
     if (!recordId) return setError("Please select an onboarded product.");
     if (!locationNodeId) return setError("Please select a placement-eligible location.");
-    if (masterCount > 1) return setError("Only one copy may be marked MASTER.");
+    if (masterCount > 1) return setError("Only one copy may be marked UNIQUE.");
 
     const payload = {
       localRecordId: recordId,
       locationNodeId,
       copies: rows.map((r) => ({
         sampleSizeId: r.sampleSizeId || undefined,
-        role: r.isMaster ? "MASTER" : "SLAVE",
+        role: r.isMaster ? "UNIQUE" : "COPY",
       })),
     };
 
@@ -253,7 +253,7 @@ export default function PlacementForm({
                             row.isMaster ? "bg-indigo-100 text-indigo-700 font-extrabold" : "bg-slate-100/50 text-slate-400"
                           }`}
                         >
-                          MASTER
+                          UNIQUE
                         </span>
                       </label>
 
@@ -271,7 +271,7 @@ export default function PlacementForm({
                             !row.isMaster ? "bg-slate-200 text-slate-700 font-extrabold" : "bg-slate-100/50 text-slate-400"
                           }`}
                         >
-                          SLAVE
+                          COPY
                         </span>
                       </label>
                     </div>
@@ -279,8 +279,8 @@ export default function PlacementForm({
                 ))}
               </div>
               <p className="text-[11px] text-slate-400">
-                At most one unit may be MASTER. If a master already exists for this product in your branch and you
-                mark a new one, the previous master is demoted to SLAVE automatically.
+                At most one unit may be UNIQUE. If a unique copy already exists for this product in your branch and you
+                mark a new one, the previous unique copy is demoted to COPY automatically.
               </p>
             </div>
 

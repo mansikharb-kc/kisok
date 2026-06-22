@@ -8,50 +8,73 @@ body {
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #18181b;
+  font-family: var(--font-outfit), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1c1c1e;
   /* Soft monochrome backdrop so glass surfaces read as glass */
-  background: linear-gradient(135deg, #e8e8ea 0%, #f4f4f5 45%, #e4e4e7 100%);
+  background: linear-gradient(135deg, #f4f4f7 0%, #fafafa 45%, #efeff4 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
 }
 
 /* ── Glass surfaces ─────────────────────────────────────────────── */
 .glass {
-  background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 28px -14px rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 12px 30px -10px rgba(0, 0, 0, 0.06);
 }
 
 .glass-dark {
-  /* Light theme: solid black sidebar */
-  background-color: rgba(10, 10, 12, 0.97);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 40%);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Light theme: deep dark slate sidebar */
+  background-color: #0b0b0f;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Dark theme: keep it glassy/translucent over the dark body */
 html.dark .glass-dark {
-  background-color: rgba(20, 20, 22, 0.55);
+  background-color: rgba(13, 13, 17, 0.75);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Make the common Tailwind card pattern glassy automatically */
 .glass-auto {
-  background-color: rgba(255, 255, 255, 0.6) !important;
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Ambient glow containers */
+.glow-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-bg::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.04) 0%, rgba(168, 85, 247, 0.01) 60%, transparent 100%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ── Dark theme (toggled via `dark` class on <html>) ───────────── */
 html.dark body {
-  color: #e7e7ea;
-  background: linear-gradient(135deg, #0b0b0d 0%, #161618 45%, #0b0b0d 100%);
+  color: #ededf0;
+  background: linear-gradient(135deg, #09090b 0%, #121215 50%, #09090b 100%);
 }
 
 html.dark .glass {

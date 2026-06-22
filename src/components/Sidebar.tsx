@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { NavItem } from "@/lib/rbac";
 
 function Chevron({ dir }: { dir: "up" | "left" | "right" }) {
@@ -95,28 +95,33 @@ function ThemeIcon({ dark }: { dark: boolean }) {
 function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; pathname: string }) {
   const [open, setOpen] = useState(true);
   return (
-    <div>
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2 mb-1 group">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/75 group-hover:text-white transition-colors">
+    <div className="space-y-1">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2.5 py-1 mb-1 group rounded-lg hover:bg-white/5 transition-colors">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white/80 transition-colors">
           {name}
         </span>
-        <span className="text-white/75 group-hover:text-white transition-colors">
+        <span className="text-white/40 group-hover:text-white/80 transition-colors">
           <Chevron dir={open ? "up" : "left"} />
         </span>
       </button>
       <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", transition: "max-height 0.25s ease" }}>
-        <div className="space-y-0.5">
+        <div className="space-y-1 pl-1">
           {items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded px-3 py-2 text-sm transition ${
-                  active ? "bg-white/15 text-white font-medium" : "text-white hover:bg-white/5"
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold tracking-wide transition duration-150 ${
+                  active
+                    ? "bg-white/10 text-white shadow-[inset_3px_0_0_rgba(255,255,255,0.85)]"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                {item.label}
+                <span className={`shrink-0 transition-colors ${active ? "text-white" : "text-white/40"}`}>
+                  <NavIcon href={item.href} />
+                </span>
+                <span>{item.label}</span>
               </Link>
             );
           })}
@@ -131,6 +136,64 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  async function autoLogout() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "timeout" }),
+      });
+    } catch (e) {
+      console.error("Auto-logout error:", e);
+    }
+    router.replace("/login");
+    router.refresh();
+  }
+
+  useEffect(() => {
+    const lastActivity = { current: Date.now() };
+
+    function handleActivity() {
+      lastActivity.current = Date.now();
+    }
+
+    const events = ["mousemove", "keydown", "click", "scroll"];
+    events.forEach((e) => window.addEventListener(e, handleActivity));
+
+    // Check inactivity every 5 seconds (10 minutes = 600,000 ms)
+    const inactivityInterval = setInterval(() => {
+      if (Date.now() - lastActivity.current >= 10 * 60 * 1000) {
+        clearInterval(inactivityInterval);
+        autoLogout();
+      }
+    }, 5000);
+
+    // Send heartbeat ping every 1 minute
+    const pingInterval = setInterval(() => {
+      if (Date.now() - lastActivity.current < 10 * 60 * 1000) {
+        fetch("/api/auth/session-ping", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: window.location.pathname }),
+        }).catch((err) => console.error("Heartbeat ping failed:", err));
+      }
+    }, 60000);
+
+    // Initial ping on path changes
+    fetch("/api/auth/session-ping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: window.location.pathname }),
+    }).catch((err) => console.error("Initial ping failed:", err));
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, handleActivity));
+      clearInterval(inactivityInterval);
+      clearInterval(pingInterval);
+    };
+  }, [pathname, router]);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem("kc_sidebar_collapsed") === "1");
@@ -160,99 +223,143 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
   }
 
   async function logout() {
+    setShowConfirmModal(true);
+  }
+
+  async function handleConfirmLogout() {
+    setShowConfirmModal(false);
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
   }
 
   return (
-    <aside
-      className={`glass-dark text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200 ${
-        collapsed ? "w-14" : "w-64"
-      }`}
-    >
-      {/* Header with collapse toggle */}
-      <div className={`flex items-center px-3 py-5 border-b border-white/10 ${collapsed ? "justify-center" : "justify-between"}`}>
-        {!collapsed && (
-          <Link href="/dashboard" className="min-w-0">
-            <div className="text-white font-bold tracking-tight">KC IMS</div>
-            <div className="text-[11px] text-white/60 uppercase tracking-wider">Inventory Management</div>
-          </Link>
-        )}
-        <button
-          onClick={toggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="text-white/80 hover:text-white shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 focus:outline-none"
-        >
-          <Chevron dir={collapsed ? "right" : "left"} />
-        </button>
-      </div>
+    <>
+      <aside
+        className={`glass-dark text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 transition-[width] duration-200 ${
+          collapsed ? "w-14" : "w-64"
+        }`}
+      >
+        {/* Header with collapse toggle */}
+        <div className={`flex items-center px-3 py-5 border-b border-white/10 ${collapsed ? "justify-center" : "justify-between"}`}>
+          {!collapsed && (
+            <Link href="/dashboard" className="min-w-0">
+              <div className="text-white font-bold tracking-tight">KC IMS</div>
+              <div className="text-[11px] text-white/60 uppercase tracking-wider">Inventory Management</div>
+            </Link>
+          )}
+          <button
+            onClick={toggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="text-white/80 hover:text-white shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 focus:outline-none"
+          >
+            <Chevron dir={collapsed ? "right" : "left"} />
+          </button>
+        </div>
 
-      {/* Nav (hidden when collapsed) */}
-      {!collapsed ? (
-        <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-5">
-          {groups.map((g) => (
-            <NavGroup key={g.name} name={g.name} items={g.items} pathname={pathname} />
-          ))}
-        </nav>
-      ) : (
-        <nav className="flex-1 overflow-y-auto scrollbar-hide py-4 flex flex-col items-center gap-1">
-          {groups.map((g) => {
-            const active = g.items.some(
-              (item) => pathname === item.href || pathname.startsWith(item.href + "/")
-            );
-            return (
-              <button
-                key={g.name}
-                onClick={() => toggle()}
-                title={g.name}
-                className={`w-10 h-10 flex items-center justify-center rounded transition ${
-                  active ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <NavIcon href={groupIconHref(g.name)} />
-              </button>
-            );
-          })}
-        </nav>
-      )}
-
-      {/* Footer */}
-      <div className="px-3 py-4 border-t border-white/10">
+        {/* Nav (hidden when collapsed) */}
         {!collapsed ? (
-          <>
-            <div className="text-sm text-white font-medium truncate">{user.name}</div>
-            <div className="text-[11px] text-white/70 truncate">{user.roleLabels.join(", ")}</div>
-            <button
-              onClick={toggleTheme}
-              className="mt-3 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5 flex items-center justify-center gap-2"
-            >
-              <ThemeIcon dark={dark} />
-              {dark ? "Light mode" : "Dark mode"}
-            </button>
-            <button onClick={logout} className="mt-2 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5">
-              Sign out
-            </button>
-          </>
+          <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-5">
+            {groups.map((g) => (
+              <NavGroup key={g.name} name={g.name} items={g.items} pathname={pathname} />
+            ))}
+          </nav>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              title={dark ? "Light mode" : "Dark mode"}
-              className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none"
-            >
-              <ThemeIcon dark={dark} />
-            </button>
-            <button onClick={logout} aria-label="Sign out" className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </button>
-          </div>
+          <nav className="flex-1 overflow-y-auto scrollbar-hide py-4 flex flex-col items-center gap-1">
+            {groups.map((g) => {
+              const active = g.items.some(
+                (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+              );
+              return (
+                <button
+                  key={g.name}
+                  onClick={() => toggle()}
+                  title={g.name}
+                  className={`w-10 h-10 flex items-center justify-center rounded transition ${
+                    active ? "bg-white/15 text-white" : "text-white/80 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <NavIcon href={groupIconHref(g.name)} />
+                </button>
+              );
+            })}
+          </nav>
         )}
-      </div>
-    </aside>
+
+        {/* Footer */}
+        <div className="px-3 py-4 border-t border-white/10">
+          {!collapsed ? (
+            <>
+              <div className="text-sm text-white font-medium truncate">{user.name}</div>
+              <div className="text-[11px] text-white/70 truncate">{user.roleLabels.join(", ")}</div>
+              <button
+                onClick={toggleTheme}
+                className="mt-3 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5 flex items-center justify-center gap-2"
+              >
+                <ThemeIcon dark={dark} />
+                {dark ? "Light mode" : "Dark mode"}
+              </button>
+              <button onClick={logout} className="mt-2 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5">
+                Sign out
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                title={dark ? "Light mode" : "Dark mode"}
+                className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none"
+              >
+                <ThemeIcon dark={dark} />
+              </button>
+              <button onClick={logout} aria-label="Sign out" className="w-full flex justify-center text-white/80 hover:text-white py-1.5 rounded hover:bg-white/10 focus:outline-none">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-sm w-full p-6 space-y-4 animate-scale-in">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sign Out</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Are you sure you want to sign out of the KC IMS console?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="rounded-lg bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700 transition"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

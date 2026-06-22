@@ -10,6 +10,7 @@ export type SessionUser = {
   email: string;
   name: string;
   roles: SessionRole[];
+  sessionLogId?: string;
 };
 
 function secret(): Uint8Array {
@@ -19,7 +20,12 @@ function secret(): Uint8Array {
 }
 
 export async function signSession(user: SessionUser): Promise<string> {
-  return new SignJWT({ email: user.email, name: user.name, roles: user.roles })
+  return new SignJWT({
+    email: user.email,
+    name: user.name,
+    roles: user.roles,
+    sessionLogId: user.sessionLogId,
+  })
     .setProtectedHeader({ alg: ALG })
     .setSubject(user.uid)
     .setIssuedAt()
@@ -35,6 +41,7 @@ export async function verifySession(token: string): Promise<SessionUser | null> 
       email: String(payload.email),
       name: String(payload.name),
       roles: (payload.roles as SessionRole[]) ?? [],
+      sessionLogId: payload.sessionLogId ? String(payload.sessionLogId) : undefined,
     };
   } catch {
     return null;

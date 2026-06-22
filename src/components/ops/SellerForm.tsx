@@ -69,7 +69,7 @@ type CustomField = {
   isRequired: boolean;
 };
 
-const MEMBER_TYPES = ["Paid", "Sponsor", "Barter"];
+const MEMBER_TYPES = ["Paid", "Sponsor", "Barter", "Free"];
 
 type SellerEdit = {
   id: string;
@@ -765,9 +765,10 @@ export default function SellerForm({
             <label className={L}>Membership ID</label>
             <input
               value={membershipId}
-              onChange={(e) => setMembershipId(e.target.value)}
-              className={I}
-              placeholder="e.g. MEM-123"
+              disabled
+              readOnly
+              className={`${I} bg-slate-50 cursor-not-allowed text-slate-500 font-mono`}
+              placeholder={editing ? "No membership ID" : "Auto-generated on save"}
             />
           </div>
           <div>

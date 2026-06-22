@@ -606,7 +606,7 @@ export default function SkuOnboardingChecklist({
       const existing = existingCopies[i];
       initialRows.push({
         sampleSizeId: existing?.sampleSizeId ?? "",
-        isMaster: existing ? existing.copyRole === "MASTER" : i === 0,
+        isMaster: existing ? existing.copyRole === "UNIQUE" : i === 0,
       });
     }
     setModalRows(initialRows);
@@ -653,14 +653,14 @@ export default function SkuOnboardingChecklist({
     if (!finalLocationId) return setModalError("Please select a placement location.");
 
     const masterCount = modalRows.filter((r) => r.isMaster).length;
-    if (masterCount !== 1) return setModalError("Exactly one copy must be marked MASTER.");
+    if (masterCount !== 1) return setModalError("Exactly one copy must be marked UNIQUE.");
 
     const payload = {
       localRecordId: targetRecord.id,
       locationNodeId: finalLocationId,
       copies: modalRows.map((r) => ({
         sampleSizeId: r.sampleSizeId || undefined,
-        role: r.isMaster ? "MASTER" : "SLAVE",
+        role: r.isMaster ? "UNIQUE" : "COPY",
       })),
     };
 
@@ -1060,7 +1060,7 @@ export default function SkuOnboardingChecklist({
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0">
                                             <span className={`px-1 rounded text-[8px] font-extrabold tracking-wide select-none ${
-                                              c.copyRole === "MASTER" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                                              c.copyRole === "UNIQUE" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
                                             }`}>
                                               {c.copyRole}
                                             </span>
@@ -1258,13 +1258,13 @@ export default function SkuOnboardingChecklist({
                           <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors ${
                             row.isMaster ? "bg-brand-100 text-brand-800 font-extrabold" : "bg-slate-100 text-slate-400"
                           }`}>
-                            MASTER
+                            UNIQUE
                           </span>
                         </label>
                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold select-none ${
                           !row.isMaster ? "bg-slate-200 text-slate-700 font-extrabold" : "bg-slate-50 text-slate-350"
                         }`}>
-                          SLAVE
+                          COPY
                         </span>
                       </div>
                     </div>
@@ -1273,7 +1273,7 @@ export default function SkuOnboardingChecklist({
               </div>
 
               <p className="text-[11px] text-slate-400 leading-normal">
-                Exactly one unit must be marked MASTER. If a master already exists for this product in your branch, saving will update role allocations accordingly.
+                Exactly one unit must be marked UNIQUE. If a unique copy already exists for this product in your branch, saving will update role allocations accordingly.
               </p>
             </div>
 
@@ -1591,7 +1591,7 @@ export default function SkuOnboardingChecklist({
                                 <div key={copy.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-xs items-center hover:bg-slate-50/30 transition-colors">
                                   <div className="col-span-2">
                                     <span className={`px-2 py-0.5 rounded-md text-[8px] font-extrabold tracking-wide ${
-                                      copy.copyRole === "MASTER" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                                      copy.copyRole === "UNIQUE" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
                                     }`}>
                                       {copy.copyRole}
                                     </span>

@@ -15,7 +15,7 @@ const createSchema = z.object({
     .array(
       z.object({
         sampleSizeId: z.coerce.bigint().optional().nullable(),
-        role: z.enum(["MASTER", "SLAVE"]),
+        role: z.enum(["UNIQUE", "COPY"]),
       }),
     )
     .min(1, "At least one copy is required")
@@ -86,9 +86,9 @@ export const POST = handler(async (req: Request) => {
 
   const { localRecordId, locationNodeId, copies } = parsed.data;
 
-  // At most one MASTER in the request.
-  const requestedMasters = copies.filter((c) => c.role === "MASTER").length;
-  if (requestedMasters > 1) return fail("At most one copy may be marked MASTER", 422);
+  // At most one UNIQUE in the request.
+  const requestedMasters = copies.filter((c) => c.role === "UNIQUE").length;
+  if (requestedMasters > 1) return fail("At most one copy may be marked UNIQUE", 422);
 
   // --- Validate the onboarding record: assigned seller + exec's branch. ---
   const record = await prisma.localOnboardingRecord.findUnique({
@@ -138,15 +138,15 @@ export const POST = handler(async (req: Request) => {
 
   // --- Single-master invariant. ---
   const existingMaster = await prisma.productCopy.findFirst({
-    where: { brandProductId, branchId, copyRole: "MASTER" },
+    where: { brandProductId, branchId, copyRole: "UNIQUE" },
     select: { id: true },
   });
   const wantsMaster = requestedMasters === 1;
   // If a master already exists and the request does not designate a new one,
-  // every new copy must be a SLAVE. If the request designates a new master,
+  // every new copy must be a COPY. If the request designates a new master,
   // we will demote the old one inside the transaction.
   const effectiveRoles = copies.map((c) =>
-    c.role === "MASTER" && (wantsMaster ? true : false) ? "MASTER" : "SLAVE",
+    c.role === "UNIQUE" && (wantsMaster ? true : false) ? "UNIQUE" : "COPY",
   );
 
   // --- Find existing copies for this local onboarding record to update them in-place if possible ---
@@ -216,8 +216,8 @@ export const POST = handler(async (req: Request) => {
     // Demote the previous master if this request designates a new one.
     if (wantsMaster && existingMaster) {
       await tx.productCopy.updateMany({
-        where: { brandProductId, branchId, copyRole: "MASTER" },
-        data: { copyRole: "SLAVE" },
+        where: { brandProductId, branchId, copyRole: "UNIQUE" },
+        data: { copyRole: "COPY" },
       });
     }
 

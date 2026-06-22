@@ -33,6 +33,7 @@ model User {
   roles       UserRole[]
   assignments SellerAssignment[] @relation("ExecAssignments")
   reminders   Reminder[]
+  sessionLogs UserSessionLog[]
 
   @@map("users")
 }
@@ -723,7 +724,7 @@ model ProductCopy {
   branchId       BigInt   @map("branch_id") @db.UnsignedBigInt
   sequenceNo     Int      @map("sequence_no")
   instanceCode   String   @unique @map("instance_code") @db.VarChar(128)
-  copyRole       String   @default("SLAVE") @map("copy_role") @db.VarChar(10)
+  copyRole       String   @default("COPY") @map("copy_role") @db.VarChar(10)
   sampleSizeId   BigInt?  @map("sample_size_id") @db.UnsignedBigInt
   locationNodeId BigInt?  @map("location_node_id") @db.UnsignedBigInt
   qrMediaId      BigInt?  @map("qr_media_id") @db.UnsignedBigInt
@@ -976,3 +977,21 @@ model Reminder {
   @@index([userId])
   @@map("reminders")
 }
+
+model UserSessionLog {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt    @map("user_id") @db.UnsignedBigInt
+  username    String    @db.VarChar(120)
+  fullName    String    @db.VarChar(150)
+  role        String    @db.VarChar(100) // Role/dashboard active during session
+  loginTime   DateTime  @default(now()) @map("login_time")
+  logoutTime  DateTime? @map("logout_time")
+  logoutType  String?   @map("logout_type") @db.VarChar(20) // "manual" | "timeout"
+  lastActive  DateTime  @default(now()) @map("last_active")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_session_logs")
+}
+

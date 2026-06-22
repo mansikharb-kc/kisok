@@ -59,6 +59,7 @@ export const NAV: NavItem[] = [
   { href: "/ops/activity",      label: "Activity",         group: "Operations", roles: ["OB_EXEC", "ONB_LEAD"] },
   { href: "/ops/flags",         label: "Flags",            group: "Operations", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"] },
   { href: "/ops/tickets",       label: "Tickets",          group: "Operations", roles: ["PROJECT_USER", "CONCIERGE_MANAGER"] },
+  { href: "/ops/user-logins",   label: "User Logins",      group: "Operations", roles: ["ONB_LEAD"] },
 
   // Admin
   { href: "/users/role/ho-admin", label: "HO Admins", group: "Users", roles: ["HO_ADMIN"] },

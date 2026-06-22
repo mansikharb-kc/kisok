@@ -19,7 +19,7 @@ type CustomField = {
   isRequired: boolean;
 };
 
-const MEMBER_TYPES = ["Paid", "Sponsor", "Barter"];
+const MEMBER_TYPES = ["Paid", "Sponsor", "Barter", "Free"];
 const inputCls =
   "w-full rounded border border-slate-300 bg-white/60 backdrop-blur-md px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 const labelCls = "block text-sm font-semibold text-slate-900 mb-1";
@@ -320,7 +320,13 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
             </div>
             <div>
               <label className={labelCls}>Membership ID</label>
-              <input value={membershipId} onChange={(e) => setMembershipId(e.target.value)} className={`${inputCls} font-mono`} placeholder="Auto (MEM-####) — leave blank" />
+              <input
+                value={membershipId}
+                disabled
+                readOnly
+                className={`${inputCls} bg-slate-50 cursor-not-allowed text-slate-500 font-mono`}
+                placeholder="Auto (MEM-####) — leave blank"
+              />
             </div>
             <div>
               <label className={labelCls}>Type of member</label>

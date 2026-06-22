@@ -8,6 +8,7 @@ import { slugify } from "@/lib/categoryLevels";
 const schema = z.object({
   parentId: z.coerce.bigint().nullable().optional(),
   names: z.array(z.string().trim().min(1).max(120)).min(1).max(500),
+  remarks: z.string().trim().min(1, "Remarks/Description is required").optional().nullable(),
 });
 
 export const POST = handler(async (req: Request) => {
@@ -17,7 +18,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { parentId } = parsed.data;
+  const { parentId, remarks } = parsed.data;
   // de-dupe input names (case-insensitive), preserve order
   const seen = new Set<string>();
   const names: string[] = [];
@@ -36,13 +37,16 @@ export const POST = handler(async (req: Request) => {
 
   // Branch Admin → one pending change request per name (created only on HO approval).
   if (!isHo) {
+    if (!remarks) {
+      return fail("Remarks/Description is required for approvals", 422);
+    }
     const branchId = session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId)?.branchId;
     await prisma.$transaction(
       names.map((name) =>
         prisma.changeRequest.create({
           data: {
             type: "NEW_CATEGORY",
-            payload: { name, code: slugify(name) || "category", parentId: parentId ? parentId.toString() : null },
+            payload: { name, code: slugify(name) || "category", parentId: parentId ? parentId.toString() : null, remarks },
             branchId: branchId ? BigInt(branchId) : null,
             requestedBy: BigInt(session.uid),
             status: "pending",
@@ -54,7 +58,7 @@ export const POST = handler(async (req: Request) => {
       actorUserId: session.uid,
       action: "category.request",
       entityType: "ChangeRequest",
-      after: { type: "NEW_CATEGORY", names: names.slice(0, 10) },
+      after: { type: "NEW_CATEGORY", names: names.slice(0, 10), remarks },
     });
     return ok({ requested: names.length, pending: true }, { status: 202 });
   }

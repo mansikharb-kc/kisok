@@ -42,11 +42,21 @@ export const POST = handler(async (req: Request) => {
     branchId: ur.branchId ? ur.branchId.toString() : null,
   }));
 
+  const sessionLog = await prisma.userSessionLog.create({
+    data: {
+      userId: user.id,
+      username: user.username || user.email,
+      fullName: user.fullName,
+      role: roles[0]?.code || "unknown",
+    },
+  });
+
   const token = await signSession({
     uid: user.id.toString(),
     email: user.email,
     name: user.fullName,
     roles,
+    sessionLogId: sessionLog.id.toString(),
   });
   await setSessionCookie(token);
 

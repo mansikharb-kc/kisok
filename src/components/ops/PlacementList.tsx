@@ -121,7 +121,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                       <div>
                         <span
                           className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            c.copyRole === "MASTER" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
+                            c.copyRole === "UNIQUE" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
                           }`}
                         >
                           {c.copyRole}
@@ -241,7 +241,7 @@ export default function PlacementList({ rows }: { rows: Row[] }) {
                       <div>
                         <span
                           className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
-                            c.copyRole === "MASTER" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
+                            c.copyRole === "UNIQUE" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
                           }`}
                         >
                           {c.copyRole}

@@ -40,13 +40,14 @@ export default function CategoryCreateForm({
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [remarks, setRemarks] = useState("");
 
   const meta = levelMeta(level);
   const needsParent = level > 1;
   const ancestorLevels = Array.from({ length: level - 1 }, (_, i) => i + 1);
   const parentId = needsParent ? sel[level - 1] ?? null : null;
   const names = text.split("\n").map((s) => s.trim()).filter(Boolean);
-  const canSubmit = names.length > 0 && (!needsParent || !!parentId);
+  const canSubmit = names.length > 0 && (!needsParent || !!parentId) && (!isRequest || remarks.trim().length > 0);
 
   function optionsForLevel(k: number) {
     if (k === 1) return parents.filter((p) => p.level === 1);
@@ -96,7 +97,7 @@ export default function CategoryCreateForm({
       const res = await fetch("/api/categories/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentId, names }),
+        body: JSON.stringify({ parentId, names, remarks: isRequest ? remarks : null }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -254,6 +255,22 @@ export default function CategoryCreateForm({
             {names.length > 0 && <span className="text-slate-500"> — {names.length} will be created</span>}
           </p>
         </div>
+        
+        {isRequest && (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">
+              Remarks / Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              rows={3}
+              required
+              placeholder="Provide a reason or description for this category request..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
+            />
+          </div>
+        )}
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3 pt-1">

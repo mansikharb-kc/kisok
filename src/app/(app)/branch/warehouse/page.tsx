@@ -120,7 +120,7 @@ export default async function Page({
     );
   }
 
-  const [nodeRows, branchProgram] = await Promise.all([
+  const [nodeRows, branchProgram, categoryRows] = await Promise.all([
     prisma.locationNode.findMany({
       where: { branchId, programId: selectedProgram.id },
       orderBy: [{ path: "asc" }, { name: "asc" }],
@@ -147,16 +147,23 @@ export default async function Page({
         },
         _count: { select: { children: true, copies: true } },
         copies: { where: { status: "active" }, select: { copyRole: true } },
+        nodeCategories: { select: { categoryId: true } },
       },
     }),
     prisma.branchProgram.findUnique({
       where: { branchId_programId: { branchId, programId: selectedProgram.id } },
       select: { flowSteps: true },
     }),
+    prisma.category.findMany({
+      where: { status: "active" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, code: true, parentId: true },
+    }),
   ]);
 
   const nodes: LocationNode[] = serialize(nodeRows) as any;
   const dbFlowSteps = branchProgram?.flowSteps ? (branchProgram.flowSteps as any) : null;
+  const categoriesList = serialize(categoryRows) as any[];
 
   return (
     <div className="space-y-2">
@@ -169,6 +176,7 @@ export default async function Page({
         programName={selectedProgram.name}
         initial={nodes}
         initialFlowSteps={dbFlowSteps}
+        categories={categoriesList}
         canEdit={isBranchAdmin}
       />
     </div>

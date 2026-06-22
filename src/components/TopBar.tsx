@@ -33,7 +33,7 @@ export default function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 glass border-b border-slate-200/70">
+    <header className="sticky top-0 z-20 glass border-b border-slate-200/50 shadow-sm">
       <div className="max-w-6xl mx-auto w-full px-8 h-14 flex items-center justify-between">
         <nav className="flex items-center gap-2 text-sm min-w-0">
           {showBack && (

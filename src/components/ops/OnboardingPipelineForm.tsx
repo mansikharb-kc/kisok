@@ -290,7 +290,7 @@ export default function OnboardingPipelineForm({
         return;
       }
       if (!reqSample && !reqSpaceAndRack && !reqKt) {
-        setError("Please select at least one onboarding request (Requested Space/Rack, Requested Sample, or Requested KT) to initiate.");
+        setError("Please select at least one onboarding request (Requested Space/Rack, Requested Sample, or Requested Knowledge Transfer) to initiate.");
         return;
       }
     }
@@ -760,7 +760,7 @@ export default function OnboardingPipelineForm({
                       className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
                     />
                     <label htmlFor="reqKtCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
-                      Requested KT
+                      Requested Knowledge Transfer
                     </label>
                   </div>
                 </div>

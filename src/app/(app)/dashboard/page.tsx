@@ -5,6 +5,20 @@ import { timeAgo, actionLabel, actionTone, auditTarget } from "@/lib/format";
 import LeadAssignmentsTable from "@/components/ops/LeadAssignmentsTable";
 import RecentActivityClient from "@/components/dashboard/RecentActivityClient";
 import DashboardTicketsList from "@/components/ops/DashboardTicketsList";
+import {
+  FolderTree,
+  Tag,
+  Milestone,
+  GraduationCap,
+  Users,
+  Package,
+  Layers,
+  CheckSquare,
+  Warehouse,
+  FileCheck,
+  Clock,
+  Printer
+} from "lucide-react";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
   let whereClause = {};
@@ -351,7 +365,7 @@ async function getBranchWarehouseOccupancy(branchId: bigint) {
   for (const node of eligibleNodes) {
     if (node.copies.length > 0) {
       occupied++;
-      const hasMaster = node.copies.some((c) => c.copyRole === "MASTER");
+      const hasMaster = node.copies.some((c) => c.copyRole === "UNIQUE");
       if (hasMaster) {
         masterLocations++;
       } else {
@@ -622,37 +636,61 @@ export default async function DashboardPage() {
       {isHo || (!branchId && !opsBranchId) ? (
         // HO Admin Global Dashboard
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.categories as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Categories</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+              <FolderTree className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.categories as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Categories</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.attributes as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Attributes</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-emerald-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-emerald-500 transition-colors">
+              <Tag className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.attributes as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Attributes</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.brands as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Brands</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-blue-500 transition-colors">
+              <Milestone className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.brands as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Brands</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.programs as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Programs</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-purple-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-purple-500 transition-colors">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.programs as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Programs</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.sellers as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Sellers</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-amber-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-amber-500 transition-colors">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.sellers as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Sellers</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.products as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Products (SKUs)</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+              <Package className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.products as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Products (SKUs)</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.copies as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Physical Copies</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-teal-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-teal-500 transition-colors">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.copies as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Physical Copies</div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-4 shadow-sm">
-            <div className="text-2xl font-bold">{countsData.pendingApprovals as number}</div>
-            <div className="text-xs text-slate-500 mt-1">Pending Approvals</div>
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-rose-400 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-rose-500 transition-colors">
+              <CheckSquare className="w-5 h-5" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.pendingApprovals as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Pending Approvals</div>
           </div>
         </div>
       ) : branchId ? (
@@ -660,40 +698,58 @@ export default async function DashboardPage() {
         <div className="space-y-5">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Operations</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Branch Operations</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                <div className="text-xs font-medium text-slate-400">Sellers</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.sellers as number}</div>
-                <div className="text-xs text-slate-500 mt-1">{countsData.assignedSellers as number} assigned to execs</div>
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-indigo-400 transition-all duration-200 group">
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Sellers</div>
+                <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{countsData.sellers as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">{countsData.assignedSellers as number} assigned to execs</div>
               </div>
-              <a href="/branch/warehouse" className="group rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Location IDs</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.locations as number}</div>
-                <div className="text-xs text-slate-500 mt-1">placement-eligible nodes</div>
+              <a href="/branch/warehouse" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-500 hover:shadow-md transition-all duration-200">
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-brand-500 transition-colors">
+                  <Warehouse className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-brand-600">Location IDs</div>
+                <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{countsData.locations as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">placement-eligible nodes</div>
               </a>
-              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                <div className="text-xs font-medium text-slate-400">Copies on shelf</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.copies as number}</div>
-                <div className="text-xs text-slate-500 mt-1">
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-emerald-400 transition-all duration-200 group">
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-emerald-500 transition-colors">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Copies on shelf</div>
+                <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{countsData.copies as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">
                   {countsData.labeledCopies as number} labeled · {countsData.pendingCopies as number} pending
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                <div className="text-xs font-medium text-slate-400">Products onboarded</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.branchProducts as number}</div>
-                <div className="text-xs text-slate-500 mt-1">of {countsData.totalProducts as number} total SKUs</div>
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-indigo-400 transition-all duration-200 group">
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Products onboarded</div>
+                <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{countsData.branchProducts as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">of {countsData.totalProducts as number} total SKUs</div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                <div className="text-xs font-medium text-slate-400">Open consignments</div>
-                <div className="text-3xl font-bold mt-1 text-slate-900">{countsData.openConsignments as number}</div>
-                <div className="text-xs text-slate-500 mt-1">in progress</div>
+              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-blue-400 transition-all duration-200 group">
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-blue-500 transition-colors">
+                  <Milestone className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Open consignments</div>
+                <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{countsData.openConsignments as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">in progress</div>
               </div>
-              <div className={`rounded-lg border p-5 shadow-sm ${(countsData.pendingApprovals as number) > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white/60 backdrop-blur-md"}`}>
-                <div className={`text-xs font-medium ${(countsData.pendingApprovals as number) > 0 ? "text-amber-600" : "text-slate-400"}`}>HO Approvals pending</div>
-                <div className={`text-3xl font-bold mt-1 ${(countsData.pendingApprovals as number) > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals as number}</div>
-                <div className="text-xs text-slate-500 mt-1">change requests awaiting HO</div>
+              <div className={`relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all duration-200 group ${(countsData.pendingApprovals as number) > 0 ? "border-amber-300 bg-amber-50/50 hover:border-amber-400" : "border-slate-200 bg-white/60 backdrop-blur-md hover:border-rose-400"}`}>
+                <div className="absolute top-4 right-4 text-slate-400 group-hover:text-amber-500 transition-colors">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <div className={`text-xs font-medium uppercase tracking-wider ${(countsData.pendingApprovals as number) > 0 ? "text-amber-600" : "text-slate-500"}`}>HO Approvals pending</div>
+                <div className={`text-3xl font-black mt-1.5 leading-none ${(countsData.pendingApprovals as number) > 0 ? "text-amber-700" : "text-slate-900"}`}>{countsData.pendingApprovals as number}</div>
+                <div className="text-xs text-slate-400 mt-2 font-medium">change requests awaiting HO</div>
               </div>
             </div>
           </div>
@@ -705,60 +761,81 @@ export default async function DashboardPage() {
           {isOnbLead && onbLeadData && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Onboarding Lead Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="/ops/sellers" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Sellers</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.sellersCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">
+                <a href="/ops/sellers" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-500 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-brand-500 transition-colors">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-brand-600">Total Sellers</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{onbLeadData.sellersCount}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">
                     {onbLeadData.assignedCount} assigned · {onbLeadData.unassignedCount} unassigned
                   </div>
                 </a>
-                <a href="/ops/assignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assignments</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.assignedCount}</div>
-                  <div className={`text-xs mt-1 ${onbLeadData.unassignedCount > 0 ? "text-amber-600 font-medium" : "text-slate-500"}`}>
+                <a href="/ops/assignments" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+                    <FileCheck className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-indigo-650">Assignments</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{onbLeadData.assignedCount}</div>
+                  <div className={`text-xs mt-2 font-medium ${onbLeadData.unassignedCount > 0 ? "text-amber-600" : "text-slate-400"}`}>
                     {onbLeadData.unassignedCount} sellers unassigned
                   </div>
                 </a>
-                <a href="/ops/consignments" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Open Consignments</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.openConsignments}</div>
-                  <div className="text-xs text-slate-500 mt-1">not yet closed</div>
+                <a href="/ops/consignments" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-blue-400 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-blue-500 transition-colors">
+                    <Milestone className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-blue-600">Open Consignments</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{onbLeadData.openConsignments}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">not yet closed</div>
                 </a>
-                <a href="/branch/warehouse" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Total Warehouses</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.warehousesCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">active at branch</div>
+                <a href="/branch/warehouse" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-purple-400 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-purple-500 transition-colors">
+                    <Warehouse className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-purple-650">Total Warehouses</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{onbLeadData.warehousesCount}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">active at branch</div>
                 </a>
               </div>
 
               {/* Branch Onboarding Progress */}
               <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Branch Onboarding Progress</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Branch Onboarding Progress</div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                    <div className="text-xs font-medium text-slate-400">Total SKU Records</div>
-                    <div className="text-3xl font-bold mt-1 text-slate-900">{onbLeadData.totalRecords}</div>
-                    <div className="text-xs text-slate-500 mt-1">active products in branch sellers' brands</div>
+                  <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-slate-350 transition-all duration-200 group">
+                    <div className="absolute top-4 right-4 text-slate-400">
+                      <Package className="w-5 h-5" />
+                    </div>
+                    <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total SKU Records</div>
+                    <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{onbLeadData.totalRecords}</div>
+                    <div className="text-xs text-slate-400 mt-2 font-medium">active products in branch sellers' brands</div>
                   </div>
-                  <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                     <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarded SKUs</div>
-                     <div className="text-3xl font-bold mt-1 text-emerald-600">{onbLeadData.productsOnboarded}</div>
-                     <div className="text-xs text-slate-500 mt-1">onboarding records created branch-wide</div>
+                  <a href="/ops/onboarding" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-emerald-400 hover:shadow-md transition-all duration-200">
+                     <div className="absolute top-4 right-4 text-emerald-400 group-hover:text-emerald-500 transition-colors">
+                       <Layers className="w-5 h-5" />
+                     </div>
+                     <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-emerald-600">Onboarded SKUs</div>
+                     <div className="text-3xl font-black mt-1.5 text-emerald-600 leading-none">{onbLeadData.productsOnboarded}</div>
+                     <div className="text-xs text-slate-400 mt-2 font-medium">onboarding records created branch-wide</div>
                   </a>
-                  <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                     <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Pending Onboarding</div>
-                     <div className="text-3xl font-bold mt-1 text-amber-600">{onbLeadData.notOnboardedRecords}</div>
-                     <div className="text-xs text-slate-500 mt-1">remaining products to onboard</div>
+                  <a href="/ops/onboarding" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-amber-400 hover:shadow-md transition-all duration-200">
+                     <div className="absolute top-4 right-4 text-amber-400 group-hover:text-amber-500 transition-colors">
+                       <Clock className="w-5 h-5" />
+                     </div>
+                     <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-amber-600">Pending Onboarding</div>
+                     <div className="text-3xl font-black mt-1.5 text-amber-600 leading-none">{onbLeadData.notOnboardedRecords}</div>
+                     <div className="text-xs text-slate-400 mt-2 font-medium">remaining products to onboard</div>
                   </a>
                 </div>
               </div>
 
               {/* Onboarding Request Tickets */}
               <div className="space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Request Tickets</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Onboarding Request Tickets</div>
                 <DashboardTicketsList tickets={serializedDashboardTickets} userRoles={session.roles.map(r => r.code)} />
               </div>
             </div>
@@ -768,28 +845,40 @@ export default async function DashboardPage() {
           {isOBExec && obExecData && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Onboarding Exec Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Assigned Sellers</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.assignedSellersCount}</div>
-                  <div className="text-xs text-slate-500 mt-1">sellers assigned to you</div>
+                <a href="/ops/onboarding" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-500 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-brand-500 transition-colors">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-brand-600">Assigned Sellers</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{obExecData.assignedSellersCount}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">sellers assigned to you</div>
                 </a>
-                <a href="/ops/consignments" className={`group rounded-xl border p-5 shadow-sm hover:shadow-md transition-all ${obExecData.pendingConsignments > 0 ? "border-amber-200 bg-amber-50 hover:border-amber-300" : "border-slate-200 bg-white/60 backdrop-blur-md hover:border-brand-300"}`}>
-                  <div className={`text-xs font-medium ${obExecData.pendingConsignments > 0 ? "text-amber-600" : "text-slate-400 group-hover:text-brand-600"}`}>Pending Consignments</div>
-                  <div className={`text-3xl font-bold mt-1 ${obExecData.pendingConsignments > 0 ? "text-amber-700" : "text-slate-900"}`}>{obExecData.pendingConsignments}</div>
-                  <div className="text-xs text-slate-500 mt-1">awaiting executive verification</div>
+                <a href="/ops/consignments" className={`relative overflow-hidden group block rounded-xl border p-5 shadow-sm hover:shadow-md transition-all duration-200 ${obExecData.pendingConsignments > 0 ? "border-amber-300 bg-amber-50/50 hover:border-amber-400" : "border-slate-200 bg-white/60 backdrop-blur-md hover:border-blue-400"}`}>
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-amber-500 transition-colors">
+                    <Milestone className="w-5 h-5" />
+                  </div>
+                  <div className={`text-xs font-medium uppercase tracking-wider ${obExecData.pendingConsignments > 0 ? "text-amber-600" : "text-slate-500 group-hover:text-blue-600"}`}>Pending Consignments</div>
+                  <div className={`text-3xl font-black mt-1.5 leading-none ${obExecData.pendingConsignments > 0 ? "text-amber-700" : "text-slate-900"}`}>{obExecData.pendingConsignments}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">awaiting executive verification</div>
                 </a>
-                <a href="/ops/onboarding" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Onboarding Progress</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.productsOnboarded} / {obExecData.totalRecords}</div>
-                  <div className="text-xs text-slate-500 mt-1">{obExecData.notOnboardedRecords} SKUs pending</div>
+                <a href="/ops/onboarding" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-indigo-605">Onboarding Progress</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{obExecData.productsOnboarded} / {obExecData.totalRecords}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">{obExecData.notOnboardedRecords} SKUs pending</div>
                 </a>
-                <a href="/ops/placement" className="group rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-brand-300 hover:shadow-md transition-all">
-                  <div className="text-xs font-medium text-slate-400 group-hover:text-brand-600">Physical Copies</div>
-                  <div className="text-3xl font-bold mt-1 text-slate-900">{obExecData.copiesPlaced + obExecData.copiesUnplaced}</div>
-                  <div className="text-xs text-slate-500 mt-1">
+                <a href="/ops/placement" className="relative overflow-hidden group block rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:border-emerald-400 hover:shadow-md transition-all duration-200">
+                  <div className="absolute top-4 right-4 text-slate-400 group-hover:text-emerald-500 transition-colors">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider group-hover:text-emerald-600">Physical Copies</div>
+                  <div className="text-3xl font-black mt-1.5 text-slate-900 leading-none">{obExecData.copiesPlaced + obExecData.copiesUnplaced}</div>
+                  <div className="text-xs text-slate-400 mt-2 font-medium">
                     {obExecData.copiesPlaced} placed · {obExecData.copiesUnplaced} unplaced
                   </div>
                 </a>
@@ -801,43 +890,43 @@ export default async function DashboardPage() {
           {isConsignment && consignmentData && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Consignment Overview</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Consignment Overview</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(
                   [
-                    { key: "initiated", label: "Initiated", color: "bg-blue-50 text-blue-700 border-blue-200" },
-                    { key: "received", label: "Received", color: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-                    { key: "in_buffer", label: "In Buffer", color: "bg-amber-50 text-amber-700 border-amber-200" },
-                    { key: "fabricating", label: "Fabricating", color: "bg-orange-50 text-orange-700 border-orange-200" },
-                    { key: "qc", label: "In QC", color: "bg-purple-50 text-purple-700 border-purple-200" },
-                    { key: "passed_back", label: "Passed Back", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                    { key: "initiated", label: "Initiated", color: "bg-blue-50/50 hover:bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-300" },
+                    { key: "received", label: "Received", color: "bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-indigo-300" },
+                    { key: "in_buffer", label: "In Buffer", color: "bg-amber-50/50 hover:bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300" },
+                    { key: "fabricating", label: "Fabricating", color: "bg-orange-50/50 hover:bg-orange-50 text-orange-700 border-orange-200 hover:border-orange-300" },
+                    { key: "qc", label: "In QC", color: "bg-purple-50/50 hover:bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-300" },
+                    { key: "passed_back", label: "Passed Back", color: "bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300" },
                   ] as { key: string; label: string; color: string }[]
                 ).map(({ key, label, color }) => (
                   <a
                     href={`/ops/consignments?tab=consignments&status=${key}`}
                     key={key}
-                    className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all hover:border-slate-300 block ${color}`}
+                    className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all block ${color}`}
                   >
-                    <div className="text-xs font-medium opacity-80">{label}</div>
-                    <div className="text-3xl font-bold mt-1">{(consignmentData!.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wider opacity-75">{label}</div>
+                    <div className="text-3xl font-black mt-1.5">{(consignmentData!.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
                   </a>
                 ))}
                 <a
                   href="/ops/consignments?tab=consignments&status=qc"
-                  className="rounded-xl border border-purple-200 bg-purple-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 block"
+                  className="rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 block"
                 >
-                  <div className="text-xs font-medium text-purple-700 opacity-80">Pending QC Items</div>
-                  <div className="text-3xl font-bold mt-1 text-purple-700">{consignmentData.pendingQcItems}</div>
-                  <div className="text-xs mt-1 text-purple-500 font-medium">awaiting inspection</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-purple-700 opacity-75">Pending QC Items</div>
+                  <div className="text-3xl font-black mt-1.5 text-purple-750">{consignmentData.pendingQcItems}</div>
+                  <div className="text-xs mt-2 text-purple-500 font-semibold">awaiting inspection</div>
                 </a>
                 <a
                   href="/ops/consignments?tab=consignments&status=passed_back"
-                  className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-emerald-300 block"
+                  className="rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-emerald-300 block"
                 >
-                  <div className="text-xs font-medium text-emerald-700 opacity-80">Passed QC Today</div>
-                  <div className="text-3xl font-bold mt-1 text-emerald-700">{consignmentData.passedToday}</div>
-                  <div className="text-xs mt-1 text-emerald-500 font-medium">items cleared</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700 opacity-75">Passed QC Today</div>
+                  <div className="text-3xl font-black mt-1.5 text-emerald-750">{consignmentData.passedToday}</div>
+                  <div className="text-xs mt-2 text-emerald-500 font-semibold">items cleared</div>
                 </a>
               </div>
               <div className="mt-4">
@@ -881,14 +970,14 @@ export default async function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Active KT Tickets</div>
+                  <div className="text-xs font-medium text-slate-400">Active Knowledge Transfer Tickets</div>
                   <div className="text-3xl font-bold mt-1 text-amber-600">
                     {serializedDashboardTickets.filter(t => t.status !== "RESOLVED" && t.status !== "CLOSED").length}
                   </div>
                   <div className="text-xs text-slate-500 mt-1">requiring coordination</div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm">
-                  <div className="text-xs font-medium text-slate-400">Resolved KT Tickets</div>
+                  <div className="text-xs font-medium text-slate-400">Resolved Knowledge Transfer Tickets</div>
                   <div className="text-3xl font-bold mt-1 text-emerald-600">
                     {serializedDashboardTickets.filter(t => t.status === "RESOLVED" || t.status === "CLOSED").length}
                   </div>
@@ -979,19 +1068,19 @@ export default async function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Master Copy Locations</span>
+                <div className="rounded-xl bg-slate-55 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Unique Copy Locations</span>
                   <div className="flex items-baseline gap-2 mt-2">
                     <span className="text-2xl font-bold text-amber-700">{occupancyData.masterLocations}</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200"> Master</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">Unique</span>
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Slave Copy Only Locations</span>
+                <div className="rounded-xl bg-slate-55 border border-slate-100 p-4 flex flex-col justify-between hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Copy Only Locations</span>
                   <div className="flex items-baseline gap-2 mt-2">
                     <span className="text-2xl font-bold text-indigo-700">{occupancyData.slaveOnlyLocations}</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200"> Slave Only</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">Copy Only</span>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 -- Run AFTER `prisma db push`.
 -- Adds the generated column + unique index that enforces exactly ONE
--- MASTER copy per (brand_product, branch). MySQL ignores NULLs in unique
--- indexes, so any number of SLAVE copies (NULL) are allowed.
+-- UNIQUE copy per (brand_product, branch). MySQL ignores NULLs in unique
+-- indexes, so any number of COPY copies (NULL) are allowed.
 
 SET @col := (SELECT COUNT(*) FROM information_schema.columns
              WHERE table_schema = DATABASE()
@@ -11,7 +11,7 @@ SET @col := (SELECT COUNT(*) FROM information_schema.columns
 SET @sql := IF(@col = 0,
   'ALTER TABLE product_copies
      ADD COLUMN is_master_flag TINYINT
-       GENERATED ALWAYS AS (CASE WHEN copy_role = ''MASTER'' THEN 1 ELSE NULL END) STORED,
+       GENERATED ALWAYS AS (CASE WHEN copy_role = ''UNIQUE'' THEN 1 ELSE NULL END) STORED,
      ADD UNIQUE KEY uq_one_master (brand_product_id, branch_id, is_master_flag)',
   'SELECT "patch already applied" AS note');
 
