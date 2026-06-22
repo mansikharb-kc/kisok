@@ -29,7 +29,15 @@ export const POST = handler(async (req: Request) => {
     path.startsWith("/ops/user-logins") ||
     path.startsWith("/ops/activity")
   ) {
-    activeRole = "ONB_LEAD";
+    const userRoleCodes = session.roles.map((r) => r.code);
+    if (
+      (path.startsWith("/ops/user-logins") || path.startsWith("/ops/activity")) &&
+      userRoleCodes.includes("BRANCH_ADMIN")
+    ) {
+      activeRole = "BRANCH_ADMIN";
+    } else {
+      activeRole = "ONB_LEAD";
+    }
   } else if (path.startsWith("/ops/tickets")) {
     const userRoleCodes = session.roles.map((r) => r.code);
     if (userRoleCodes.includes("CONCIERGE_MANAGER")) {

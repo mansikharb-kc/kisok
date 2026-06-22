@@ -9,13 +9,22 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasRole(session.roles, "ONB_LEAD")) redirect("/dashboard");
 
-  const roleEntry = session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
+  const isLead = hasRole(session.roles, "ONB_LEAD");
+  const isBranchAdmin = hasRole(session.roles, "BRANCH_ADMIN");
+  if (!isLead && !isBranchAdmin) redirect("/dashboard");
+
+  const roleEntry =
+    session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId) ??
+    session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
   const targetRoles = ["OB_EXEC", "CONSIGNMENT_USER", "CONCIERGE_MANAGER", "PROJECT_USER"];
+  if (isBranchAdmin) {
+    targetRoles.push("ONB_LEAD");
+  }
+
   const allowedUserRoles = await prisma.userRole.findMany({
     where: {
       branchId: branchId,
@@ -52,6 +61,7 @@ export default async function Page() {
     <UserLoginsClient
       initialLogs={serializedLogs}
       branchName={branch?.name ?? "Managed Branch"}
+      showOnbLeadFilter={isBranchAdmin}
     />
   );
 }

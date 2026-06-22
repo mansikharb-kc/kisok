@@ -12,11 +12,13 @@ export default async function ActivityPage() {
 
   const isExec = hasRole(session.roles, "OB_EXEC");
   const isLead = hasRole(session.roles, "ONB_LEAD");
-  if (!isExec && !isLead) redirect("/dashboard");
+  const isBranchAdmin = hasRole(session.roles, "BRANCH_ADMIN");
+  if (!isExec && !isLead && !isBranchAdmin) redirect("/dashboard");
 
   const roleEntry =
     session.roles.find((r) => r.code === "OB_EXEC" && r.branchId) ??
-    session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
+    session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId) ??
+    session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId);
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
@@ -74,7 +76,7 @@ export default async function ActivityPage() {
           Track and manage revisit schedule reminders for onboarding sellers.
         </p>
       </div>
-      <ActivityClient initialReminders={serializedReminders} isLead={isLead} />
+      <ActivityClient initialReminders={serializedReminders} isLead={isLead || isBranchAdmin} />
     </div>
   );
 }

@@ -7,13 +7,22 @@ import { ok, fail, handler } from "@/lib/api";
 export const GET = handler(async () => {
   const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
-  if (!hasRole(session.roles, "ONB_LEAD")) return fail("Forbidden", 403);
 
-  const roleEntry = session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
+  const isLead = hasRole(session.roles, "ONB_LEAD");
+  const isBranchAdmin = hasRole(session.roles, "BRANCH_ADMIN");
+  if (!isLead && !isBranchAdmin) return fail("Forbidden", 403);
+
+  const roleEntry =
+    session.roles.find((r) => r.code === "BRANCH_ADMIN" && r.branchId) ??
+    session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) return fail("Branch ID required", 400);
 
   const targetRoles = ["OB_EXEC", "CONSIGNMENT_USER", "CONCIERGE_MANAGER", "PROJECT_USER"];
+  if (isBranchAdmin) {
+    targetRoles.push("ONB_LEAD");
+  }
+
   const allowedUserRoles = await prisma.userRole.findMany({
     where: {
       branchId: branchId,

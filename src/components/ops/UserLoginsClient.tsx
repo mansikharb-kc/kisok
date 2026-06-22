@@ -19,9 +19,11 @@ type SessionLog = {
 export default function UserLoginsClient({
   initialLogs,
   branchName,
+  showOnbLeadFilter = false,
 }: {
   initialLogs: SessionLog[];
   branchName: string;
+  showOnbLeadFilter?: boolean;
 }) {
   const [logs, setLogs] = useState<SessionLog[]>(initialLogs);
   const [search, setSearch] = useState("");
@@ -197,6 +199,9 @@ export default function UserLoginsClient({
               <option value="CONSIGNMENT_USER">Consignment User</option>
               <option value="CONCIERGE_MANAGER">Concierge Manager</option>
               <option value="PROJECT_USER">Project User</option>
+              {showOnbLeadFilter && (
+                <option value="ONB_LEAD">Onboarding Lead</option>
+              )}
             </select>
           </div>
 
