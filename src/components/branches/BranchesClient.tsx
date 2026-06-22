@@ -14,6 +14,28 @@ export type BranchRow = {
 export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function handleDelete(branch: BranchRow) {
+    if (!confirm(`Delete branch "${branch.name}"? This permanently removes it from the database and cannot be undone.`)) return;
+    setBusyId(branch.id);
+    try {
+      const res = await fetch(`/api/branches/${branch.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Delete failed.");
+        return;
+      }
+      if (data.deactivated) {
+        alert(`"${branch.name}" is still in use (sellers, warehouse, or users reference it), so it was deactivated instead of deleted.`);
+      }
+      router.refresh();
+    } catch {
+      alert("Delete failed. Check your connection.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -104,6 +126,7 @@ export default function BranchesClient({ initial }: { initial: BranchRow[] }) {
                     <div className="inline-flex justify-end gap-2">
                       <IconButton kind="view" title="View" onClick={() => router.push(`/masters/branches/${branch.id}`)} />
                       <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/masters/branches/${branch.id}/edit`)} />
+                      <IconButton kind="delete" title="Delete" tone="danger" disabled={busyId === branch.id} onClick={() => handleDelete(branch)} />
                     </div>
                   </td>
                 </tr>

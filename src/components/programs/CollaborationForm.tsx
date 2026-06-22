@@ -305,8 +305,9 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
         </div>
 
-        {/* View-only preview — Onboarding Lead fills these on the Add Seller page */}
-        <div className="space-y-5 m-0 p-0 border-0 min-w-0">
+        {/* View-only preview — Onboarding Lead fills these on the Add Seller page.
+            Wrapped in a disabled fieldset so HO can see the fields but cannot fill them. */}
+        <fieldset disabled className="space-y-5 m-0 p-0 border-0 min-w-0 opacity-75">
           <p className="text-xs text-slate-500 italic">
             Member, contract &amp; category details are filled by the Onboarding Lead during seller onboarding — shown here for reference only.
           </p>
@@ -316,7 +317,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className={labelCls}>Collaboration (company)</label>
-              <input value={collaboration} onChange={(e) => setCollaboration(e.target.value)} className={inputCls} placeholder="e.g. Kohler India" required />
+              <input value={collaboration} onChange={(e) => setCollaboration(e.target.value)} className={inputCls} placeholder="e.g. Kohler India" />
             </div>
             <div>
               <label className={labelCls}>Membership ID</label>
@@ -562,7 +563,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           </div>
         </div>
 
-        </div>
+        </fieldset>
 
         {/* Custom fields */}
         <div className={cardCls}>
@@ -609,7 +610,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
           {customFields.length === 0 ? (
             <p className="text-xs text-slate-400">No section fields. HO admin can add fields with “+ Add field”.</p>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <fieldset disabled className="grid gap-4 md:grid-cols-2 opacity-75">
               {customFields.map((f) => (
                 <div key={f.id}>
                   <label className={labelCls}>
@@ -635,7 +636,7 @@ export default function CollaborationForm({ branches, programs }: { branches: Br
                   )}
                 </div>
               ))}
-            </div>
+            </fieldset>
           )}
         </div>
 
