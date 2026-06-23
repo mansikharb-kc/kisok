@@ -16,6 +16,7 @@ const ROLES = [
   { code: "OB_EXEC", name: "Onboarding Exec", description: "L3 — product onboarding & placement" },
   { code: "PROJECT_USER", name: "Project User", description: "L3 — project view and reporting" },
   { code: "CONCIERGE_MANAGER", name: "Concierge Manager", description: "L3 — concierge management and coordination" },
+  { code: "SCREEN_MANAGER", name: "Screen Manager", description: "L3 — manages RMS screens for a branch" },
 ];
 
 async function main() {

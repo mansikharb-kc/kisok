@@ -43,6 +43,7 @@ const SLUG_TO_ROLE: Record<string, string> = {
   "ob-exec": "OB_EXEC",
   "project-user": "PROJECT_USER",
   "concierge-manager": "CONCIERGE_MANAGER",
+  "screen-manager": "SCREEN_MANAGER",
 };
 
 const ROLE_NAME_MAP: Record<string, string> = {
@@ -53,6 +54,7 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "ob-exec": "Onboarding Execs",
   "project-user": "Project Users",
   "concierge-manager": "Concierge Managers",
+  "screen-manager": "Screen Managers",
 };
 
 interface PageProps {
@@ -203,7 +205,7 @@ export default function RoleUsersPage({ params }: PageProps) {
             className="w-full text-sm outline-none placeholder:text-slate-400 bg-transparent"
           />
         </div>
-        {roleCode !== "ho-admin" && (
+        {roleCode !== "ho-admin" && availableBranches.length > 1 && (
           <select
             value={branchFilter}
             onChange={(e) => setBranchFilter(e.target.value)}

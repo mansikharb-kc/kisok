@@ -49,7 +49,7 @@ ims revisesd/                         ← existing repo (root unchanged)
 └── src/
     ├── app/
     │   ├── (app)/                    ← IMS pages (sidebar + login) — UNTOUCHED
-    │   │   └── rms-screens/          ← NEW: HO Admin — bind screen↔block + approve devices
+    │   │   └── rms-screens/          ← NEW: Branch Admin + Screen Manager — bind screen↔block + approve devices (branch-scoped)
     │   ├── api/
     │   │   ├── ...(IMS)
     │   │   └── rms/                  ← NEW: RMS read + BOM + device endpoints
@@ -135,21 +135,28 @@ All additive; use IMS's manual-migration pattern (`prisma/migrations-manual/*.sq
 
 RMS is served from a public server, so the URL must NOT be openable by anyone (e.g. from home).
 
+### 7.0 Who manages screens — roles
+Screen management is **branch-scoped**, NOT done by HO Admin:
+- **Branch Admin** creates a **Screen Manager** user for their branch (new branch-scoped role `SCREEN_MANAGER`).
+- The **Screen Manager** manages **all screens of that one branch** — creating/binding screens to blocks and approving/revoking devices.
+- HO Admin only retains org-wide visibility (can see all branches' screens), but day-to-day screen management is the branch's Screen Manager.
+- Hierarchy: **HO Admin → (creates) Branch Admin → (creates) Screen Manager → (manages) that branch's screens.**
+
 ### 7.1 Screen ↔ Block matching
-- **HO Admin** creates a `Screen` and binds it to a block (`Screen.location_node_id`).
+- The **Screen Manager** (branch-scoped) creates a `Screen` and binds it to a block in their branch (`Screen.location_node_id`).
 - Each screen gets an **unguessable token** URL: `/rms/screen/<random-token>` (not a sequential id).
 - The block's Windows display is set once (kiosk mode) to that URL. App reads Screen → bound block → shows that block's data; top bar (Floor/Block/Rack) comes from the block node's ancestor path.
 
-### 7.2 Device activation with HO Admin approval
-1. Unactivated device opens the URL → shows **"Pending approval"**, creates a **device access request** for HO Admin (screen/block, device id, user-agent, IP, time).
-2. **HO Admin** reviews → **Approve / Reject**.
+### 7.2 Device activation with Screen Manager approval
+1. Unactivated device opens the URL → shows **"Pending approval"**, creates a **device access request** for the branch's **Screen Manager** (screen/block, device id, user-agent, IP, time).
+2. **Screen Manager** (or Branch Admin) reviews → **Approve / Reject**.
 3. Approve → server issues a **signed long-lived cookie** (the activation) → device now shows data.
 4. Any other/unapproved device → blocked ("Pending/Denied"), attempt logged.
-5. HO Admin can **Revoke** any time.
+5. Screen Manager can **Revoke** any time.
 
-Net effect: only HO-Admin-approved physical screens show data; anyone opening the link elsewhere → request goes to admin, nothing shown until approved.
+Net effect: only Screen-Manager-approved physical screens show data; anyone opening the link elsewhere → request goes to the branch's Screen Manager, nothing shown until approved. A Screen Manager only ever sees/approves screens of their own branch.
 
-> Admin UI for binding + approval lives in IMS under `app/(app)/rms-screens` (reuses existing HO Admin auth).
+> Admin UI for binding + approval lives in IMS under `app/(app)/rms-screens`, accessible to **Branch Admin + Screen Manager** (scoped to their branch).
 
 ---
 
@@ -168,7 +175,7 @@ Net effect: only HO-Admin-approved physical screens show data; anyone opening th
 ## 9. Suggested build order (milestones)
 
 1. **RMS shell** — `app/rms/layout.tsx` (own theme), route group, base kiosk layout.
-2. **Security first** — `screens` binding admin + `screen_devices` activation + HO Admin approve/reject/revoke + "pending approval" screen. Nothing viewable without it.
+2. **Security first** — `SCREEN_MANAGER` role + `screens` binding admin (Branch Admin/Screen Manager) + `screen_devices` activation + approve/reject/revoke + "pending approval" screen. Nothing viewable without it.
 3. **Home** — Local "What's in this Rack" + 3 global modes; location top bar from bound block.
 4. **BBC** → **Product Attribute (detail) page** (shared) with location + QR + specs + "+ BOM".
 5. **BBB** (category → brands → products → detail).
@@ -192,8 +199,37 @@ Build each screen exactly to Figma. Price stays hidden.
 - RMS = **`/rms` route inside the IMS app, same repo, same DB (`kcrms`), same deploy**.
 - URL free: `/rms/screen/<token>`.
 - Windows touch → Edge/Chrome kiosk mode (or PWA + offline cache).
-- **HO Admin** binds screen↔block **and** approves device activation (request → approve/reject/revoke; unguessable token + signed device cookie).
+- **Branch Admin** creates a **Screen Manager** (new branch-scoped `SCREEN_MANAGER` role) who manages all that branch's screens — binds screen↔block **and** approves device activation (request → approve/reject/revoke; unguessable token + signed device cookie). NOT HO Admin.
 - Follow Figma **1:1**; **price hidden** everywhere (only deviation).
 - Home = Local ("What's in this Rack") + Global 3 modes (BBC / BBB / BBP); shared Product Attribute (detail) page.
 - RMS has its **own colorful theme** (IMS greyscale/no-emoji rules do not apply).
 - New backend (additive in same schema): `screen_devices`, BOM tables, `is_sponsored`, `is_featured`, view counter.
+- **In current scope (moved up from Phase 2):** customer ID + BOM-as-quote, i18n, accessibility/voice, interaction-based dwell-time analytics (see §12).
+
+---
+
+## 12. Added to current scope (moved up from Phase 2)
+These were originally future items; the client wants them in the MVP build.
+
+### 12.1 Customer identification + BOM as a quote
+- At the kiosk, **optionally identify the customer** (loyalty/membership scan, or phone/lead capture).
+- The **BOM cart is tied to that customer** (`bom_lists.customer_id`).
+- **QR handoff:** the visitor scans a QR to **continue the same BOM on their phone**.
+- BOM can be **emailed / pushed to CRM as a quote** (reuse the existing emailer / WhatsApp assets).
+- New data: `customers` (or `leads`), `bom_lists.customer_id`, a quote record + email/CRM hook.
+- Note: the quote lists **items + quantities only — no price** (per locked decision), unless price is later enabled.
+
+### 12.2 Internationalization (i18n)
+- **Multi-language UI + kiosk** (language switch), localization, **RTL** support, **per-center timezone**.
+- **Multi-currency** support wired in (only meaningful once price is shown; price currently hidden).
+- New: locale + timezone per branch/screen; translation resource files; locale-aware date/number formatting.
+
+### 12.3 Accessibility
+- **WCAG / ADA** compliant kiosk — sufficient contrast, visible focus, large touch targets, screen-reader labels/ARIA.
+- **Voice / assistant** navigation option.
+- Ties into i18n (multi-language voice + labels).
+
+### 12.4 Dwell-time & interaction analytics (interaction-based — NOT camera)
+- Engagement measured purely from **clicks/taps and interaction events** — privacy-friendly, no camera.
+- **Dwell-time** = time spent per screen / product, derived from the time gap between interaction events; plus taps per session, drill-down depth, and idle gaps.
+- Captured via the analytics event stream (see `ARCHITECTURE.md` §4) — every tap/view/search timestamped, dwell computed from consecutive event timestamps.

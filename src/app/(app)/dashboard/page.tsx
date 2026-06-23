@@ -407,6 +407,48 @@ export default async function DashboardPage() {
   );
   const opsBranchId = opsRole?.branchId ? BigInt(opsRole.branchId) : null;
 
+  // --- Screen Manager: dedicated RMS-only dashboard (blocks / screens / programs of their branch) ---
+  const isScreenManager = hasRole(session.roles, "SCREEN_MANAGER");
+  if (isScreenManager && !isHo && !branchId) {
+    const smRole = session.roles.find((r) => r.code === "SCREEN_MANAGER" && r.branchId);
+    const smBranchId = smRole?.branchId ? BigInt(smRole.branchId) : null;
+    const [smBranch, blockCount, screenCount, programCount] = await Promise.all([
+      smBranchId ? prisma.branch.findUnique({ where: { id: smBranchId }, select: { name: true } }) : Promise.resolve(null),
+      smBranchId ? prisma.locationNode.count({ where: { branchId: smBranchId, nodeType: "BLOCK" } }) : Promise.resolve(0),
+      smBranchId ? prisma.screen.count({ where: { branchId: smBranchId } }) : Promise.resolve(0),
+      smBranchId ? prisma.branchProgram.count({ where: { branchId: smBranchId, approvalStatus: "approved" } }) : Promise.resolve(0),
+    ]);
+    const smCards = [
+      { label: "Blocks", value: blockCount },
+      { label: "Screens", value: screenCount },
+      { label: "Programs", value: programCount },
+    ];
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Signed in as Screen Manager · {smBranch?.name ?? "your branch"}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {smCards.map((c) => (
+            <div key={c.label} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">{c.label}</div>
+              <div className="mt-2 text-4xl font-bold text-slate-900">{c.value}</div>
+            </div>
+          ))}
+        </div>
+        <a
+          href="/rms-screens"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          Manage RMS Screens
+        </a>
+      </div>
+    );
+  }
+
   let countsData: Record<string, unknown> = {};
   let branchName = "";
   let opsBranchName = "";
