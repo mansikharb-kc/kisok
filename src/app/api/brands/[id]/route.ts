@@ -75,12 +75,24 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const isHO = session.roles.some((r) => r.code === "HO_ADMIN");
   if (!isHO) {
-    const keys = Object.keys(parsed.data).filter(
-      (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
-    );
-    const nonCategoryKeys = keys.filter((k) => k !== "categoryIds");
-    if (nonCategoryKeys.length > 0) {
-      return fail("Only HO Admins can edit other brand master details", 403);
+    // approval status is HO-only
+    if (parsed.data.approvalStatus !== undefined) {
+      return fail("Only HO Admins can change approval status", 403);
+    }
+    // The brand's creator (e.g. the Onboarding Lead who added it during seller
+    // onboarding) may edit all detail fields of their own brand. Others may edit
+    // only the category mapping.
+    const existing = await prisma.brand.findUnique({ where: { id }, select: { createdByUserId: true } });
+    if (!existing) return fail("Brand not found", 404);
+    const isCreator = existing.createdByUserId != null && String(existing.createdByUserId) === String(session.uid);
+    if (!isCreator) {
+      const keys = Object.keys(parsed.data).filter(
+        (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
+      );
+      const nonCategoryKeys = keys.filter((k) => k !== "categoryIds");
+      if (nonCategoryKeys.length > 0) {
+        return fail("Only HO Admins or the brand's creator can edit brand details", 403);
+      }
     }
   }
 

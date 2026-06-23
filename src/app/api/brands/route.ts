@@ -94,6 +94,7 @@ export const POST = handler(async (req: Request) => {
         contractEnd: contractEnd ? new Date(contractEnd) : null,
         approvalStatus: "approved",
         status: "active",
+        createdByUserId: BigInt(session.uid),
         brandCategories: categoryIds?.length
           ? { create: [...new Set(categoryIds.map(String))].map((id) => ({ categoryId: BigInt(id) })) }
           : undefined,

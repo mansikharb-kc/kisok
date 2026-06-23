@@ -220,6 +220,7 @@ model Brand {
   description       String?   @db.Text
   approvalStatus    String    @default("draft") @map("approval_status") @db.VarChar(20)
   status            String    @default("active") @db.VarChar(20)
+  createdByUserId   BigInt?   @map("created_by_user_id") @db.UnsignedBigInt
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

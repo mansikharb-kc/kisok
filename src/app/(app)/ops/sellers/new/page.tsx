@@ -24,6 +24,7 @@ export default async function Page() {
         id: true,
         name: true,
         code: true,
+        createdByUserId: true,
         brandCategories: { select: { categoryId: true } },
       },
       orderBy: { name: "asc" },
@@ -84,6 +85,7 @@ export default async function Page() {
         execs={execs}
         flatCategories={flatCategories}
         salespersons={salespersons}
+        currentUserId={session.uid}
       />
     </div>
   );

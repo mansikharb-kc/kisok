@@ -40,6 +40,7 @@ export default async function Page({ params }: { params: { id: string } }) {
         id: true,
         name: true,
         code: true,
+        createdByUserId: true,
         brandCategories: { select: { categoryId: true } },
       },
       orderBy: { name: "asc" },
@@ -102,6 +103,7 @@ export default async function Page({ params }: { params: { id: string } }) {
         flatCategories={flatCategories}
         seller={sellerData}
         salespersons={salespersons}
+        currentUserId={session.uid}
       />
     </div>
   );

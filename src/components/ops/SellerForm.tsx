@@ -43,6 +43,7 @@ type BrandOption = {
   id: string;
   name: string;
   code: string;
+  createdByUserId?: string | null;
   brandCategories?: { categoryId: string }[];
 };
 
@@ -112,6 +113,7 @@ export default function SellerForm({
   flatCategories = [],
   seller,
   salespersons = [],
+  currentUserId,
 }: {
   brands: BrandOption[];
   programs: ProgramOption[];
@@ -119,6 +121,7 @@ export default function SellerForm({
   flatCategories?: FlatCat[];
   seller?: SellerEdit;
   salespersons?: string[];
+  currentUserId?: string;
 }) {
   const router = useRouter();
   const editing = !!seller;
@@ -1058,6 +1061,21 @@ export default function SellerForm({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
                           </button>
+                          {currentUserId && b.createdByUserId && String(b.createdByUserId) === String(currentUserId) && (
+                            <a
+                              href={`/masters/brands/${b.id}/edit?origin=seller-onboarding`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Edit this brand (you created it)"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded p-0.5"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </a>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate uppercase tracking-wider">{b.code}</div>
                       </div>
