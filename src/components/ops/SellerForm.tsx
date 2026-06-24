@@ -1048,19 +1048,6 @@ export default function SellerForm({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           </button>
-                          <button
-                            type="button"
-                            title="Add Categories to this Brand"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedBrandForCategoryEdit(b.id);
-                            }}
-                            className="inline-flex items-center justify-center text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors rounded p-0.5"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                          </button>
                           {currentUserId && b.createdByUserId && String(b.createdByUserId) === String(currentUserId) && (
                             <a
                               href={`/masters/brands/${b.id}/edit?origin=seller-onboarding`}
