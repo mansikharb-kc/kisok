@@ -8,6 +8,15 @@ import { isValidPhone, isValidEmail, isValidPincode, isAlphabetic, isNonEmptyStr
 import { LEVELS, levelMeta } from "@/lib/categoryLevels";
 
 const PHONE_CCS = ["+91", "+1", "+44", "+971", "+65", "+61"];
+const COUNTRIES = [
+  "India", "United States", "United Kingdom", "United Arab Emirates", "Saudi Arabia",
+  "Singapore", "Australia", "Canada", "Germany", "France", "Japan", "China",
+  "Brazil", "South Africa", "Russia", "Italy", "Spain", "Netherlands", "Switzerland",
+  "Sweden", "Norway", "Denmark", "Finland", "Ireland", "New Zealand", "Malaysia",
+  "Thailand", "Indonesia", "Vietnam", "Philippines", "Turkey", "Mexico", "Argentina",
+  "Colombia", "Egypt", "Nigeria", "Kenya", "Bangladesh", "Pakistan", "Sri Lanka",
+  "Nepal", "Bhutan", "Maldives"
+];
 
 export type BrandEdit = {
   id: string;
@@ -17,14 +26,21 @@ export type BrandEdit = {
   logoMediaId: string | null;
   logoUrl: string | null;
   contactPerson: string | null;
+  contactPersonDesignation: string | null;
   phoneCc: string | null;
   phone: string | null;
   email: string | null;
+  contacts: any[] | null;
   website: string | null;
+  socialLinkedin: string | null;
+  socialTwitter: string | null;
+  socialInstagram: string | null;
+  socialYoutube: string | null;
   address: string | null;
   pincode: string | null;
   city: string | null;
   state: string | null;
+  country: string | null;
   gstNumber: string | null;
   agreementDuration: string | null;
   contractStart: string | null; // yyyy-mm-dd
@@ -52,15 +68,43 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   const [logoUrl, setLogoUrl] = useState(brand?.logoUrl ?? "");
   const [logoBusy, setLogoBusy] = useState(false);
   // contact
-  const [contactPerson, setContactPerson] = useState(brand?.contactPerson ?? "");
-  const [phoneCc, setPhoneCc] = useState(brand?.phoneCc ?? "+91");
-  const [phone, setPhone] = useState(brand?.phone ?? "");
-  const [email, setEmail] = useState(brand?.email ?? "");
+  type ContactInput = {
+    name: string;
+    designation: string;
+    phoneCc: string;
+    phone: string;
+    email: string;
+  };
+  const [contacts, setContacts] = useState<ContactInput[]>(() => {
+    if (brand?.contacts && Array.isArray(brand.contacts) && brand.contacts.length > 0) {
+      return brand.contacts.map((c: any) => ({
+        name: c.name ?? "",
+        designation: c.designation ?? "",
+        phoneCc: c.phoneCc ?? "+91",
+        phone: c.phone ?? "",
+        email: c.email ?? "",
+      }));
+    }
+    return [
+      {
+        name: brand?.contactPerson ?? "",
+        designation: brand?.contactPersonDesignation ?? "",
+        phoneCc: brand?.phoneCc ?? "+91",
+        phone: brand?.phone ?? "",
+        email: brand?.email ?? "",
+      },
+    ];
+  });
   const [website, setWebsite] = useState(brand?.website ?? "");
+  const [socialLinkedin, setSocialLinkedin] = useState(brand?.socialLinkedin ?? "");
+  const [socialTwitter, setSocialTwitter] = useState(brand?.socialTwitter ?? "");
+  const [socialInstagram, setSocialInstagram] = useState(brand?.socialInstagram ?? "");
+  const [socialYoutube, setSocialYoutube] = useState(brand?.socialYoutube ?? "");
   const [address, setAddress] = useState(brand?.address ?? "");
   const [pincode, setPincode] = useState(brand?.pincode ?? "");
   const [city, setCity] = useState(brand?.city ?? "");
   const [stateName, setStateName] = useState(brand?.state ?? "");
+  const [country, setCountry] = useState(brand?.country ?? "India");
   // contract
   const [gstNumber, setGstNumber] = useState(brand?.gstNumber ?? "");
   const [agreementDuration, setAgreementDuration] = useState(brand?.agreementDuration ?? "");
@@ -174,14 +218,21 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
       setError("Please enter a valid GSTIN or leave it blank");
       return;
     }
-    if (email && !isValidEmail(email)) {
-      setError("Please enter a valid email address containing '@'");
-      return;
+    // Validate each contact person
+    for (let idx = 0; idx < contacts.length; idx++) {
+      const c = contacts[idx];
+      const indexLabel = contacts.length > 1 ? ` for Contact Person #${idx + 1}` : "";
+      
+      if (c.email && !isValidEmail(c.email)) {
+        setError(`Please enter a valid email address containing '@'${indexLabel}`);
+        return;
+      }
+      if (c.phone && !isValidPhone(c.phone)) {
+        setError(`Phone number must be exactly 10 digits${indexLabel}`);
+        return;
+      }
     }
-    if (phone && !isValidPhone(phone)) {
-      setError("Phone number must be exactly 10 digits");
-      return;
-    }
+
     if (pincode && !isValidPincode(pincode)) {
       setError("Pincode must be exactly 6 digits");
       return;
@@ -198,9 +249,25 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
     try {
       const payload = {
         name, code, brandType: brandType || null, logoMediaId,
-        contactPerson: contactPerson || null, phoneCc, phone: phone || null,
-        email: email || null, website: website || null, address: address || null,
-        pincode: pincode || null, city: city || null, state: stateName || null,
+        contactPerson: contacts[0]?.name || null,
+        contactPersonDesignation: contacts[0]?.designation || null,
+        phoneCc: contacts[0]?.phoneCc || "+91",
+        phone: contacts[0]?.phone || null,
+        email: contacts[0]?.email || null,
+        contacts: contacts.map(c => ({
+          name: c.name || null,
+          designation: c.designation || null,
+          phoneCc: c.phoneCc || "+91",
+          phone: c.phone || null,
+          email: c.email || null,
+        })),
+        website: website || null,
+        socialLinkedin: socialLinkedin || null,
+        socialTwitter: socialTwitter || null,
+        socialInstagram: socialInstagram || null,
+        socialYoutube: socialYoutube || null,
+        address: address || null, pincode: pincode || null, city: city || null,
+        state: stateName || null, country: country || null,
         gstNumber: gstNumber || null, agreementDuration: agreementDuration || null,
         contractStart: contractStart || null, contractEnd: contractEnd || null,
         description: description || null,
@@ -442,40 +509,120 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
 
       {/* 3. Contact */}
       <div className={card}>
-        <StepHeader n={3} title="Contact Details" sub="Registered address and point of contact information" />
-        <div className="space-y-4">
-          <div>
-            <label className={L}>Contact Person</label>
-            <input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} className={I} placeholder="e.g. Rajesh Kumar" />
-          </div>
-          <div>
-            <label className={L}>Phone</label>
-            <div className="flex gap-2">
-              <select
-                value={phoneCc}
-                onChange={(e) => setPhoneCc(e.target.value)}
-                className="w-24 shrink-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                {PHONE_CCS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <input
-                type="tel"
-                maxLength={10}
-                pattern="\d{10}"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                className="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                placeholder="9876543210"
-              />
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">3</span>
+            <div>
+              <h2 className="font-bold text-slate-800">Contact Details</h2>
+              <p className="text-xs text-slate-500">Registered address and point of contact information</p>
             </div>
           </div>
-          <div>
-            <label className={L}>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={I} placeholder="contact@brand.com" />
-          </div>
-          <div>
+          <button
+            type="button"
+            onClick={() => setContacts(prev => [...prev, { name: "", designation: "", phoneCc: "+91", phone: "", email: "" }])}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition active:scale-[0.98]"
+          >
+            + ADD NEW CONTACT PERSON
+          </button>
+        </div>
+        <div className="space-y-6">
+          {contacts.map((c, idx) => (
+            <div key={idx} className={`space-y-4 ${idx > 0 ? "border-t border-dashed border-slate-200 pt-5" : ""}`}>
+              {idx > 0 && (
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Contact Person #{idx + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setContacts(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-xs font-bold text-red-500 hover:text-red-700 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              
+              <div>
+                <label className={L}>Contact Person Name {idx === 0 ? "(Primary)" : `#${idx + 1}`}</label>
+                <input
+                  value={c.name}
+                  onChange={(e) => setContacts(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
+                  className={I}
+                  placeholder="e.g. Rajesh Kumar"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={L}>Phone</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={c.phoneCc}
+                      onChange={(e) => setContacts(prev => prev.map((item, i) => i === idx ? { ...item, phoneCc: e.target.value } : item))}
+                      className="w-24 shrink-0 rounded-lg border border-slate-300 px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                    >
+                      {PHONE_CCS.map((cc) => <option key={cc} value={cc}>{cc}</option>)}
+                    </select>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      pattern="\d{10}"
+                      value={c.phone}
+                      onChange={(e) => setContacts(prev => prev.map((item, i) => i === idx ? { ...item, phone: e.target.value.replace(/\D/g, "") } : item))}
+                      className="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      placeholder="9876543210"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={L}>Contact Person Designation</label>
+                  <input
+                    value={c.designation}
+                    onChange={(e) => setContacts(prev => prev.map((item, i) => i === idx ? { ...item, designation: e.target.value } : item))}
+                    className={I}
+                    placeholder="e.g. Sales Manager"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={L}>Email</label>
+                <input
+                  type="email"
+                  value={c.email}
+                  onChange={(e) => setContacts(prev => prev.map((item, i) => i === idx ? { ...item, email: e.target.value } : item))}
+                  className={I}
+                  placeholder="contact@brand.com"
+                />
+              </div>
+            </div>
+          ))}
+
+          <div className="border-t border-slate-100 pt-4">
             <label className={L}>Website</label>
             <input value={website} onChange={(e) => setWebsite(e.target.value)} className={I} placeholder="https://brand.com" />
+          </div>
+          {/* Social Media Links Section */}
+          <div className="border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Social Media Links</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={L}>LinkedIn Link</label>
+                <input value={socialLinkedin} onChange={(e) => setSocialLinkedin(e.target.value)} className={I} placeholder="e.g. https://linkedin.com/company/brand" />
+              </div>
+              <div>
+                <label className={L}>Twitter / X Link</label>
+                <input value={socialTwitter} onChange={(e) => setSocialTwitter(e.target.value)} className={I} placeholder="e.g. https://x.com/brand" />
+              </div>
+              <div>
+                <label className={L}>Instagram Link</label>
+                <input value={socialInstagram} onChange={(e) => setSocialInstagram(e.target.value)} className={I} placeholder="e.g. https://instagram.com/brand" />
+              </div>
+              <div>
+                <label className={L}>YouTube Link</label>
+                <input value={socialYoutube} onChange={(e) => setSocialYoutube(e.target.value)} className={I} placeholder="e.g. https://youtube.com/@brand" />
+              </div>
+            </div>
           </div>
           <div>
             <label className={L}>Address</label>
@@ -497,18 +644,25 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
               <input value={stateName} onChange={(e) => setStateName(e.target.value)} className={I} placeholder="e.g. Delhi" />
             </div>
             <div>
-              <label className={L}>GST Number</label>
-              <input
-                value={gstNumber}
-                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                maxLength={15}
-                className={`${I} font-mono ${gstNumber && !isValidGstin(gstNumber) ? "border-red-400" : ""}`}
-                placeholder="07ABCDE1234F1Z5"
-              />
-              {gstNumber && !isValidGstin(gstNumber) && (
-                <p className="text-[11px] text-red-500 mt-1">Invalid GSTIN — must be 15 chars (e.g. 07ABCDE1234F1Z5)</p>
-              )}
+              <label className={L}>Country</label>
+              <select value={country} onChange={(e) => setCountry(e.target.value)} className={I}>
+                <option value="">Select Country</option>
+                {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
+          </div>
+          <div>
+            <label className={L}>GST Number</label>
+            <input
+              value={gstNumber}
+              onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+              maxLength={15}
+              className={`${I} font-mono ${gstNumber && !isValidGstin(gstNumber) ? "border-red-400" : ""}`}
+              placeholder="07ABCDE1234F1Z5"
+            />
+            {gstNumber && !isValidGstin(gstNumber) && (
+              <p className="text-[11px] text-red-500 mt-1">Invalid GSTIN — must be 15 chars (e.g. 07ABCDE1234F1Z5)</p>
+            )}
           </div>
         </div>
       </div>

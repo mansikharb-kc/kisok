@@ -44,14 +44,27 @@ const createSchema = z.object({
   brandType: z.string().trim().max(40).optional().nullable(),
   logoMediaId: z.coerce.bigint().optional().nullable(),
   contactPerson: z.string().trim().max(150).optional().nullable(),
+  contactPersonDesignation: z.string().trim().max(150).optional().nullable(),
   phoneCc: z.string().trim().max(8).optional().nullable(),
   phone: z.string().trim().max(20).optional().nullable(),
   email: z.string().trim().max(190).optional().nullable(),
+  contacts: z.array(z.object({
+    name: z.string().trim().max(150).optional().nullable(),
+    designation: z.string().trim().max(150).optional().nullable(),
+    phoneCc: z.string().trim().max(8).optional().nullable(),
+    phone: z.string().trim().max(20).optional().nullable(),
+    email: z.string().trim().max(190).optional().nullable()
+  })).optional().nullable(),
   website: z.string().trim().max(255).optional().nullable(),
+  socialLinkedin: z.string().trim().max(255).optional().nullable(),
+  socialTwitter: z.string().trim().max(255).optional().nullable(),
+  socialInstagram: z.string().trim().max(255).optional().nullable(),
+  socialYoutube: z.string().trim().max(255).optional().nullable(),
   address: z.string().trim().max(500).optional().nullable(),
   pincode: z.string().trim().max(20).optional().nullable(),
   city: z.string().trim().max(120).optional().nullable(),
   state: z.string().trim().max(120).optional().nullable(),
+  country: z.string().trim().max(120).optional().nullable(),
   gstNumber: z
     .string()
     .trim()
@@ -81,12 +94,45 @@ export const POST = handler(async (req: Request) => {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
   const { categoryIds, contractStart, contractEnd, code: _ignored, ...d } = parsed.data;
 
+  // Sync contacts and root fields
+  let syncedContacts = d.contacts;
+  let rootContactPerson = d.contactPerson;
+  let rootContactPersonDesignation = d.contactPersonDesignation;
+  let rootPhoneCc = d.phoneCc;
+  let rootPhone = d.phone;
+  let rootEmail = d.email;
+
+  if (syncedContacts && syncedContacts.length > 0) {
+    const first = syncedContacts[0];
+    rootContactPerson = first.name || null;
+    rootContactPersonDesignation = first.designation || null;
+    rootPhoneCc = first.phoneCc || null;
+    rootPhone = first.phone || null;
+    rootEmail = first.email || null;
+  } else if (rootContactPerson || rootContactPersonDesignation || rootPhone || rootEmail) {
+    syncedContacts = [
+      {
+        name: rootContactPerson || null,
+        designation: rootContactPersonDesignation || null,
+        phoneCc: rootPhoneCc || null,
+        phone: rootPhone || null,
+        email: rootEmail || null,
+      },
+    ];
+  }
+
   const brandNo = await nextBrandNo(d.brandType);
   const code = await nextBrandCode(d.name);
   const brand = await prisma.$transaction(async (tx) => {
     const created = await tx.brand.create({
       data: {
         ...d,
+        contactPerson: rootContactPerson,
+        contactPersonDesignation: rootContactPersonDesignation,
+        phoneCc: rootPhoneCc,
+        phone: rootPhone,
+        email: rootEmail,
+        contacts: syncedContacts ? (syncedContacts as any) : null,
         brandNo,
         name: d.name,
         code,

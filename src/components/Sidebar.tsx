@@ -96,16 +96,16 @@ function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; p
   const [open, setOpen] = useState(true);
   return (
     <div className="space-y-1">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2.5 py-1 mb-1 group rounded-lg hover:bg-white/5 transition-colors">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white/80 transition-colors">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2.5 py-2 mb-1 group rounded-lg hover:bg-white/5 transition-colors border-b border-white/5">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-100 group-hover:text-white transition-colors">
           {name}
         </span>
-        <span className="text-white/40 group-hover:text-white/80 transition-colors">
+        <span className="text-white/60 group-hover:text-white transition-colors">
           <Chevron dir={open ? "up" : "left"} />
         </span>
       </button>
       <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", transition: "max-height 0.25s ease" }}>
-        <div className="space-y-1 pl-1">
+        <div className="space-y-1 pl-3.5">
           {items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (

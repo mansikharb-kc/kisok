@@ -204,14 +204,21 @@ model Brand {
   logoMediaId       BigInt?   @map("logo_media_id") @db.UnsignedBigInt
   // contact
   contactPerson     String?   @map("contact_person") @db.VarChar(150)
+  contactPersonDesignation String?   @map("contact_person_designation") @db.VarChar(150)
   phoneCc           String?   @map("phone_cc") @db.VarChar(8)
   phone             String?   @db.VarChar(20)
   email             String?   @db.VarChar(190)
+  contacts          Json?
   website           String?   @db.VarChar(255)
+  socialLinkedin    String?   @map("social_linkedin") @db.VarChar(255)
+  socialTwitter     String?   @map("social_twitter") @db.VarChar(255)
+  socialInstagram   String?   @map("social_instagram") @db.VarChar(255)
+  socialYoutube     String?   @map("social_youtube") @db.VarChar(255)
   address           String?   @db.VarChar(500)
   pincode           String?   @db.VarChar(20)
   city              String?   @db.VarChar(120)
   state             String?   @db.VarChar(120)
+  country           String?   @db.VarChar(120)
   // membership & contract
   gstNumber         String?   @map("gst_number") @db.VarChar(30)
   agreementDuration String?   @map("agreement_duration") @db.VarChar(40)

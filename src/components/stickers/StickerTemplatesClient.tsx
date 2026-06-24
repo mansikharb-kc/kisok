@@ -50,6 +50,41 @@ const emptyDraft = (): Draft => ({
   status: "active",
 });
 
+function MiniaturePreview({ layout, previewRows, onClick }: { layout: any; previewRows: any; onClick: () => void }) {
+  const scale = layout.base === "pioneer" ? 0.16 : 0.22;
+  return (
+    <div
+      onClick={onClick}
+      className="w-[75px] h-[55px] border border-slate-200 rounded bg-white shadow-sm overflow-hidden flex items-center justify-center relative cursor-pointer hover:border-brand-500 hover:shadow transition group select-none"
+      title="Click to duplicate / direct add template"
+    >
+      <div 
+        style={{ 
+          transform: `scale(${scale})`, 
+          transformOrigin: "center center",
+          flexShrink: 0
+        }}
+        className="pointer-events-none"
+      >
+        <StickerRender
+          layout={layout}
+          rows={previewRows}
+          brandName="Brand"
+          qrUrl={null}
+          barcodeValue="SKU-0001"
+          bottomCode="D28.05"
+        />
+      </div>
+      {/* Overlay indicator */}
+      <div className="absolute inset-0 bg-brand-500/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+        <span className="bg-brand-600 text-white text-[9px] px-1 py-0.5 rounded font-bold shadow uppercase tracking-wide">
+          + Add
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function StickerTemplatesClient({
   initial,
   categories,
@@ -196,16 +231,28 @@ export default function StickerTemplatesClient({
           <table className="w-full table-fixed text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-600">
               <tr>
-                <th className="px-4 py-3 text-left font-medium w-[28%]">Template</th>
-                <th className="px-4 py-3 text-left font-medium w-[26%]">Category</th>
-                <th className="px-4 py-3 text-left font-medium w-[18%]">Base design</th>
-                <th className="px-4 py-3 text-left font-medium w-[14%]">Status</th>
-                {!readOnly && <th className="px-4 py-3 text-right font-medium w-[14%]">Actions</th>}
+                <th className="px-4 py-3 text-left font-medium w-[22%]">Template</th>
+                <th className="px-4 py-3 text-left font-medium w-[22%]">Category</th>
+                <th className="px-4 py-3 text-left font-medium w-[14%]">Base design</th>
+                <th className="px-4 py-3 text-left font-medium w-[12%]">Status</th>
+                <th className="px-4 py-3 text-left font-medium w-[14%]">Preview</th>
+                {!readOnly && <th className="px-4 py-3 text-right font-medium w-[16%]">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((t) => {
                 const layout = normalizeLayout(t.layout);
+                const previewRows: RenderRow[] = layout.fields.map((f) => {
+                  let value = "";
+                  if (f.source === "static") value = f.staticText || "";
+                  else if (f.source === "attribute") value = "(attr)";
+                  else if (f.source === "productName") value = "Sample Product";
+                  else if (f.source === "sku") value = "SKU-0001";
+                  else if (f.source === "brandName") value = "Brand";
+                  else if (f.source === "instanceCode") value = "SKU-KCONE-0001";
+                  return { id: f.id, label: f.label, value };
+                });
+
                 return (
                   <tr key={t.id} className={`hover:bg-slate-50 ${t.status === "inactive" ? "opacity-60" : ""}`}>
                     <td className="px-4 py-3 align-middle font-semibold text-slate-800 truncate">{t.name}</td>
@@ -223,9 +270,16 @@ export default function StickerTemplatesClient({
                         {t.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 align-middle">
+                      <MiniaturePreview
+                        layout={layout}
+                        previewRows={previewRows}
+                        onClick={() => openDuplicate(t)}
+                      />
+                    </td>
                     {!readOnly && (
                       <td className="px-4 py-3 align-middle text-right">
-                        <div className="inline-flex justify-end gap-2">
+                        <div className="inline-flex justify-end gap-1.5">
                           <IconButton kind="edit" title="Edit" tone="primary" onClick={() => openEdit(t)} />
                           <IconButton kind="add" title="Duplicate" onClick={() => openDuplicate(t)} />
                           <IconButton kind={t.status === "active" ? "retire" : "activate"} title={t.status === "active" ? "Deactivate" : "Activate"} onClick={() => patch(t, { status: t.status === "active" ? "inactive" : "active" })} disabled={busy} />

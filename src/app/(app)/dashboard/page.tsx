@@ -17,7 +17,8 @@ import {
   Warehouse,
   FileCheck,
   Clock,
-  Printer
+  Printer,
+  MapPin
 } from "lucide-react";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
@@ -73,18 +74,17 @@ async function countCategories(status?: string) {
 }
 
 async function globalCounts() {
-  const [categories, attributes, brands, programs, sellers, products, copies, pendingApprovals] =
+  const [categories, attributes, brands, programs, sellers, branches, pendingApprovals] =
     await Promise.all([
       countCategories(),
       prisma.attribute.count(),
       prisma.brand.count(),
       prisma.program.count(),
       prisma.seller.count(),
-      prisma.brandProduct.count(),
-      prisma.productCopy.count(),
+      prisma.branch.count({ where: { status: "active" } }),
       prisma.changeRequest.count({ where: { status: "pending" } }),
     ]);
-  return { categories, attributes, brands, programs, sellers, products, copies, pendingApprovals };
+  return { categories, attributes, brands, programs, sellers, branches, pendingApprovals };
 }
 
 async function branchCounts(branchId: bigint) {
@@ -592,11 +592,7 @@ export default async function DashboardPage() {
 
   // Active flags count for warning banner
   let activeFlagsCount = 0;
-  if (isHo) {
-    activeFlagsCount = await prisma.flag.count({
-      where: { isResolved: false },
-    });
-  } else if (targetBranchId) {
+  if (!isHo && targetBranchId) {
     activeFlagsCount = await prisma.flag.count({
       where: {
         isResolved: false,
@@ -713,19 +709,12 @@ export default async function DashboardPage() {
             <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.sellers as number}</div>
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Sellers</div>
           </div>
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all duration-200 group">
-            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
-              <Package className="w-5 h-5" />
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-emerald-450 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-emerald-500 transition-colors">
+              <MapPin className="w-5 h-5" />
             </div>
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.products as number}</div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Products (SKUs)</div>
-          </div>
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-teal-400 transition-all duration-200 group">
-            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-teal-500 transition-colors">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.copies as number}</div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Physical Copies</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.branches as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Active Branches</div>
           </div>
           <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-rose-400 transition-all duration-200 group">
             <div className="absolute top-4 right-4 text-slate-400 group-hover:text-rose-500 transition-colors">

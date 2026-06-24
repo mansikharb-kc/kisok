@@ -13,14 +13,27 @@ const updateSchema = z.object({
   brandType: z.string().trim().max(40).optional().nullable(),
   logoMediaId: z.coerce.bigint().optional().nullable(),
   contactPerson: z.string().trim().max(150).optional().nullable(),
+  contactPersonDesignation: z.string().trim().max(150).optional().nullable(),
   phoneCc: z.string().trim().max(8).optional().nullable(),
   phone: z.string().trim().max(20).optional().nullable(),
   email: z.string().trim().max(190).optional().nullable(),
+  contacts: z.array(z.object({
+    name: z.string().trim().max(150).optional().nullable(),
+    designation: z.string().trim().max(150).optional().nullable(),
+    phoneCc: z.string().trim().max(8).optional().nullable(),
+    phone: z.string().trim().max(20).optional().nullable(),
+    email: z.string().trim().max(190).optional().nullable()
+  })).optional().nullable(),
   website: z.string().trim().max(255).optional().nullable(),
+  socialLinkedin: z.string().trim().max(255).optional().nullable(),
+  socialTwitter: z.string().trim().max(255).optional().nullable(),
+  socialInstagram: z.string().trim().max(255).optional().nullable(),
+  socialYoutube: z.string().trim().max(255).optional().nullable(),
   address: z.string().trim().max(500).optional().nullable(),
   pincode: z.string().trim().max(20).optional().nullable(),
   city: z.string().trim().max(120).optional().nullable(),
   state: z.string().trim().max(120).optional().nullable(),
+  country: z.string().trim().max(120).optional().nullable(),
   gstNumber: z.string().trim().max(20).optional().nullable().refine((v) => !v || GSTIN_REGEX.test(v.toUpperCase()), "Invalid GSTIN"),
   agreementDuration: z.string().trim().max(40).optional().nullable(),
   contractStart: dateish,
@@ -98,11 +111,81 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const { categoryIds, contractStart, contractEnd, ...data } = parsed.data;
 
+  // Sync contacts and root fields during patch
+  if (data.contacts !== undefined) {
+    if (data.contacts && data.contacts.length > 0) {
+      const first = data.contacts[0];
+      data.contactPerson = first.name || null;
+      data.contactPersonDesignation = first.designation || null;
+      data.phoneCc = first.phoneCc || null;
+      data.phone = first.phone || null;
+      data.email = first.email || null;
+    } else {
+      data.contactPerson = null;
+      data.contactPersonDesignation = null;
+      data.phoneCc = null;
+      data.phone = null;
+      data.email = null;
+    }
+  } else {
+    const hasAnyRootContactField = 
+      data.contactPerson !== undefined ||
+      data.contactPersonDesignation !== undefined ||
+      data.phoneCc !== undefined ||
+      data.phone !== undefined ||
+      data.email !== undefined;
+
+    if (hasAnyRootContactField) {
+      const existingBrand = await prisma.brand.findUnique({
+        where: { id },
+        select: {
+          contactPerson: true,
+          contactPersonDesignation: true,
+          phoneCc: true,
+          phone: true,
+          email: true,
+          contacts: true,
+        }
+      });
+      if (existingBrand) {
+        const mergedPerson = data.contactPerson !== undefined ? data.contactPerson : existingBrand.contactPerson;
+        const mergedDesignation = data.contactPersonDesignation !== undefined ? data.contactPersonDesignation : existingBrand.contactPersonDesignation;
+        const mergedPhoneCc = data.phoneCc !== undefined ? data.phoneCc : existingBrand.phoneCc;
+        const mergedPhone = data.phone !== undefined ? data.phone : existingBrand.phone;
+        const mergedEmail = data.email !== undefined ? data.email : existingBrand.email;
+
+        let existingContacts = Array.isArray(existingBrand.contacts) ? (existingBrand.contacts as any[]) : [];
+        if (existingContacts.length === 0) {
+          existingContacts = [
+            {
+              name: mergedPerson || null,
+              designation: mergedDesignation || null,
+              phoneCc: mergedPhoneCc || null,
+              phone: mergedPhone || null,
+              email: mergedEmail || null,
+            }
+          ];
+        } else {
+          existingContacts[0] = {
+            ...existingContacts[0],
+            name: mergedPerson || null,
+            designation: mergedDesignation || null,
+            phoneCc: mergedPhoneCc || null,
+            phone: mergedPhone || null,
+            email: mergedEmail || null,
+          };
+        }
+        data.contacts = existingContacts;
+      }
+    }
+  }
+
   const brand = await prisma.$transaction(async (tx) => {
     const updated = await tx.brand.update({
       where: { id },
       data: {
         ...data,
+        contacts: data.contacts !== undefined ? (data.contacts as any) : undefined,
         // Approving a brand also makes it active (e.g. an Onboarding Lead's brand
         // created as pending_approval becomes usable once HO approves).
         ...(data.approvalStatus === "approved" && data.status === undefined ? { status: "active" } : {}),

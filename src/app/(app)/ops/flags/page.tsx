@@ -10,7 +10,7 @@ export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const allowedRoles = ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"];
+  const allowedRoles = ["BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"];
   if (!hasRole(session.roles, ...allowedRoles as any)) redirect("/dashboard");
 
   const isHo = hasRole(session.roles, "HO_ADMIN");

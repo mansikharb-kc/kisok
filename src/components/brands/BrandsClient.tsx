@@ -16,6 +16,27 @@ export type BrandRow = {
   productCount: number;
   sellerCount: number;
   branchCount: number;
+  contactPerson?: string | null;
+  contactPersonDesignation?: string | null;
+  phoneCc?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  socialLinkedin?: string | null;
+  socialTwitter?: string | null;
+  socialInstagram?: string | null;
+  socialYoutube?: string | null;
+  address?: string | null;
+  pincode?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  gstNumber?: string | null;
+  agreementDuration?: string | null;
+  contractStart?: string | null;
+  contractEnd?: string | null;
+  description?: string | null;
+  contacts?: any[] | null;
 };
 
 const APPROVAL_BADGE: Record<string, string> = {
@@ -43,6 +64,202 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
   const [busy, setBusy] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [approval, setApproval] = useState<"all" | "approved" | "pending" | "rejected">("all");
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  function parseCSV(text: string) {
+    const lines = text.split(/\r\n|\n/);
+    const result: string[][] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const row: string[] = [];
+      let inQuotes = false;
+      let currentVal = "";
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          row.push(currentVal.trim());
+          currentVal = "";
+        } else {
+          currentVal += char;
+        }
+      }
+      row.push(currentVal.trim());
+      result.push(row);
+    }
+    return result;
+  }
+
+  async function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setImportBusy(true);
+    setImportError(null);
+    try {
+      const text = await file.text();
+      const parsed = parseCSV(text);
+      if (parsed.length < 2) {
+        setImportError("CSV file must contain a header row and at least one data row.");
+        return;
+      }
+      
+      const headers = parsed[0].map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
+      const nameIdx = headers.indexOf("brandname");
+      if (nameIdx === -1) {
+        setImportError("Required column 'Brand Name' not found in CSV header.");
+        return;
+      }
+
+      const typeIdx = headers.indexOf("brandtype");
+      const personIdx = headers.indexOf("contactperson");
+      const designationIdx = headers.indexOf("designation");
+      const phoneCcIdx = headers.indexOf("phonecc");
+      const phoneIdx = headers.indexOf("phone");
+      const emailIdx = headers.indexOf("email");
+      const websiteIdx = headers.indexOf("website");
+      const linkedinIdx = headers.indexOf("linkedin");
+      const twitterIdx = headers.indexOf("twitter");
+      const instagramIdx = headers.indexOf("instagram");
+      const youtubeIdx = headers.indexOf("youtube");
+      const addressIdx = headers.indexOf("address");
+      const pincodeIdx = headers.indexOf("pincode");
+      const cityIdx = headers.indexOf("city");
+      const stateIdx = headers.indexOf("state");
+      const countryIdx = headers.indexOf("country");
+      const gstIdx = headers.indexOf("gstnumber");
+      const agreementIdx = headers.indexOf("agreementduration");
+      const contractStartIdx = headers.indexOf("contractstart");
+      const descIdx = headers.indexOf("description");
+
+      const brandsToCreate = [];
+      for (let i = 1; i < parsed.length; i++) {
+        const row = parsed[i];
+        if (row.length < nameIdx + 1 || !row[nameIdx]) continue;
+
+        const newBrand = {
+          name: row[nameIdx],
+          brandType: typeIdx !== -1 ? row[typeIdx] || null : null,
+          contactPerson: personIdx !== -1 ? row[personIdx] || null : null,
+          contactPersonDesignation: designationIdx !== -1 ? row[designationIdx] || null : null,
+          phoneCc: phoneCcIdx !== -1 ? row[phoneCcIdx] || null : "+91",
+          phone: phoneIdx !== -1 ? row[phoneIdx] || null : null,
+          email: emailIdx !== -1 ? row[emailIdx] || null : null,
+          website: websiteIdx !== -1 ? row[websiteIdx] || null : null,
+          socialLinkedin: linkedinIdx !== -1 ? row[linkedinIdx] || null : null,
+          socialTwitter: twitterIdx !== -1 ? row[twitterIdx] || null : null,
+          socialInstagram: instagramIdx !== -1 ? row[instagramIdx] || null : null,
+          socialYoutube: youtubeIdx !== -1 ? row[youtubeIdx] || null : null,
+          address: addressIdx !== -1 ? row[addressIdx] || null : null,
+          pincode: pincodeIdx !== -1 ? row[pincodeIdx] || null : null,
+          city: cityIdx !== -1 ? row[cityIdx] || null : null,
+          state: stateIdx !== -1 ? row[stateIdx] || null : null,
+          country: countryIdx !== -1 ? row[countryIdx] || null : null,
+          gstNumber: gstIdx !== -1 ? row[gstIdx] || null : null,
+          agreementDuration: agreementIdx !== -1 ? row[agreementIdx] || null : null,
+          contractStart: contractStartIdx !== -1 ? row[contractStartIdx] || null : null,
+          description: descIdx !== -1 ? row[descIdx] || null : null,
+        };
+        brandsToCreate.push(newBrand);
+      }
+
+      if (brandsToCreate.length === 0) {
+        setImportError("No valid rows to import.");
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      for (const brandData of brandsToCreate) {
+        try {
+          const res = await fetch("/api/brands", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(brandData)
+          });
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+
+      alert(`Import completed! ${successCount} brands imported successfully.${failCount > 0 ? ` ${failCount} rows failed.` : ""}`);
+      setImportOpen(false);
+      router.refresh();
+    } catch (err: any) {
+      setImportError(err.message || "Failed to read file.");
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  function triggerExport() {
+    const headers = [
+      "Brand No", "Brand Name", "Code", "Brand Type", "Contact Person",
+      "Designation", "Phone CC", "Phone", "Email", "Website", "LinkedIn",
+      "Twitter", "Instagram", "YouTube", "Address", "Pincode", "City",
+      "State", "Country", "GST Number", "Agreement Duration", "Contract Start",
+      "Contract End", "Description"
+    ];
+
+    const csvRows = [
+      headers.join(",")
+    ];
+
+    for (const b of rows) {
+      const values = [
+        b.brandNo ?? "",
+        b.name,
+        b.code,
+        b.brandType ?? "",
+        b.contactPerson ?? "",
+        b.contactPersonDesignation ?? "",
+        b.phoneCc ?? "",
+        b.phone ?? "",
+        b.email ?? "",
+        b.website ?? "",
+        b.socialLinkedin ?? "",
+        b.socialTwitter ?? "",
+        b.socialInstagram ?? "",
+        b.socialYoutube ?? "",
+        b.address ?? "",
+        b.pincode ?? "",
+        b.city ?? "",
+        b.state ?? "",
+        b.country ?? "",
+        b.gstNumber ?? "",
+        b.agreementDuration ?? "",
+        b.contractStart ?? "",
+        b.contractEnd ?? "",
+        b.description ?? ""
+      ].map(val => {
+        const escaped = ('' + (val ?? "")).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(","));
+    }
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => encodeURIComponent(e)).join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", `brands_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setExportOpen(false);
+  }
 
   const visible = useMemo(() => initial.filter((b) => b.status !== "archived"), [initial]);
   const counts = useMemo(
@@ -119,9 +336,27 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
             </button>
           </div>
           {!readOnly && (
-            <button type="button" onClick={() => router.push("/masters/brands/new")} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-              + New Brand
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition active:scale-[0.98] shadow-sm"
+              >
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                Import
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportOpen(true)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 transition active:scale-[0.98] shadow-sm"
+              >
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Export
+              </button>
+              <button type="button" onClick={() => router.push("/masters/brands/new")} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+                + New Brand
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -297,6 +532,163 @@ export default function BrandsClient({ initial, readOnly = false }: { initial: B
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {exportOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 py-8">
+          <div className="w-full max-w-6xl rounded-2xl border border-white/10 bg-slate-900 text-white shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4 bg-slate-950/40">
+              <div>
+                <h3 className="text-lg font-bold text-white">Brand Data Export Preview</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Spreadsheet preview of the brand columns to be exported</p>
+              </div>
+              <button type="button" onClick={() => setExportOpen(false)} className="text-slate-400 hover:text-white transition font-bold text-lg">✕</button>
+            </div>
+
+            <div className="p-6 overflow-auto flex-1 bg-slate-950">
+              <div className="border border-slate-750 rounded-lg overflow-auto shadow-inner max-w-full bg-slate-900">
+                <table className="min-w-full border-collapse text-[11px] font-mono text-slate-200">
+                  <thead className="bg-slate-800 sticky top-0 z-10 border-b border-slate-700">
+                    <tr>
+                      <th className="border border-slate-700 px-2 py-2 text-center bg-slate-850 text-slate-400 w-10 font-bold">#</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">Brand No</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[130px]">Brand Name</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[90px]">Code</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">Brand Type</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[130px]">Contact Person</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[120px]">Designation</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[60px]">Phone CC</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[110px]">Phone</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[150px]">Email</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[150px]">Website</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[150px]">Address</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[80px]">Pincode</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">City</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">State</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">Country</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[120px]">GST Number</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[130px]">Agreement Duration</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">Contract Start</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[100px]">Contract End</th>
+                      <th className="border border-slate-700 px-3 py-2 text-left bg-slate-850 text-slate-200 font-bold min-w-[180px]">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 bg-slate-900">
+                    {rows.map((b, index) => (
+                      <tr key={b.id} className="hover:bg-white/[0.02]">
+                        <td className="border border-slate-700 px-2 py-1 text-center bg-slate-850/40 text-slate-400 font-semibold">{index + 1}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[120px] font-semibold text-white">{b.brandNo ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[150px] font-semibold text-white">{b.name}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[90px] text-slate-300">{b.code}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-300">{b.brandType ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[130px] text-slate-350">{b.contactPerson ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[120px] text-slate-350">{b.contactPersonDesignation ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[60px] text-slate-350">{b.phoneCc ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[110px] text-slate-350">{b.phone ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[150px] text-slate-350">{b.email ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[150px] text-slate-350">{b.website ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[180px] text-slate-350">{b.address ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[80px] text-slate-350">{b.pincode ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-350">{b.city ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-350">{b.state ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-350">{b.country ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[120px] text-slate-350">{b.gstNumber ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[130px] text-slate-350">{b.agreementDuration ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-350">{b.contractStart ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[100px] text-slate-350">{b.contractEnd ?? "—"}</td>
+                        <td className="border border-slate-700 px-3 py-1 truncate max-w-[200px] text-slate-350">{b.description ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-white/5 px-6 py-4 bg-slate-950/40">
+              <button
+                type="button"
+                onClick={() => setExportOpen(false)}
+                className="rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={triggerExport}
+                className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-sm font-semibold text-white transition shadow-lg active:scale-[0.98]"
+              >
+                Export Data (CSV)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {importOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 py-8">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 text-white shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/5 px-6 py-4 bg-slate-950/40">
+              <div>
+                <h3 className="text-lg font-bold text-white">Import Brands (CSV)</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Select a CSV file containing brand columns to import in bulk</p>
+              </div>
+              <button type="button" onClick={() => setImportOpen(false)} className="text-slate-400 hover:text-white transition font-bold text-lg">✕</button>
+            </div>
+
+            <div className="p-6 space-y-4 bg-slate-950">
+              {importError && (
+                <div className="rounded-lg bg-rose-950/40 border border-rose-800 text-rose-200 text-xs p-3">
+                  {importError}
+                </div>
+              )}
+              
+              <div className="text-xs text-slate-300 space-y-1.5 bg-slate-900 p-4 rounded-xl border border-white/5">
+                <span className="font-semibold text-white block mb-1">CSV Header Format Guidelines:</span>
+                <p className="flex items-center gap-1.5 flex-wrap">
+                  Required column: <code className="bg-white/15 text-white font-mono px-1.5 py-0.5 rounded border border-white/5 font-semibold text-[11px]">Brand Name</code>
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap leading-relaxed">
+                  Optional columns:
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Brand Type</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Contact Person</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Designation</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Phone CC</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Phone</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Email</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Website</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">Address</code>
+                  <code className="bg-white/10 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-white/5 text-[11px]">GST Number</code>
+                  etc.
+                </div>
+              </div>
+
+              <label className="border-2 border-dashed border-white/10 rounded-xl p-8 bg-slate-900/50 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.02] hover:border-brand-500 transition group">
+                <svg className="w-10 h-10 text-slate-500 mb-2 group-hover:text-brand-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                <span className="text-sm font-semibold text-slate-200 group-hover:text-brand-400 transition">Choose CSV File</span>
+                <span className="text-xs text-slate-500 mt-1">or drag & drop it here</span>
+                <input type="file" accept=".csv" onChange={handleCsvImport} className="hidden" disabled={importBusy} />
+              </label>
+
+              {importBusy && (
+                <div className="text-center py-2 text-xs text-brand-400 font-bold flex items-center justify-center gap-1.5">
+                  <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                  Uploading and importing brands data...
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-white/5 px-6 py-4 bg-slate-950/40">
+              <button
+                type="button"
+                onClick={() => setImportOpen(false)}
+                disabled={importBusy}
+                className="rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition disabled:opacity-50 active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
