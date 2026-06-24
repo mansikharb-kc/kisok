@@ -428,7 +428,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Signed in as Screen Manager · {smBranch?.name ?? "your branch"}
+            Signed in as RMS Manager · {smBranch?.name ?? "your branch"}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -71,7 +71,7 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "ob-exec": "Onboarding Exec",
   "project-user": "Project User",
   "concierge-manager": "Concierge Manager",
-  "screen-manager": "Screen Manager",
+  "screen-manager": "RMS Manager",
 };
 
 export default function RoleUserForm({

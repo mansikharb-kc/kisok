@@ -19,7 +19,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   OB_EXEC: "Onboarding Exec",
   PROJECT_USER: "Project User",
   CONCIERGE_MANAGER: "Concierge Manager",
-  SCREEN_MANAGER: "Screen Manager",
+  SCREEN_MANAGER: "RMS Manager",
 };
 
 export type NavItem = {
@@ -75,7 +75,7 @@ export const NAV: NavItem[] = [
   { href: "/users/role/ob-exec", label: "Onboarding Execs", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/project-user", label: "Project Users", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/concierge-manager", label: "Concierge Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/users/role/screen-manager", label: "Screen Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/screen-manager", label: "RMS Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export type SessionRole = { code: RoleCode; branchId: string | null };

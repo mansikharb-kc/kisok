@@ -382,6 +382,7 @@ model LocationNode {
 
   copies         ProductCopy[]
   screens        Screen[]
+  screenRacks    ScreenRack[]          @relation("RackScreenLinks")
   nodeCategories LocationNodeCategory[]
 
   @@index([branchId])
@@ -838,10 +839,25 @@ model Screen {
 
   branch   Branch        @relation(fields: [branchId], references: [id])
   location LocationNode? @relation(fields: [locationNodeId], references: [id])
+  racks    ScreenRack[]
 
   @@index([branchId])
   @@index([locationNodeId])
   @@map("screens")
+}
+
+// A screen (mounted on a block) covers MULTIPLE racks of that block.
+// One rack belongs to at most one screen (unique locationNodeId).
+model ScreenRack {
+  id             BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  screenId       BigInt @map("screen_id") @db.UnsignedBigInt
+  locationNodeId BigInt @unique @map("location_node_id") @db.UnsignedBigInt
+
+  screen Screen       @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  rack   LocationNode @relation("RackScreenLinks", fields: [locationNodeId], references: [id], onDelete: Cascade)
+
+  @@index([screenId])
+  @@map("screen_racks")
 }
 
 // ---------------------------------------------------------------------
