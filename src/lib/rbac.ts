@@ -49,6 +49,7 @@ export const NAV: NavItem[] = [
   // L2 — RMS screens (Branch Admin + the Screen Manager they create; branch-scoped)
   { href: "/rms-blocks", label: "Blocks", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
   { href: "/rms-screens", label: "RMS Screens", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
+  { href: "/rms-preview", label: "Screen Preview", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
 
   // L2 — Read-only visibility into ops for Branch Admin (PRD §8: view sellers/assignments)
   { href: "/branch/programs", label: "Programs (select)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
