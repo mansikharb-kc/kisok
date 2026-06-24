@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE } from "@/lib/auth";
 
-const PUBLIC = ["/login", "/forgot-password"];
+// Auth pages — logged-in users get bounced away from these to the dashboard.
+const AUTH_PAGES = ["/login", "/forgot-password"];
+// No-auth-required paths. "/rms" = public kiosk screens (/rms/screen/<token>...).
+// NOTE: admin pages /rms-screens, /rms-blocks, /rms-preview do NOT start with "/rms/" so stay protected.
+const PUBLIC = [...AUTH_PAGES, "/rms"];
 
 async function valid(token: string | undefined): Promise<boolean> {
   if (!token) return false;
@@ -20,6 +24,7 @@ export async function middleware(req: NextRequest) {
   const authed = await valid(token);
 
   const isPublic = PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isAuthPage = AUTH_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   if (!authed && !isPublic) {
     const url = req.nextUrl.clone();
@@ -27,7 +32,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (authed && isPublic) {
+  // Only bounce logged-in users away from auth pages (login/forgot) — NOT from the kiosk.
+  if (authed && isAuthPage) {
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

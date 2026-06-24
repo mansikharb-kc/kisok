@@ -19,19 +19,32 @@ export default async function RmsBlocksPage() {
   const branchId = role?.branchId ? BigInt(role.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
-  const [branch, blocks, screens] = await Promise.all([
+  const [branch, blocks, screensRaw] = await Promise.all([
     prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } }),
     prisma.locationNode.findMany({
       where: { branchId, nodeType: "BLOCK" },
       orderBy: { name: "asc" },
       include: {
+        program: { select: { id: true, name: true } },
         nodeCategories: { include: { category: { select: { id: true, name: true } } } },
-        _count: { select: { children: true, copies: true } },
+        children: {
+          where: { nodeType: "RACK" },
+          orderBy: { name: "asc" },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            _count: { select: { copies: true } },
+            screenRacks: { include: { screen: { select: { id: true, name: true, token: true } } } },
+          },
+        },
+        _count: { select: { copies: true } },
       },
     }),
     prisma.screen.findMany({
       where: { branchId },
-      select: { id: true, name: true, token: true, status: true, locationNodeId: true },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, token: true, status: true },
     }),
   ]);
 
@@ -39,16 +52,27 @@ export default async function RmsBlocksPage() {
     id: b.id,
     name: b.name,
     code: b.code,
-    childCount: b._count?.children ?? 0,
+    programId: b.program?.id ?? null,
+    programName: b.program?.name ?? "No program",
     copyCount: b._count?.copies ?? 0,
     categories: (b.nodeCategories ?? []).map((nc: any) => ({ id: nc.category.id, name: nc.category.name })),
+    racks: (b.children ?? []).map((r: any) => {
+      const sr = r.screenRacks?.[0];
+      return {
+        id: r.id,
+        name: r.name,
+        code: r.code,
+        copyCount: r._count?.copies ?? 0,
+        screen: sr ? { id: sr.screen.id, name: sr.screen.name, token: sr.screen.token } : null,
+      };
+    }),
   }));
 
   return (
     <RmsBlocksClient
       branchName={branch?.name ?? "your branch"}
       blocks={blockRows}
-      screens={serialize(screens) as any[]}
+      screens={serialize(screensRaw) as any[]}
     />
   );
 }

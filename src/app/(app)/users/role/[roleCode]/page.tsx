@@ -54,7 +54,7 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "ob-exec": "Onboarding Execs",
   "project-user": "Project Users",
   "concierge-manager": "Concierge Managers",
-  "screen-manager": "Screen Managers",
+  "screen-manager": "RMS Managers",
 };
 
 interface PageProps {
