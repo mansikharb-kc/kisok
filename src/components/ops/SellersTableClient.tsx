@@ -173,6 +173,29 @@ export default function SellersTableClient({ rows, newSellerHref }: { rows: Sell
   // Sort indicators removed for a clean header — columns still sort on click.
   const SortIndicator = (_props: { field: SortField }) => null;
 
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  async function handleArchive(s: SellerRow) {
+    if (!confirm(`Archive seller "${s.name}"? It will be removed from this list.`)) return;
+    setArchivingId(s.id);
+    try {
+      const res = await fetch(`/api/sellers/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Could not archive seller");
+        return;
+      }
+      router.refresh();
+    } catch {
+      alert("Request failed. Check your connection.");
+    } finally {
+      setArchivingId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Search and Quick Filters bar */}
@@ -393,6 +416,7 @@ export default function SellersTableClient({ rows, newSellerHref }: { rows: Sell
                     <div className="inline-flex items-center justify-end gap-1.5">
                       <IconButton kind="edit" title="Edit" tone="primary" onClick={() => router.push(`/ops/sellers/${s.id}/edit`)} />
                       <IconButton kind="view" title="View" onClick={() => router.push(`/ops/sellers/${s.id}`)} />
+                      <IconButton kind="archive" title="Archive" tone="danger" disabled={archivingId === s.id} onClick={() => handleArchive(s)} />
                     </div>
                   </td>
                 </ClickableRow>

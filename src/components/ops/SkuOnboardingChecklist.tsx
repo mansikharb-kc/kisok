@@ -162,20 +162,8 @@ export default function SkuOnboardingChecklist({
   };
 
   const handleSelectExportCategory = async (cat: any) => {
-    // Fetch category code if not present
-    let code = cat.code;
-    if (!code) {
-      try {
-        const res = await fetch(`/api/onboarding/options?q=${encodeURIComponent(cat.name)}`);
-        const data = await res.json();
-        const found = data.categories?.find((c: any) => c.id.toString() === cat.id.toString());
-        if (found) code = found.code;
-      } catch (err) {
-        console.error("Failed to fetch category code", err);
-      }
-    }
-
-    setSelectedExportCategory({ ...cat, code: code || cat.name.toLowerCase().replace(/\s+/g, "-") });
+    // Categories are matched by NAME (no code). Just select it.
+    setSelectedExportCategory(cat);
     setExportCategories([]);
     setExportCategoryQuery(cat.name);
     setExportLoadingAttrs(true);
@@ -196,7 +184,7 @@ export default function SkuOnboardingChecklist({
     const headers = [
       "Product Name",
       "SKU",
-      "Category Code",
+      "Category Name",
       ...exportCategoryAttrs.map((a) => a.name),
       "Product Image URL",
       "Product Video URL",
@@ -335,10 +323,10 @@ export default function SkuOnboardingChecklist({
 
   function handleExportTemplate() {
     if (!activeBrand) return;
-    const headers = [["Product Name", "SKU", "Category Code"]];
+    const headers = [["Product Name", "SKU", "Category Name"]];
     const sampleData = [
-      ["Kohler Veil Faucet", "K-VEIL-101", "faucets"],
-      ["Kohler Moxie Shower", "K-SHW-202", "faucets"],
+      ["Kohler Veil Faucet", "K-VEIL-101", "Faucets"],
+      ["Kohler Moxie Shower", "K-SHW-202", "Faucets"],
     ];
     const ws = XLSX.utils.aoa_to_sheet([...headers, ...sampleData]);
     const wb = XLSX.utils.book_new();
@@ -436,23 +424,22 @@ export default function SkuOnboardingChecklist({
         for (const row of rows) {
           const name = row["Product Name"] || row["name"];
           const skuVal = row["SKU"] || row["sku"];
-          const categoryCode = row["Category Code"] || row["category_code"] || row["category"];
+          const categoryName = row["Category Name"] || row["Category Code"] || row["category_name"] || row["category"];
 
-          if (!name || !skuVal || !categoryCode) {
+          if (!name || !skuVal || !categoryName) {
             failCount++;
             continue;
           }
 
           try {
-            const catRes = await fetch(`/api/onboarding/options?q=${encodeURIComponent(categoryCode.toString().trim())}`);
+            const catRes = await fetch(`/api/onboarding/options?q=${encodeURIComponent(categoryName.toString().trim())}`);
             const catData = await catRes.json();
             const matchingCat = catData.categories?.find(
-              (c: any) => c.name.toLowerCase() === categoryCode.toString().trim().toLowerCase() ||
-                          (c.code && c.code.toLowerCase() === categoryCode.toString().trim().toLowerCase())
+              (c: any) => c.name.toLowerCase() === categoryName.toString().trim().toLowerCase()
             );
 
             if (!matchingCat) {
-              console.error(`Category not found for code: ${categoryCode}`);
+              console.error(`Category not found for name: ${categoryName}`);
               failCount++;
               continue;
             }
@@ -1384,7 +1371,6 @@ export default function SkuOnboardingChecklist({
                         className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex justify-between items-center transition-colors"
                       >
                         <span className="font-semibold">{cat.name}</span>
-                        <span className="text-xs font-mono text-slate-400">{cat.code}</span>
                       </button>
                     ))}
                   </div>
@@ -1415,7 +1401,7 @@ export default function SkuOnboardingChecklist({
                       <div className="flex flex-wrap gap-1.5">
                         <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded border border-slate-200">Product Name</span>
                         <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded border border-slate-200">SKU</span>
-                        <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded border border-slate-200">Category Code</span>
+                        <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded border border-slate-200">Category Name</span>
                       </div>
                     </div>
 
