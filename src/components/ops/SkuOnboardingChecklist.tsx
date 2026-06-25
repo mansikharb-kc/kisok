@@ -40,6 +40,7 @@ interface SizeOption {
 }
 
 interface SkuOnboardingChecklistProps {
+  assignmentId: string;
   sellerId: string;
   programId: string;
   programName: string;
@@ -68,6 +69,7 @@ interface SkuOnboardingChecklistProps {
 }
 
 export default function SkuOnboardingChecklist({
+  assignmentId,
   sellerId,
   programId,
   programName,
@@ -89,6 +91,9 @@ export default function SkuOnboardingChecklist({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState("");
+  const [isBulkPrintMode, setIsBulkPrintMode] = useState(false);
+  const [selectedBulkProductIds, setSelectedBulkProductIds] = useState<string[]>([]);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Local state to track number of units typed in the quantity column
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -794,7 +799,7 @@ export default function SkuOnboardingChecklist({
                     </button>
                     {isExec && (
                       <Link
-                        href={`/ops/onboarding/new?sellerId=${sellerId}&programId=${programId}&brandId=${activeBrand.id}`}
+                        href={`/ops/onboarding/new?sellerId=${sellerId}&programId=${programId}&brandId=${activeBrand.id}&assignmentId=${assignmentId}`}
                         className="inline-flex items-center gap-1.5 rounded bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition shadow-sm"
                       >
                         Add
@@ -820,6 +825,20 @@ export default function SkuOnboardingChecklist({
                     >
                       Export Template
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBulkPrintMode(prev => !prev);
+                        setSelectedBulkProductIds([]);
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-semibold transition shadow-sm ${
+                        isBulkPrintMode
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-bold"
+                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      Print Bulk Templates
+                    </button>
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -841,6 +860,26 @@ export default function SkuOnboardingChecklist({
                     <table className="w-full border-collapse text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-150 bg-slate-50/40 text-[10px] font-bold uppercase tracking-wider text-slate-450">
+                          {isBulkPrintMode && (
+                            <th className="px-4 py-3 font-semibold w-12">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  filteredProducts.filter(p => onboardingMap[p.id]?.copies?.length > 0).length > 0 &&
+                                  filteredProducts.filter(p => onboardingMap[p.id]?.copies?.length > 0).every(p => selectedBulkProductIds.includes(p.id))
+                                }
+                                onChange={(e) => {
+                                  const productsWithCopies = filteredProducts.filter(p => onboardingMap[p.id]?.copies?.length > 0);
+                                  if (e.target.checked) {
+                                    setSelectedBulkProductIds(productsWithCopies.map(p => p.id));
+                                  } else {
+                                    setSelectedBulkProductIds([]);
+                                  }
+                                }}
+                                className="rounded border-slate-350 h-4 w-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                              />
+                            </th>
+                          )}
                           <th className="px-4 py-3 font-semibold">Product</th>
                           <th className="px-4 py-3 font-semibold">SKU</th>
                           <th className="px-4 py-3 font-semibold">
@@ -900,6 +939,7 @@ export default function SkuOnboardingChecklist({
                         {filteredProducts.map((p) => {
                           const record = onboardingMap[p.id];
                           const isOnboarded = !!record;
+                          const hasCopies = !!(record?.copies && record.copies.length > 0);
                           const currentQty = quantities[p.id] ?? record?.copies?.length ?? 1;
 
                           return (
@@ -910,6 +950,21 @@ export default function SkuOnboardingChecklist({
                                 isOnboarded ? "bg-emerald-50/15" : ""
                               }`}
                             >
+                              {isBulkPrintMode && (
+                                <td className="px-4 py-3.5 align-middle" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    disabled={!hasCopies}
+                                    checked={selectedBulkProductIds.includes(p.id)}
+                                    onChange={() => {
+                                      setSelectedBulkProductIds(prev =>
+                                        prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                                      );
+                                    }}
+                                    className="rounded border-slate-350 h-5 w-5 text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  />
+                                </td>
+                              )}
                               {/* Product Info */}
                               <td className="px-4 py-3.5">
                                 <div className="font-bold text-slate-800 text-sm leading-tight">
@@ -1080,6 +1135,33 @@ export default function SkuOnboardingChecklist({
                         })}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                {isBulkPrintMode && (
+                  <div className="flex justify-end gap-3 px-4 py-3 bg-slate-50/70 border-t border-slate-150">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBulkPrintMode(false);
+                        setSelectedBulkProductIds([]);
+                      }}
+                      className="rounded-lg bg-rose-600 text-white px-4 py-2 text-sm font-semibold hover:bg-rose-700 transition shadow-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedBulkProductIds.length === 0) {
+                          alert("Please select at least one product to print.");
+                          return;
+                        }
+                        setIsPreviewModalOpen(true);
+                      }}
+                      className="rounded-lg bg-emerald-600 text-white px-4 py-2 text-sm font-semibold hover:bg-emerald-700 transition shadow-sm"
+                    >
+                      Print Now
+                    </button>
                   </div>
                 )}
               </div>
@@ -1834,6 +1916,113 @@ export default function SkuOnboardingChecklist({
                 className="w-full rounded-lg bg-slate-900 text-white py-2.5 text-sm font-bold hover:bg-slate-800 transition shadow-xs text-center cursor-pointer"
               >
                 Close &amp; Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Bulk Print Preview Modal (Sheet View) */}
+      {isPreviewModalOpen && (
+        <div className="fixed inset-0 z-55 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
+          <div className="mt-10 w-full max-w-4xl rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md p-6 shadow-2xl space-y-6">
+            
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">Bulk Print Preview</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Verify the sticker templates and copies to be printed.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Excel / Sheet Grid Layout */}
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
+              <table className="w-full border-collapse text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[10.5px] font-bold uppercase text-slate-500">
+                    <th className="px-4 py-3 font-sans font-extrabold">Product Name</th>
+                    <th className="px-4 py-3 font-mono font-extrabold">SKU</th>
+                    <th className="px-4 py-3 font-sans font-extrabold">Category</th>
+                    <th className="px-4 py-3 font-sans font-extrabold">Placement Location</th>
+                    <th className="px-4 py-3 font-sans font-extrabold">Role</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProducts
+                    .filter((p) => selectedBulkProductIds.includes(p.id))
+                    .flatMap((p) => {
+                      const record = onboardingMap[p.id];
+                      const copies = record?.copies ?? [];
+                      return copies.map((c: any) => ({
+                        productId: p.id,
+                        name: p.name,
+                        sku: p.sku,
+                        category: p.category.name,
+                        locationName: c.location?.name ?? "Stage Buffer",
+                        role: c.copyRole,
+                        copyId: c.id
+                      }));
+                    })
+                    .map((item, index) => (
+                      <tr key={`${item.copyId}-${index}`} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3 font-semibold text-slate-800 font-sans">{item.name}</td>
+                        <td className="px-4 py-3 text-slate-600 font-mono font-bold">{item.sku}</td>
+                        <td className="px-4 py-3 text-slate-550 font-sans">{item.category}</td>
+                        <td className="px-4 py-3 text-slate-700 font-sans font-semibold">{item.locationName}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold tracking-wide font-sans ${
+                            item.role === "UNIQUE" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                          }`}>
+                            {item.role}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-150">
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="rounded-lg bg-rose-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-rose-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const copyIds: any[] = [];
+                  selectedBulkProductIds.forEach((prodId) => {
+                    const record = onboardingMap[prodId];
+                    if (record?.copies) {
+                      record.copies.forEach((c: any) => {
+                        copyIds.push(c.id);
+                      });
+                    }
+                  });
+                  if (copyIds.length === 0) {
+                    alert("No physical copies are placed for these products to print.");
+                    return;
+                  }
+                  setIsPreviewModalOpen(false);
+                  setIsBulkPrintMode(false);
+                  setSelectedBulkProductIds([]);
+                  window.open(`/print/stickers?ids=${copyIds.join(",")}`, "_blank");
+                }}
+                className="rounded-lg bg-emerald-600 text-white px-5 py-2.5 text-sm font-bold hover:bg-emerald-700 transition"
+              >
+                Print
               </button>
             </div>
           </div>

@@ -12,7 +12,7 @@ const createSchema = z.object({
 });
 
 export const POST = handler(async (req: Request) => {
-  const session = await requireRole("ONB_LEAD");
+  const session = await requireRole("ONB_LEAD", "OB_EXEC");
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
@@ -20,7 +20,7 @@ export const POST = handler(async (req: Request) => {
 
   // Verify branch ownership
   const ownsBranch = session.roles.some(
-    (r) => r.code === "ONB_LEAD" && String(r.branchId) === String(branchId)
+    (r) => (r.code === "ONB_LEAD" || r.code === "OB_EXEC") && String(r.branchId) === String(branchId)
   );
   if (!ownsBranch) return fail("Forbidden — not your branch", 403);
 

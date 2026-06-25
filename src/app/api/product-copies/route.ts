@@ -171,11 +171,25 @@ export const POST = handler(async (req: Request) => {
   });
   let nextSeq = (lastCopy?.sequenceNo ?? 0) + 1;
 
-  // --- Find a sticker template for the product's category (optional). ---
-  const stickerTemplate = await prisma.stickerTemplate.findFirst({
-    where: { categoryId: record.product.categoryId, status: "active" },
-    select: { id: true },
-  });
+  // --- Find a sticker template for the product's category (or its parent categories) (optional). ---
+  let stickerTemplate = null;
+  let cur: bigint | null = record.product.categoryId;
+  let guard = 0;
+  while (cur && guard++ < 20) {
+    const found = await prisma.stickerTemplate.findFirst({
+      where: { categoryId: cur, status: "active" },
+      select: { id: true },
+    });
+    if (found) {
+      stickerTemplate = found;
+      break;
+    }
+    const parentCat: { parentId: bigint | null } | null = await prisma.category.findUnique({
+      where: { id: cur },
+      select: { parentId: true },
+    });
+    cur = parentCat ? parentCat.parentId : null;
+  }
 
   // --- Build per-copy plan + generate QR PNGs only for NEW copies ---
   const newCopiesPlan: {

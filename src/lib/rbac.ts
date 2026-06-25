@@ -59,7 +59,7 @@ export const NAV: NavItem[] = [
   // L3 — Operations
   { href: "/ops/sellers",       label: "Sellers",          group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/assignments",   label: "Assignments",      group: "Operations", roles: ["ONB_LEAD"] },
-  { href: "/ops/sample-sizes",  label: "Sample Sizes",     group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/sample-sizes",  label: "Sample Sizes",     group: "Operations", roles: ["ONB_LEAD", "OB_EXEC"] },
   { href: "/ops/onboarding",    label: "Product Onboarding",group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },

@@ -67,11 +67,12 @@ export default function OnboardingForm({
   const [category, setCategory] = useState<Category | null>(null);
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
+  const [assignmentId, setAssignmentId] = useState("");
 
   // Collapse/Expand state for sections 1, 2, 3
-  const [step1Open, setStep1Open] = useState(false);
-  const [step2Open, setStep2Open] = useState(false);
-  const [step3Open, setStep3Open] = useState(false);
+  const [step1Open, setStep1Open] = useState(true);
+  const [step2Open, setStep2Open] = useState(true);
+  const [step3Open, setStep3Open] = useState(true);
 
   // New Master Uploads state
   const [videoMediaId, setVideoMediaId] = useState<string | null>(null);
@@ -169,6 +170,7 @@ export default function OnboardingForm({
     const urlProgramId = params.get("programId") || "";
     const urlBrandId = params.get("brandId") || "";
     const urlSku = params.get("sku") || "";
+    const urlAssignmentId = params.get("assignmentId") || "";
 
     getJSON("/api/onboarding/options")
       .then((d) => {
@@ -179,6 +181,7 @@ export default function OnboardingForm({
         if (urlProgramId) setProgramId(urlProgramId);
         if (urlBrandId) setBrandId(urlBrandId);
         if (urlSku) setSku(urlSku);
+        if (urlAssignmentId) setAssignmentId(urlAssignmentId);
 
         setTimeout(() => {
           isBootingRef.current = false;
@@ -343,7 +346,11 @@ export default function OnboardingForm({
       }
 
       await postJSON("/api/onboarding", { brandProductId, sellerId, programId });
-      router.push("/ops/onboarding");
+      if (assignmentId) {
+        router.push(`/ops/onboarding/task/${assignmentId}`);
+      } else {
+        router.push("/ops/onboarding");
+      }
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
@@ -794,7 +801,13 @@ export default function OnboardingForm({
         <div className="flex items-center justify-end gap-3">
           <button
             type="button"
-            onClick={() => router.push("/ops/onboarding")}
+            onClick={() => {
+              if (assignmentId) {
+                router.push(`/ops/onboarding/task/${assignmentId}`);
+              } else {
+                router.push("/ops/onboarding");
+              }
+            }}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-650 hover:bg-slate-50"
           >
             Cancel
