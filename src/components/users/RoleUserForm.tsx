@@ -33,6 +33,7 @@ export type UserFormData = {
   phone: string;
   password?: string;
   status: string;
+  avatarUrl?: string | null;
 };
 
 interface RoleUserFormProps {
@@ -46,6 +47,7 @@ interface RoleUserFormProps {
     phone: string | null;
     status: string;
     roles: UserRoleAssignment[];
+    avatarUrl?: string | null;
   };
   onSubmit: (formData: UserFormData, assignments: { roleId: string; branchId: string | null }[]) => Promise<void>;
   saving: boolean;
@@ -71,7 +73,7 @@ const ROLE_NAME_MAP: Record<string, string> = {
   "ob-exec": "Onboarding Exec",
   "project-user": "Project User",
   "concierge-manager": "Concierge Manager",
-  "screen-manager": "Screen Manager",
+  "screen-manager": "RMS Manager",
 };
 
 export default function RoleUserForm({
@@ -98,12 +100,53 @@ export default function RoleUserForm({
     phone: "",
     password: "",
     status: "active",
+    avatarUrl: null,
   });
 
   // State to hold assignments for the CURRENT role
   const [formAssignments, setFormAssignments] = useState<{ roleId: string; branchId: string | null }[]>([]);
   // State to preserve other roles if editing
   const [preservedAssignments, setPreservedAssignments] = useState<{ roleId: string; branchId: string | null }[]>([]);
+
+  const [uploading, setUploading] = useState(false);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File is too large (max 5 MB)");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to upload image");
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        avatarUrl: data.url,
+      }));
+    } catch {
+      setError("Failed to upload image.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     fetchMetadata();
@@ -147,7 +190,7 @@ export default function RoleUserForm({
       const targetRoleId = targetRole?.id ?? "";
 
       if (mode === "create") {
-        setFormData({ fullName: "", email: "", username: "", phone: "", password: "", status: "active" });
+        setFormData({ fullName: "", email: "", username: "", phone: "", password: "", status: "active", avatarUrl: null });
         // Set default assignment
         const defaultBranchId = isHo
           ? (loadedBranches.length > 0 ? loadedBranches[0].id : null)
@@ -161,6 +204,7 @@ export default function RoleUserForm({
           phone: initialUser.phone || "",
           password: "",
           status: initialUser.status,
+          avatarUrl: initialUser.avatarUrl || null,
         });
 
         // Filter assignments:
@@ -296,6 +340,51 @@ export default function RoleUserForm({
       {/* Form Card */}
       <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm overflow-hidden" autoComplete="off">
         <div className="p-6 space-y-6">
+          {/* Profile Image Section */}
+          <div className="flex flex-col sm:flex-row items-center gap-5 border-b border-slate-100 pb-6">
+            <div className="relative group w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden shadow-sm hover:border-brand-500 transition-colors">
+              {formData.avatarUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={formData.avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <span className="text-[10px] text-white font-semibold">Change</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center flex flex-col items-center justify-center p-2 text-slate-400 dark:text-slate-500">
+                  <svg className="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                  </svg>
+                  <span className="text-[9px] font-medium tracking-tight">Upload</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </div>
+            <div className="flex-1 text-center sm:text-left space-y-1">
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Profile Photograph</h4>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {uploading ? "Uploading your image..." : "Upload a PNG, JPG, or WEBP photo. (Max 5MB)"}
+              </p>
+              {formData.avatarUrl && !uploading && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, avatarUrl: null })}
+                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold transition animate-fade-in"
+                >
+                  Remove Photo
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Identity Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5">

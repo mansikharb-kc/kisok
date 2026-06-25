@@ -9,9 +9,11 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasRole(session.roles, "ONB_LEAD")) redirect("/dashboard");
+  if (!hasRole(session.roles, "ONB_LEAD", "OB_EXEC")) redirect("/dashboard");
 
-  const roleEntry = session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
+  const roleEntry =
+    session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId) ??
+    session.roles.find((r) => r.code === "OB_EXEC" && r.branchId);
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 

@@ -19,7 +19,7 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   OB_EXEC: "Onboarding Exec",
   PROJECT_USER: "Project User",
   CONCIERGE_MANAGER: "Concierge Manager",
-  SCREEN_MANAGER: "Screen Manager",
+  SCREEN_MANAGER: "RMS Manager",
 };
 
 export type NavItem = {
@@ -49,6 +49,7 @@ export const NAV: NavItem[] = [
   // L2 — RMS screens (Branch Admin + the Screen Manager they create; branch-scoped)
   { href: "/rms-blocks", label: "Blocks", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
   { href: "/rms-screens", label: "RMS Screens", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
+  { href: "/rms-preview", label: "Screen Preview", group: "Branch Setup", roles: ["BRANCH_ADMIN", "SCREEN_MANAGER"] },
 
   // L2 — Read-only visibility into ops for Branch Admin (PRD §8: view sellers/assignments)
   { href: "/branch/programs", label: "Programs (select)", group: "Branch Setup", roles: ["BRANCH_ADMIN"] },
@@ -58,14 +59,13 @@ export const NAV: NavItem[] = [
   // L3 — Operations
   { href: "/ops/sellers",       label: "Sellers",          group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/assignments",   label: "Assignments",      group: "Operations", roles: ["ONB_LEAD"] },
-  { href: "/ops/direct-consignments", label: "Direct Consignments", group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/sample-sizes",  label: "Sample Sizes",     group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/onboarding",    label: "Product Onboarding",group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
   { href: "/ops/activity",      label: "Activity",         group: "Operations", roles: ["OB_EXEC", "ONB_LEAD", "BRANCH_ADMIN"] },
   { href: "/ops/flags",         label: "Flags",            group: "Operations", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"] },
-  { href: "/ops/tickets",       label: "Tickets",          group: "Operations", roles: ["PROJECT_USER", "CONCIERGE_MANAGER", "ONB_LEAD"] },
+  { href: "/ops/tickets",       label: "Tickets",          group: "Operations", roles: ["PROJECT_USER", "CONCIERGE_MANAGER"] },
   { href: "/ops/user-logins",   label: "User Logins",      group: "Operations", roles: ["ONB_LEAD", "BRANCH_ADMIN"] },
 
   // Admin
@@ -76,7 +76,7 @@ export const NAV: NavItem[] = [
   { href: "/users/role/ob-exec", label: "Onboarding Execs", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/project-user", label: "Project Users", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
   { href: "/users/role/concierge-manager", label: "Concierge Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
-  { href: "/users/role/screen-manager", label: "Screen Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
+  { href: "/users/role/screen-manager", label: "RMS Managers", group: "Users", roles: ["HO_ADMIN", "BRANCH_ADMIN"] },
 ];
 
 export type SessionRole = { code: RoleCode; branchId: string | null };

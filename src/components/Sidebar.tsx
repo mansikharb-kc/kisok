@@ -96,16 +96,16 @@ function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; p
   const [open, setOpen] = useState(true);
   return (
     <div className="space-y-1">
-      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2.5 py-1 mb-1 group rounded-lg hover:bg-white/5 transition-colors">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white/80 transition-colors">
+      <button onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between px-2.5 py-2 mb-1 group rounded-lg hover:bg-white/5 transition-colors border-b border-white/5">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-100 group-hover:text-white transition-colors">
           {name}
         </span>
-        <span className="text-white/40 group-hover:text-white/80 transition-colors">
+        <span className="text-white/60 group-hover:text-white transition-colors">
           <Chevron dir={open ? "up" : "left"} />
         </span>
       </button>
       <div style={{ overflow: "hidden", maxHeight: open ? "600px" : "0px", transition: "max-height 0.25s ease" }}>
-        <div className="space-y-1 pl-1">
+        <div className="space-y-1 pl-3.5">
           {items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -131,7 +131,7 @@ function NavGroup({ name, items, pathname }: { name: string; items: NavItem[]; p
   );
 }
 
-export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: string; roleLabels: string[] } }) {
+export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: string; roleLabels: string[]; avatarUrl?: string | null } }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -290,8 +290,22 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
         <div className="px-3 py-4 border-t border-white/10">
           {!collapsed ? (
             <>
-              <div className="text-sm text-white font-medium truncate">{user.name}</div>
-              <div className="text-[11px] text-white/70 truncate">{user.roleLabels.join(", ")}</div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0 border border-white/10">
+                  {user.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-white uppercase">
+                      {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-white font-medium truncate">{user.name}</div>
+                  <div className="text-[11px] text-white/70 truncate">{user.roleLabels.join(", ")}</div>
+                </div>
+              </div>
               <button
                 onClick={toggleTheme}
                 className="mt-3 w-full rounded border border-white/15 text-white text-xs py-1.5 hover:bg-white/5 flex items-center justify-center gap-2"
@@ -304,7 +318,17 @@ export default function Sidebar({ nav, user }: { nav: NavItem[]; user: { name: s
               </button>
             </>
           ) : (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0 border border-white/10" title={`${user.name} (${user.roleLabels.join(", ")})`}>
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-bold text-white uppercase">
+                    {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={toggleTheme}
                 title={dark ? "Light mode" : "Dark mode"}

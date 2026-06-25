@@ -12,6 +12,7 @@ const createUserSchema = z.object({
   phone: z.string().trim().max(20).optional().nullable(),
   password: z.string().min(4),
   status: z.enum(["active", "disabled"]).optional().default("active"),
+  avatarUrl: z.string().trim().max(512).optional().nullable(),
   roles: z.array(
     z.object({
       roleId: z.string(),
@@ -158,6 +159,7 @@ export const POST = handler(async (req: Request) => {
       phone: data.phone ?? null,
       passwordHash,
       status: data.status,
+      avatarUrl: data.avatarUrl ?? null,
       roles: {
         create: data.roles.map((r) => ({
           roleId: BigInt(r.roleId),
@@ -185,6 +187,7 @@ export const POST = handler(async (req: Request) => {
       email: user.email,
       status: user.status,
       rolesCount: user.roles.length,
+      avatarUrl: user.avatarUrl,
     },
   });
 

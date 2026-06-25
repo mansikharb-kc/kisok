@@ -122,34 +122,104 @@ export default function BrandDetailsModal({ brandId, onClose }: BrandDetailsModa
                   <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
                     Contact Details
                   </h5>
-                  <div className="space-y-2.5 text-sm">
-                    {brand.contactPerson && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <User className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>{brand.contactPerson}</span>
-                      </div>
-                    )}
-                    {(brand.phone || brand.phoneCc) && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span>{brand.phoneCc ? `+${brand.phoneCc} ` : ""}{brand.phone}</span>
-                      </div>
-                    )}
-                    {brand.email && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                        <a href={`mailto:${brand.email}`} className="hover:text-brand-700 transition hover:underline truncate">{brand.email}</a>
-                      </div>
-                    )}
-                    {brand.website && (
-                      <div className="flex items-center gap-2.5 text-slate-700 font-medium">
-                        <Globe className="w-4 h-4 text-slate-400 shrink-0" />
-                        <a href={brand.website.startsWith("http") ? brand.website : `https://${brand.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">{brand.website}</a>
-                      </div>
-                    )}
-                    {!brand.contactPerson && !brand.phone && !brand.email && !brand.website && (
-                      <span className="text-slate-400 text-xs italic">No contact details provided</span>
-                    )}
+                  <div className="space-y-4">
+                    {(() => {
+                      const list = (() => {
+                        if (brand.contacts && Array.isArray(brand.contacts) && brand.contacts.length > 0) {
+                          return brand.contacts;
+                        }
+                        if (brand.contactPerson || brand.phone || brand.email) {
+                          return [
+                            {
+                              name: brand.contactPerson,
+                              designation: brand.contactPersonDesignation,
+                              phoneCc: brand.phoneCc,
+                              phone: brand.phone,
+                              email: brand.email,
+                            }
+                          ];
+                        }
+                        return [];
+                      })();
+
+                      if (list.length === 0 && !brand.website && !brand.socialLinkedin && !brand.socialTwitter && !brand.socialInstagram && !brand.socialYoutube) {
+                        return <span className="text-slate-400 text-xs italic">No contact details provided</span>;
+                      }
+
+                      return (
+                        <div className="space-y-4">
+                          {list.map((c: any, idx: number) => (
+                            <div key={idx} className={`space-y-2 text-sm ${idx > 0 ? "border-t border-slate-100 pt-3" : ""}`}>
+                              {list.length > 1 && (
+                                <div className="text-xs font-bold text-slate-400 mb-1">
+                                  Contact Person #{idx + 1} {idx === 0 ? "(Primary)" : ""}
+                                </div>
+                              )}
+                              {c.name && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <User className="w-4 h-4 text-slate-400 shrink-0" />
+                                  <span>{c.name}</span>
+                                </div>
+                              )}
+                              {c.designation && (
+                                <div className="flex items-center gap-2.5 text-xs ml-[26px]">
+                                  <span className="bg-slate-100 px-2 py-0.5 rounded font-semibold text-slate-600">
+                                    {c.designation}
+                                  </span>
+                                </div>
+                              )}
+                              {(c.phone || c.phoneCc) && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                                  <span>{c.phoneCc ? `+${c.phoneCc.replace("+", "")} ` : ""}{c.phone}</span>
+                                </div>
+                              )}
+                              {c.email && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                                  <a href={`mailto:${c.email}`} className="hover:text-brand-700 transition hover:underline truncate">{c.email}</a>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {(brand.website || brand.socialLinkedin || brand.socialTwitter || brand.socialInstagram || brand.socialYoutube) && (
+                            <div className="space-y-2.5 pt-3 border-t border-slate-100 text-sm">
+                              {brand.website && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <Globe className="w-4 h-4 text-slate-400 shrink-0" />
+                                  <a href={brand.website.startsWith("http") ? brand.website : `https://${brand.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">{brand.website}</a>
+                                </div>
+                              )}
+                              {brand.socialLinkedin && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <span className="text-slate-400 font-bold shrink-0 text-[10px] w-4 text-center border border-slate-300 rounded-sm leading-none py-0.5">in</span>
+                                  <a href={brand.socialLinkedin.startsWith("http") ? brand.socialLinkedin : `https://${brand.socialLinkedin}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">LinkedIn</a>
+                                </div>
+                              )}
+                              {brand.socialTwitter && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <span className="text-slate-400 font-bold shrink-0 text-xs w-4 text-center">X</span>
+                                  <a href={brand.socialTwitter.startsWith("http") ? brand.socialTwitter : `https://${brand.socialTwitter}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">Twitter / X</a>
+                                </div>
+                              )}
+                              {brand.socialInstagram && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <span className="text-slate-400 font-bold shrink-0 text-xs w-4 text-center">IG</span>
+                                  <a href={brand.socialInstagram.startsWith("http") ? brand.socialInstagram : `https://${brand.socialInstagram}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">Instagram</a>
+                                </div>
+                              )}
+                              {brand.socialYoutube && (
+                                <div className="flex items-center gap-2.5 text-slate-700 font-medium">
+                                  <span className="text-slate-400 font-bold shrink-0 text-[10px] w-4 text-center border border-slate-300 rounded-sm leading-none py-0.5">YT</span>
+                                  <a href={brand.socialYoutube.startsWith("http") ? brand.socialYoutube : `https://${brand.socialYoutube}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-700 transition hover:underline truncate">YouTube</a>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 {/* Address Details */}
@@ -161,9 +231,9 @@ export default function BrandDetailsModal({ brandId, onClose }: BrandDetailsModa
                     {brand.address && (
                       <div className="text-slate-650 leading-relaxed">{brand.address}</div>
                     )}
-                    {(brand.city || brand.state || brand.pincode) ? (
+                    {(brand.city || brand.state || brand.country || brand.pincode) ? (
                       <div className="font-semibold text-slate-800">
-                        {[brand.city, brand.state, brand.pincode].filter(Boolean).join(", ")}
+                        {[brand.city, brand.state, brand.country, brand.pincode].filter(Boolean).join(", ")}
                       </div>
                     ) : (
                       !brand.address && (

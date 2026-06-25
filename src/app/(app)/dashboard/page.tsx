@@ -17,7 +17,8 @@ import {
   Warehouse,
   FileCheck,
   Clock,
-  Printer
+  Printer,
+  MapPin
 } from "lucide-react";
 
 async function recentActivity(branchId: bigint | null, targetRoles: string[]) {
@@ -73,18 +74,17 @@ async function countCategories(status?: string) {
 }
 
 async function globalCounts() {
-  const [categories, attributes, brands, programs, sellers, products, copies, pendingApprovals] =
+  const [categories, attributes, brands, programs, sellers, branches, pendingApprovals] =
     await Promise.all([
       countCategories(),
       prisma.attribute.count(),
       prisma.brand.count(),
       prisma.program.count(),
       prisma.seller.count(),
-      prisma.brandProduct.count(),
-      prisma.productCopy.count(),
+      prisma.branch.count({ where: { status: "active" } }),
       prisma.changeRequest.count({ where: { status: "pending" } }),
     ]);
-  return { categories, attributes, brands, programs, sellers, products, copies, pendingApprovals };
+  return { categories, attributes, brands, programs, sellers, branches, pendingApprovals };
 }
 
 async function branchCounts(branchId: bigint) {
@@ -428,7 +428,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Welcome, {session.name}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Signed in as Screen Manager · {smBranch?.name ?? "your branch"}
+            Signed in as RMS Manager · {smBranch?.name ?? "your branch"}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -579,11 +579,7 @@ export default async function DashboardPage() {
 
   // Active flags count for warning banner
   let activeFlagsCount = 0;
-  if (isHo) {
-    activeFlagsCount = await prisma.flag.count({
-      where: { isResolved: false },
-    });
-  } else if (targetBranchId) {
+  if (!isHo && targetBranchId) {
     activeFlagsCount = await prisma.flag.count({
       where: {
         isResolved: false,
@@ -700,19 +696,12 @@ export default async function DashboardPage() {
             <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.sellers as number}</div>
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Sellers</div>
           </div>
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all duration-200 group">
-            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-indigo-500 transition-colors">
-              <Package className="w-5 h-5" />
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-emerald-450 transition-all duration-200 group">
+            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-emerald-500 transition-colors">
+              <MapPin className="w-5 h-5" />
             </div>
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.products as number}</div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Products (SKUs)</div>
-          </div>
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-teal-400 transition-all duration-200 group">
-            <div className="absolute top-4 right-4 text-slate-400 group-hover:text-teal-500 transition-colors">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.copies as number}</div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Physical Copies</div>
+            <div className="text-3xl font-black text-slate-900 tracking-tight">{countsData.branches as number}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1.5">Active Branches</div>
           </div>
           <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white/60 backdrop-blur-md p-5 shadow-sm hover:shadow-md hover:border-rose-400 transition-all duration-200 group">
             <div className="absolute top-4 right-4 text-slate-400 group-hover:text-rose-500 transition-colors">
@@ -920,18 +909,18 @@ export default async function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {(
                   [
-                    { key: "initiated", label: "Initiated", color: "bg-blue-50/50 hover:bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-300" },
-                    { key: "received", label: "Received", color: "bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-indigo-300" },
-                    { key: "in_buffer", label: "In Buffer", color: "bg-amber-50/50 hover:bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300" },
-                    { key: "fabricating", label: "Fabricating", color: "bg-orange-50/50 hover:bg-orange-50 text-orange-700 border-orange-200 hover:border-orange-300" },
-                    { key: "qc", label: "In QC", color: "bg-purple-50/50 hover:bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-300" },
-                    { key: "passed_back", label: "Passed Back", color: "bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300" },
-                  ] as { key: string; label: string; color: string }[]
-                ).map(({ key, label, color }) => (
+                    { key: "initiated", label: "Initiated", className: "overview-card overview-card-initiated" },
+                    { key: "received", label: "Received", className: "overview-card overview-card-received" },
+                    { key: "in_buffer", label: "In Buffer", className: "overview-card overview-card-buffer" },
+                    { key: "fabricating", label: "Fabricating", className: "overview-card overview-card-fabricating" },
+                    { key: "qc", label: "In QC", className: "overview-card overview-card-qc" },
+                    { key: "passed_back", label: "Passed Back", className: "overview-card overview-card-passed" },
+                  ] as { key: string; label: string; className: string }[]
+                ).map(({ key, label, className }) => (
                   <a
                     href={`/ops/consignments?tab=consignments&status=${key}`}
                     key={key}
-                    className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all block ${color}`}
+                    className={`block ${className}`}
                   >
                     <div className="text-xs font-semibold uppercase tracking-wider opacity-75">{label}</div>
                     <div className="text-3xl font-black mt-1.5">{(consignmentData!.statusBreakdown as Record<string, number>)[key] ?? 0}</div>
@@ -939,19 +928,19 @@ export default async function DashboardPage() {
                 ))}
                 <a
                   href="/ops/consignments?tab=consignments&status=qc"
-                  className="rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 block"
+                  className="overview-card overview-card-qc block"
                 >
-                  <div className="text-xs font-semibold uppercase tracking-wider text-purple-700 opacity-75">Pending QC Items</div>
-                  <div className="text-3xl font-black mt-1.5 text-purple-750">{consignmentData.pendingQcItems}</div>
-                  <div className="text-xs mt-2 text-purple-500 font-semibold">awaiting inspection</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider opacity-75">Pending QC Items</div>
+                  <div className="text-3xl font-black mt-1.5">{consignmentData.pendingQcItems}</div>
+                  <div className="text-xs mt-2 opacity-80 font-semibold">awaiting inspection</div>
                 </a>
                 <a
                   href="/ops/consignments?tab=consignments&status=passed_back"
-                  className="rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 p-5 shadow-sm hover:shadow-md transition-all hover:border-emerald-300 block"
+                  className="overview-card overview-card-passed block"
                 >
-                  <div className="text-xs font-semibold uppercase tracking-wider text-emerald-700 opacity-75">Passed QC Today</div>
-                  <div className="text-3xl font-black mt-1.5 text-emerald-750">{consignmentData.passedToday}</div>
-                  <div className="text-xs mt-2 text-emerald-500 font-semibold">items cleared</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider opacity-75">Passed QC Today</div>
+                  <div className="text-3xl font-black mt-1.5">{consignmentData.passedToday}</div>
+                  <div className="text-xs mt-2 opacity-80 font-semibold">items cleared</div>
                 </a>
               </div>
               <div className="mt-4">

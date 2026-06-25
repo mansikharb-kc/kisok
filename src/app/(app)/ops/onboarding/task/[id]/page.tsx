@@ -599,6 +599,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
 
       {/* SKU Onboarding Checklist Card */}
       <SkuOnboardingChecklist
+        assignmentId={a.id.toString()}
         sellerId={a.sellerId}
         programId={a.programId}
         programName={a.program.name}

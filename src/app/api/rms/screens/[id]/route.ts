@@ -38,20 +38,20 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
 
   const { locationNodeId, name, viewDefault } = parsed.data;
 
-  // If mapping to a block (not null), validate it.
+  // If mapping to a rack (not null), validate it.
   if (locationNodeId !== undefined && locationNodeId !== null) {
-    const block = await prisma.locationNode.findFirst({
-      where: { id: locationNodeId, branchId, nodeType: "BLOCK" },
+    const rack = await prisma.locationNode.findFirst({
+      where: { id: locationNodeId, branchId, nodeType: "RACK" },
       select: { id: true },
     });
-    if (!block) return fail("Selected block not found in your branch", 404);
+    if (!rack) return fail("Selected rack not found in your branch", 404);
 
-    // One screen per block: block must not already be mapped to a different screen.
+    // One screen per rack: rack must not already be mapped to a different screen.
     const taken = await prisma.screen.findFirst({
       where: { branchId, locationNodeId, id: { not: id } },
       select: { id: true },
     });
-    if (taken) return fail("This block already has a screen mapped to it", 409);
+    if (taken) return fail("This rack already has a screen mapped to it", 409);
   }
 
   const data: { locationNodeId?: bigint | null; name?: string | null; viewDefault?: string } = {};

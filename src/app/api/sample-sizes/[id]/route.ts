@@ -11,7 +11,7 @@ const updateSchema = z.object({
 });
 
 export const PATCH = handler(async (req: Request, { params }: { params: { id: string } }) => {
-  const session = await requireRole("ONB_LEAD");
+  const session = await requireRole("ONB_LEAD", "OB_EXEC");
   const id = BigInt(params.id);
 
   const sampleSize = await prisma.sampleSize.findUnique({ where: { id } });
@@ -19,7 +19,7 @@ export const PATCH = handler(async (req: Request, { params }: { params: { id: st
 
   // Verify ownership
   const ownsBranch = session.roles.some(
-    (r) => r.code === "ONB_LEAD" && String(r.branchId) === String(sampleSize.branchId)
+    (r) => (r.code === "ONB_LEAD" || r.code === "OB_EXEC") && String(r.branchId) === String(sampleSize.branchId)
   );
   if (!ownsBranch) return fail("Forbidden — not your branch", 403);
 

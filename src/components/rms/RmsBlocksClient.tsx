@@ -4,15 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Category = { id: string; name: string };
+type ScreenRef = { id: string; name: string | null; token: string | null };
+type Rack = { id: string; name: string; code: string | null; copyCount: number; screen: ScreenRef | null };
 type Block = {
   id: string;
   name: string;
   code: string | null;
-  childCount: number;
+  programId: string | null;
+  programName: string;
   copyCount: number;
   categories: Category[];
+  racks: Rack[];
 };
-type Screen = { id: string; name: string | null; token: string | null; status: string; locationNodeId: string | null };
+type Screen = { id: string; name: string | null; token: string | null; status: string };
 
 export default function RmsBlocksClient({
   branchName,
@@ -24,71 +28,64 @@ export default function RmsBlocksClient({
   screens: Screen[];
 }) {
   const router = useRouter();
-  const screenByBlock = new Map(screens.filter((s) => s.locationNodeId).map((s) => [String(s.locationNodeId), s]));
-  const unmapped = screens.filter((s) => !s.locationNodeId);
+  const [selected, setSelected] = useState<Record<string, Set<string>>>({}); // blockId -> set of rackIds
+  const [pickScreen, setPickScreen] = useState<Record<string, string>>({}); // blockId -> screenId
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [pick, setPick] = useState<Record<string, string>>({}); // blockId -> screenId to map
-  const [copied, setCopied] = useState<string | null>(null);
+  function toggle(blockId: string, rackId: string) {
+    setSelected((prev) => {
+      const set = new Set(prev[blockId] ?? []);
+      if (set.has(rackId)) set.delete(rackId); else set.add(rackId);
+      return { ...prev, [blockId]: set };
+    });
+  }
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const kioskUrl = (token: string | null) => (token ? `${origin}/rms/screen/${token}` : "—");
-
-  async function mapScreen(blockId: string) {
-    const screenId = pick[blockId];
-    if (!screenId) return;
-    setBusyId(blockId);
+  async function postRackScreen(rackIds: string[], screenId: string | null, key: string) {
+    if (rackIds.length === 0) return;
+    setBusy(key);
     try {
-      const res = await fetch(`/api/rms/screens/${screenId}`, {
-        method: "PATCH",
+      const res = await fetch("/api/rms/rack-screen", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationNodeId: blockId }),
+        body: JSON.stringify({ rackIds, screenId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { alert(data.error || "Could not map screen"); return; }
+      if (!res.ok) { alert(data.error || "Action failed"); return; }
+      setSelected((prev) => ({ ...prev, [key]: new Set() }));
       router.refresh();
     } catch {
       alert("Request failed. Check your connection.");
     } finally {
-      setBusyId(null);
+      setBusy(null);
     }
   }
 
-  async function unmap(screenId: string) {
-    if (!confirm("Unmap this screen from the block?")) return;
-    setBusyId(screenId);
-    try {
-      const res = await fetch(`/api/rms/screens/${screenId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationNodeId: null }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { alert(data.error || "Could not unmap screen"); return; }
-      router.refresh();
-    } catch {
-      alert("Request failed.");
-    } finally {
-      setBusyId(null);
-    }
+  function mapSelected(blockId: string) {
+    const screenId = pickScreen[blockId];
+    if (!screenId) { alert("Select a screen first"); return; }
+    postRackScreen([...(selected[blockId] ?? [])], screenId, blockId);
   }
 
-  async function copy(url: string, id: string) {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(id);
-      setTimeout(() => setCopied(null), 1500);
-    } catch {
-      /* ignore */
-    }
+  function unmapSelected(blockId: string) {
+    postRackScreen([...(selected[blockId] ?? [])], null, blockId);
   }
+
+  // Blocks belong to a program (warehouse is per-program) — group them by program.
+  const programGroups = (() => {
+    const m = new Map<string, Block[]>();
+    for (const b of blocks) {
+      if (!m.has(b.programName)) m.set(b.programName, []);
+      m.get(b.programName)!.push(b);
+    }
+    return [...m.entries()].map(([programName, items]) => ({ programName, blocks: items }));
+  })();
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Blocks</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Blocks of {branchName} — categories in each block, and map a screen to it. Create screens on the <span className="font-semibold">RMS Screens</span> page first.
+          Blocks of {branchName}. Select racks in a block and map them to a screen (a screen can cover many racks). Create screens on the <span className="font-semibold">RMS Screens</span> page first.
         </p>
       </div>
 
@@ -97,9 +94,13 @@ export default function RmsBlocksClient({
           No blocks in this branch. Create blocks in Warehouse &amp; Locations first.
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {blocks.map((b) => {
-            const screen = screenByBlock.get(String(b.id));
+        <div className="space-y-8">
+          {programGroups.map((g) => (
+            <div key={g.programName} className="space-y-3">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1">{g.programName}</h2>
+              <div className="space-y-4">
+          {g.blocks.map((b) => {
+            const sel = selected[b.id] ?? new Set<string>();
             return (
               <div key={b.id} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between gap-3">
@@ -107,86 +108,79 @@ export default function RmsBlocksClient({
                     <div className="text-lg font-bold text-slate-900 truncate">{b.name}</div>
                     {b.code && <div className="font-mono text-[11px] text-slate-400">{b.code}</div>}
                   </div>
-                  <div className="text-right text-[11px] text-slate-400 shrink-0">
-                    <div>{b.childCount} sub-nodes</div>
-                    <div>{b.copyCount} items</div>
-                  </div>
+                  <div className="text-right text-[11px] text-slate-400 shrink-0">{b.racks.length} racks · {b.copyCount} items</div>
                 </div>
 
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Categories in this block</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Deals in (categories)</div>
                   {b.categories.length === 0 ? (
-                    <span className="text-xs text-slate-400">No categories assigned.</span>
+                    <span className="text-xs text-slate-400">No categories assigned to this block.</span>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {b.categories.map((c) => (
-                        <span key={c.id} className="rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">
-                          {c.name}
-                        </span>
+                        <span key={c.id} className="rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs px-2.5 py-1">{c.name}</span>
                       ))}
                     </div>
                   )}
                 </div>
 
                 <div className="border-t border-slate-100 pt-3">
-                  {screen ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white" /> {screen.name || "Screen"} mapped
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => unmap(screen.id)}
-                          disabled={busyId === screen.id}
-                          className="text-[11px] text-rose-600 hover:underline disabled:opacity-50"
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Racks — select & map to a screen</div>
+                  {b.racks.length === 0 ? (
+                    <p className="text-xs text-slate-400">No racks in this block. Add racks in Warehouse &amp; Locations.</p>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border border-slate-200 divide-y divide-slate-100">
+                        {b.racks.map((r) => (
+                          <label key={r.id} className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" checked={sel.has(r.id)} onChange={() => toggle(b.id, r.id)} />
+                            <span className="font-medium text-slate-800">{r.name}</span>
+                            {r.code && <span className="font-mono text-[11px] text-slate-400">{r.code}</span>}
+                            <span className="text-[11px] text-slate-400">· {r.copyCount} items</span>
+                            <span className="ml-auto">
+                              {r.screen ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white" /> {r.screen.name || "Screen"}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">unmapped</span>
+                              )}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-500">{sel.size} selected</span>
+                        <select
+                          value={pickScreen[b.id] ?? ""}
+                          onChange={(e) => setPickScreen((p) => ({ ...p, [b.id]: e.target.value }))}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                         >
-                          Unmap
+                          <option value="">— Select screen —</option>
+                          {screens.map((s) => <option key={s.id} value={s.id}>{s.name || `Screen ${s.id}`}</option>)}
+                        </select>
+                        <button type="button" onClick={() => mapSelected(b.id)} disabled={sel.size === 0 || busy === b.id}
+                          className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                          {busy === b.id ? "Saving…" : "Map selected"}
+                        </button>
+                        <button type="button" onClick={() => unmapSelected(b.id)} disabled={sel.size === 0 || busy === b.id}
+                          className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                          Unmap selected
                         </button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[11px] text-slate-500 truncate">{kioskUrl(screen.token)}</span>
-                        {screen.token && (
-                          <button
-                            type="button"
-                            onClick={() => copy(kioskUrl(screen.token), screen.id)}
-                            className="shrink-0 rounded border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-50"
-                          >
-                            {copied === screen.id ? "Copied" : "Copy"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : unmapped.length === 0 ? (
-                    <p className="text-xs text-slate-400">
-                      No unmapped screens. Create a screen on the <span className="font-semibold">RMS Screens</span> page first.
-                    </p>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={pick[b.id] ?? ""}
-                        onChange={(e) => setPick((p) => ({ ...p, [b.id]: e.target.value }))}
-                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                      >
-                        <option value="">— Select a screen —</option>
-                        {unmapped.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name || `Screen ${s.id}`}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => mapScreen(b.id)}
-                        disabled={!pick[b.id] || busyId === b.id}
-                        className="shrink-0 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-                      >
-                        {busyId === b.id ? "Mapping…" : "Map Screen"}
-                      </button>
-                    </div>
+                      {screens.length === 0 && (
+                        <p className="mt-2 text-[11px] text-amber-600">No screens yet. Create one on the RMS Screens page first.</p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
             );
           })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

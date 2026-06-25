@@ -87,14 +87,34 @@ export default async function PrintStickerPage({
   if (!copy) notFound();
 
   // Resolve the sticker template: an explicit ?template= wins, else the first
-  // active template for the product's category.
+  // active template for the product's category (or its parent categories).
   const templateIdParam = searchParams.template ? parseId(searchParams.template) : null;
-  const template = await prisma.stickerTemplate.findFirst({
-    where: templateIdParam
-      ? { id: templateIdParam }
-      : { categoryId: copy.product.categoryId, status: "active" },
-    select: { id: true, name: true, layout: true },
-  });
+  let template = null;
+
+  if (templateIdParam) {
+    template = await prisma.stickerTemplate.findUnique({
+      where: { id: templateIdParam },
+      select: { id: true, name: true, layout: true },
+    });
+  } else {
+    let cur: bigint | null = copy.product.categoryId;
+    let guard = 0;
+    while (cur && guard++ < 20) {
+      const found = await prisma.stickerTemplate.findFirst({
+        where: { categoryId: cur, status: "active" },
+        select: { id: true, name: true, layout: true },
+      });
+      if (found) {
+        template = found;
+        break;
+      }
+      const parentCat: { parentId: bigint | null } | null = await prisma.category.findUnique({
+        where: { id: cur },
+        select: { parentId: true },
+      });
+      cur = parentCat ? parentCat.parentId : null;
+    }
+  }
 
   if (!template) {
     return (
