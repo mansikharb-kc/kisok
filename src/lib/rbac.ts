@@ -58,13 +58,14 @@ export const NAV: NavItem[] = [
   // L3 — Operations
   { href: "/ops/sellers",       label: "Sellers",          group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/assignments",   label: "Assignments",      group: "Operations", roles: ["ONB_LEAD"] },
+  { href: "/ops/direct-consignments", label: "Direct Consignments", group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/sample-sizes",  label: "Sample Sizes",     group: "Operations", roles: ["ONB_LEAD"] },
   { href: "/ops/onboarding",    label: "Product Onboarding",group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/placement",     label: "Placement & QR",   group: "Operations", roles: ["OB_EXEC"] },
   { href: "/ops/consignments",  label: "Consignments / QC",group: "Operations", roles: ["CONSIGNMENT_USER", "OB_EXEC"] },
   { href: "/ops/activity",      label: "Activity",         group: "Operations", roles: ["OB_EXEC", "ONB_LEAD", "BRANCH_ADMIN"] },
   { href: "/ops/flags",         label: "Flags",            group: "Operations", roles: ["HO_ADMIN", "BRANCH_ADMIN", "ONB_LEAD", "OB_EXEC"] },
-  { href: "/ops/tickets",       label: "Tickets",          group: "Operations", roles: ["PROJECT_USER", "CONCIERGE_MANAGER"] },
+  { href: "/ops/tickets",       label: "Tickets",          group: "Operations", roles: ["PROJECT_USER", "CONCIERGE_MANAGER", "ONB_LEAD"] },
   { href: "/ops/user-logins",   label: "User Logins",      group: "Operations", roles: ["ONB_LEAD", "BRANCH_ADMIN"] },
 
   // Admin

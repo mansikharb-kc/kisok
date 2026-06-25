@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
 import SellersTableClient from "@/components/ops/SellersTableClient";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,13 @@ export default async function Page() {
   const roleEntry = session.roles.find((r) => r.code === "ONB_LEAD" && r.branchId);
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
+
+  // Sync the status of all assignments in the branch to ensure they match current pipelines and flags on load
+  const branchAssignments = await prisma.sellerAssignment.findMany({
+    where: { seller: { branchId } },
+    select: { id: true },
+  });
+  await Promise.all(branchAssignments.map((a) => updateAssignmentOnboardingStatus(a.id)));
 
   const sellers = await prisma.seller.findMany({
     where: { branchId, status: { not: "archived" } },

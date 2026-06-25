@@ -127,20 +127,85 @@ html.dark [class*="bg-gradient-to-"] {
   background-color: rgba(28, 28, 30, 0.6) !important;
 }
 
-/* coloured surfaces → neutral dark (status conveyed via coloured text + dots) */
+/* coloured surfaces in dark mode — premium colored translucent styling */
 html.dark .bg-emerald-50,
 html.dark .bg-emerald-100,
+html.dark .bg-emerald-50\/50,
 html.dark .bg-emerald-50\/15,
 html.dark .bg-green-50,
-html.dark .bg-green-100,
-html.dark .bg-blue-50,
-html.dark .bg-blue-100,
+html.dark .bg-green-100 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+html.dark .text-emerald-900,
+html.dark .text-emerald-850,
+html.dark .text-emerald-800,
+html.dark .text-emerald-750,
+html.dark .text-emerald-700,
+html.dark .text-emerald-650,
+html.dark .text-emerald-600 {
+  color: #34d399 !important;
+}
+
 html.dark .bg-indigo-50,
 html.dark .bg-indigo-100,
+html.dark .bg-indigo-50\/70,
+html.dark .bg-indigo-50\/50,
+html.dark .bg-indigo-50\/40,
+html.dark .bg-indigo-50\/20,
+html.dark .bg-indigo-55,
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+html.dark .text-indigo-900,
+html.dark .text-indigo-850,
+html.dark .text-indigo-800,
+html.dark .text-indigo-750,
+html.dark .text-indigo-700,
+html.dark .text-indigo-650,
+html.dark .text-indigo-600 {
+  color: #a5b4fc !important;
+}
+
 html.dark .bg-amber-50,
 html.dark .bg-amber-100,
+html.dark .bg-amber-50\/50,
 html.dark .bg-orange-50,
 html.dark .bg-orange-100,
+html.dark .bg-yellow-50,
+html.dark .bg-yellow-100 {
+  background-color: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+html.dark .text-amber-900,
+html.dark .text-amber-850,
+html.dark .text-amber-800,
+html.dark .text-amber-750,
+html.dark .text-amber-700,
+html.dark .text-amber-650,
+html.dark .text-amber-600 {
+  color: #fde047 !important;
+}
+
+html.dark .bg-sky-50,
+html.dark .bg-sky-100,
+html.dark .bg-sky-50\/50,
+html.dark .bg-sky-50\/40 {
+  background-color: rgba(14, 165, 233, 0.08) !important;
+  border-color: rgba(14, 165, 233, 0.2) !important;
+}
+html.dark .text-sky-900,
+html.dark .text-sky-850,
+html.dark .text-sky-800,
+html.dark .text-sky-750,
+html.dark .text-sky-700,
+html.dark .text-sky-650,
+html.dark .text-sky-600 {
+  color: #38bdf8 !important;
+}
+
 html.dark .bg-purple-50,
 html.dark .bg-purple-100,
 html.dark .bg-violet-50,
@@ -148,15 +213,21 @@ html.dark .bg-violet-100,
 html.dark .bg-rose-50,
 html.dark .bg-rose-100,
 html.dark .bg-red-50,
-html.dark .bg-red-100,
-html.dark .bg-yellow-50,
-html.dark .bg-yellow-100 {
+html.dark .bg-red-100 {
   background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
-
-/* custom translucent onboarding background overrides in dark mode */
-html.dark .bg-emerald-50\/15 {
-  background-color: rgba(16, 185, 129, 0.08) !important;
+html.dark .text-rose-900,
+html.dark .text-rose-850,
+html.dark .text-rose-800,
+html.dark .text-rose-700,
+html.dark .text-rose-600,
+html.dark .text-red-900,
+html.dark .text-red-850,
+html.dark .text-red-800,
+html.dark .text-red-700,
+html.dark .text-red-600 {
+  color: #f87171 !important;
 }
 
 /* coloured card borders → neutral */
@@ -181,8 +252,10 @@ html.dark .bg-slate-100 {
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
+html.dark .bg-slate-50\/80,
 html.dark .bg-slate-50\/75,
 html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/50,
 html.dark .bg-slate-50\/40,
 html.dark .bg-slate-50\/30,
 html.dark .bg-slate-50\/10 {
@@ -226,7 +299,8 @@ html.dark .hover\:bg-white\/60:hover,
 html.dark .hover\:bg-brand-50:hover,
 html.dark .hover\:bg-brand-50\/40:hover,
 html.dark .hover\:bg-brand-50\/50:hover,
-html.dark .hover\:bg-brand-100:hover {
+html.dark .hover\:bg-brand-100:hover,
+html.dark .hover\:bg-indigo-55:hover {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -461,16 +535,7 @@ button {
   }
 }
 
-@keyframes led-green {
-  0%, 100% {
-    background-color: #059669;
-    box-shadow: 0 0 2px rgba(16, 185, 129, 0.2);
-  }
-  50% {
-    background-color: #34d399;
-    box-shadow: 0 0 12px 3px rgba(52, 211, 153, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
-  }
-}
+
 
 @keyframes led-yellow {
   0%, 100% {
@@ -487,9 +552,7 @@ button {
   animation: blink 10000s linear infinite;
 }
 
-.animate-led-green {
-  animation: led-green 1.2s ease-in-out infinite;
-}
+
 
 .animate-led-yellow {
   animation: led-yellow 1.2s ease-in-out infinite;
@@ -499,7 +562,6 @@ button {
   .animate-blink {
     animation: none;
   }
-  .animate-led-green,
   .animate-led-yellow {
     animation: none;
   }

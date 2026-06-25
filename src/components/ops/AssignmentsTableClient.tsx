@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import RemoveAssignmentButton from "./RemoveAssignmentButton";
 import { formatDate } from "@/lib/format";
+import { onboardingStatusMeta } from "@/lib/onboardingMeta";
 
 interface SellerBrand {
   brand: {
@@ -37,6 +38,7 @@ interface AssignmentRow {
   seller: Seller;
   program: Program | null;
   exec: Exec;
+  onboardingStatus: string;
 }
 
 interface AssignmentsTableClientProps {
@@ -88,7 +90,7 @@ export default function AssignmentsTableClient({ initialRows }: AssignmentsTable
   const statuses = useMemo(() => {
     const set = new Set<string>();
     initialRows.forEach((r) => {
-      set.add(r.seller.status);
+      set.add(r.onboardingStatus);
     });
     return Array.from(set).sort();
   }, [initialRows]);
@@ -130,7 +132,7 @@ export default function AssignmentsTableClient({ initialRows }: AssignmentsTable
       result = result.filter((r) => r.seller.sellerBrands.some((sb) => sb.brand.code === selectedBrandCode));
     }
     if (selectedStatus) {
-      result = result.filter((r) => r.seller.status === selectedStatus);
+      result = result.filter((r) => r.onboardingStatus === selectedStatus);
     }
 
     // Sort
@@ -233,7 +235,7 @@ export default function AssignmentsTableClient({ initialRows }: AssignmentsTable
             <option value="">All Statuses</option>
             {statuses.map((status) => (
               <option key={status} value={status}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {onboardingStatusMeta(status).label}
               </option>
             ))}
           </select>
@@ -339,12 +341,11 @@ export default function AssignmentsTableClient({ initialRows }: AssignmentsTable
                     {/* Status */}
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-semibold text-white capitalize ${
-                          row.seller.status === "active" ? "bg-emerald-600" : "bg-slate-500"
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          onboardingStatusMeta(row.onboardingStatus).badge
                         }`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                        {row.seller.status}
+                        {onboardingStatusMeta(row.onboardingStatus).label}
                       </span>
                     </td>
 

@@ -16,7 +16,7 @@ export default async function NewOnboardingPage() {
 
   const categoryRows = await prisma.category.findMany({
     where: { status: "active" },
-    select: { id: true, name: true, parentId: true },
+    select: { id: true, name: true, code: true, parentId: true },
   });
   const flatCategories = serialize(categoryRows);
 

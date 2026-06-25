@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { serialize } from "@/lib/prisma";
@@ -29,6 +30,7 @@ const pipelineSchema = z.object({
   stickerPasted: z.boolean().optional(),
   placedInRack: z.boolean().optional(),
   verificationPhoto: z.string().trim().nullable().optional(),
+  isDirectConsignment: z.boolean().optional(),
 });
 
 export const POST = handler(async (req: Request, ctx: { params: { id: string } }) => {
@@ -57,6 +59,7 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
     stickerPasted = false,
     placedInRack = false,
     verificationPhoto = null,
+    isDirectConsignment = false,
   } = parsed.data;
 
   // Retrieve assignment
@@ -147,6 +150,7 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
         dateToRevisit,
       },
     });
+    await updateAssignmentOnboardingStatus(assignmentId);
     return ok({ pipeline: serialize(pipeline) });
   }
 
@@ -192,6 +196,24 @@ Remarks: ${remarks || "None"}`;
       let primaryTicketId: bigint | null = null;
       let primaryTicketNo: string | null = null;
 
+      let details: any = {};
+      if (isDirectConsignment) {
+        const dcTicket = await tx.ticket.findFirst({
+          where: {
+            sellerId: assignment.sellerId,
+            type: "DIRECT_CONSIGNMENT",
+            status: "RESOLVED",
+          },
+        });
+        if (dcTicket && dcTicket.description) {
+          try {
+            details = JSON.parse(dcTicket.description);
+          } catch (err) {
+            console.error("Failed to parse direct consignment details:", err);
+          }
+        }
+      }
+
       // 1. If reqSample is checked, generate the primary Sample Request ticket
       if (reqSample) {
         const ticket = await tx.ticket.create({
@@ -199,8 +221,8 @@ Remarks: ${remarks || "None"}`;
             title: ticketTitle,
             description: ticketDesc,
             type: "SAMPLE_REQUEST",
-            status: "WITH_CONSIGNMENT",
-            currentRole: "CONSIGNMENT_USER",
+            status: isDirectConsignment ? "WITH_EXEC" : "WITH_CONSIGNMENT",
+            currentRole: isDirectConsignment ? "OB_EXEC" : "CONSIGNMENT_USER",
             branchId,
             sellerId: assignment.sellerId,
             brandId: targetBrandId!,
@@ -217,8 +239,10 @@ Remarks: ${remarks || "None"}`;
             ticketId: ticket.id,
             action: "raise",
             fromRole: "OB_EXEC",
-            toRole: "CONSIGNMENT_USER",
-            note: `Raised onboarding consignment sample request ticket ${ticketNo}`,
+            toRole: isDirectConsignment ? "OB_EXEC" : "CONSIGNMENT_USER",
+            note: isDirectConsignment
+              ? `Raised onboarding direct consignment sample request ticket ${ticketNo} (bypass)`
+              : `Raised onboarding consignment sample request ticket ${ticketNo}`,
             byUserId: BigInt(session.uid),
           },
         });
@@ -295,7 +319,20 @@ Remarks: ${remarks || "None"}`;
       // 4. Determine pipeline status:
       // If reqSample is checked, go to TICKET_RAISED (warehouse receipt flow).
       // If reqSample is false (but space/rack or KT is checked), go directly to DATA_AND_STICKER.
-      const targetStatus = reqSample ? "TICKET_RAISED" : "DATA_AND_STICKER";
+      // If isDirectConsignment is true and reqSample is checked, go directly to CONSIGNMENT_RECEIVED.
+      const targetStatus = reqSample
+        ? (isDirectConsignment ? "CONSIGNMENT_RECEIVED" : "TICKET_RAISED")
+        : "DATA_AND_STICKER";
+
+      const receiptFields = isDirectConsignment ? {
+        receivedDate: details.receivedDate ? new Date(details.receivedDate) : null,
+        vehicleDetails: details.vehicleDetails || null,
+        quantityReceived: details.quantityReceived || 0,
+        boxQc: details.boxQc || null,
+        photographUrl: details.photographUrl || null,
+        packingListDoc: details.packingListDoc || null,
+        consignmentRemarks: details.remarks || null,
+      } : {};
 
       const pipeline = await tx.onboardingPipeline.upsert({
         where: {
@@ -317,6 +354,7 @@ Remarks: ${remarks || "None"}`;
           dateToRevisit,
           status: targetStatus,
           ticketId: primaryTicketId,
+          ...receiptFields,
         },
         create: {
           assignmentId,
@@ -333,9 +371,11 @@ Remarks: ${remarks || "None"}`;
           remarks,
           dateToRevisit,
           ticketId: primaryTicketId,
+          ...receiptFields,
         },
       });
 
+      await updateAssignmentOnboardingStatus(assignmentId, tx);
       return { pipeline, ticketNo: primaryTicketNo };
     });
 
@@ -395,6 +435,7 @@ Remarks: ${remarks || "None"}`;
         });
       }
 
+      await updateAssignmentOnboardingStatus(assignmentId, tx);
       return { pipeline };
     });
 
@@ -431,6 +472,7 @@ Remarks: ${remarks || "None"}`;
       },
     });
 
+    await updateAssignmentOnboardingStatus(assignmentId);
     return ok({ pipeline: serialize(pipeline) });
   }
 
@@ -465,6 +507,7 @@ Remarks: ${remarks || "None"}`;
       },
     });
 
+    await updateAssignmentOnboardingStatus(assignmentId);
     return ok({ pipeline: serialize(pipeline) });
   }
 

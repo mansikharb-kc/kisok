@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
@@ -122,6 +123,7 @@ export const PATCH = handler(async (req: Request, ctx: { params: { id: string } 
           where: { id: pipeline.id },
           data: pipelineUpdateData,
         });
+        await updateAssignmentOnboardingStatus(pipeline.assignmentId, tx);
       }
     }
 

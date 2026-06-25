@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { serialize } from "@/lib/prisma";
@@ -103,6 +104,8 @@ export const POST = handler(async (req: Request) => {
       isResolved: false,
     },
   });
+
+  await updateAssignmentOnboardingStatus(BigInt(assignmentId));
 
   return ok({ flag: serialize(flag) });
 });

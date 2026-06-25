@@ -718,7 +718,7 @@ export default function OnboardingForm({
                     )}
                     <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
                       {imageBusy ? "Uploading…" : imageUrl ? "Change Image" : "Upload Image"}
-                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "image")} className="hidden" disabled={imageBusy} />
+                      <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "image")} className="hidden" style={{ display: "none" }} disabled={imageBusy} />
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">PNG, JPG, WEBP, GIF, SVG (max 50 MB)</p>
@@ -736,7 +736,7 @@ export default function OnboardingForm({
                     )}
                     <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
                       {videoBusy ? "Uploading…" : videoUrl ? "Change Video" : "Upload Video"}
-                      <input type="file" accept="video/*" onChange={(e) => handleFileUpload(e, "video")} className="hidden" disabled={videoBusy} />
+                      <input type="file" accept="video/*" onChange={(e) => handleFileUpload(e, "video")} className="hidden" style={{ display: "none" }} disabled={videoBusy} />
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">MP4, WEBM, OGG, MOV (max 50 MB)</p>
@@ -754,7 +754,7 @@ export default function OnboardingForm({
                     )}
                     <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-650 hover:bg-slate-50 text-center select-none bg-white">
                       {pdfBusy ? "Uploading…" : pdfUrl ? "Change PDF" : "Upload PDF"}
-                      <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, "pdf")} className="hidden" disabled={pdfBusy} />
+                      <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, "pdf")} className="hidden" style={{ display: "none" }} disabled={pdfBusy} />
                     </label>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">PDF document (max 50 MB)</p>

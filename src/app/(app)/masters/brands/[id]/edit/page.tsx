@@ -18,7 +18,7 @@ export default async function EditBrandPage({ params }: { params: { id: string }
       where: { id: id! },
       include: { logo: { select: { url: true } }, brandCategories: { select: { categoryId: true } } },
     }),
-    prisma.category.findMany({ where: { status: "active" }, select: { id: true, name: true, parentId: true } }),
+    prisma.category.findMany({ where: { status: "active" }, select: { id: true, name: true, code: true, parentId: true } }),
   ]);
   if (!b) notFound();
 

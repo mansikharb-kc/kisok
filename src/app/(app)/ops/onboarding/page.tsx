@@ -6,6 +6,7 @@ import { prisma, serialize } from "@/lib/prisma";
 import OnboardingList from "@/components/ops/OnboardingList";
 import ClickableRow from "@/components/ops/ClickableRow";
 import OnboardingStatusSelect from "@/components/ops/OnboardingStatusSelect";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,15 @@ export default async function OnboardingPage() {
     const assignments = await prisma.sellerAssignment.findMany({
       where: { obExecUserId: BigInt(session.uid), seller: { branchId } },
       orderBy: { assignedAt: "desc" },
+    });
+
+    // Sync onboarding status of all tasks to ensure they match current pipelines and flags
+    await Promise.all(assignments.map((a) => updateAssignmentOnboardingStatus(a.id)));
+
+    // Re-fetch assignments with all details now that their onboardingStatus columns are synced
+    const updatedAssignments = await prisma.sellerAssignment.findMany({
+      where: { obExecUserId: BigInt(session.uid), seller: { branchId } },
+      orderBy: { assignedAt: "desc" },
       include: {
         seller: {
           select: {
@@ -40,17 +50,19 @@ export default async function OnboardingPage() {
             membershipId: true,
             status: true,
             sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
+            tickets: { where: { type: "DIRECT_CONSIGNMENT" }, select: { id: true } },
           },
         },
         program: { select: { id: true, name: true, code: true } },
       },
     });
-    const sellerIds = assignments.map((a) => a.sellerId);
+
+    const sellerIds = updatedAssignments.map((a) => a.sellerId);
     // No assignments → match nothing (sentinel id keeps the type a bigint[]).
     sellerFilter = { in: sellerIds.length ? sellerIds : [BigInt(0)] };
 
     const detailed = await Promise.all(
-      assignments.map(async (a) => {
+      updatedAssignments.map(async (a) => {
         const onboardedCount = await prisma.localOnboardingRecord.count({
           where: {
             sellerId: a.sellerId,
@@ -143,8 +155,13 @@ export default async function OnboardingPage() {
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
                     >
                       <td className="px-5 py-3.5">
-                        <div className="font-bold text-slate-800">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
                           {a.seller.name}
+                          {a.seller.tickets && a.seller.tickets.length > 0 && (
+                            <span className="inline-block text-[9px] bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                              Direct Consignment
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-400 font-mono">
                           {a.seller.sellerCode} {a.seller.membershipId ? `· ${a.seller.membershipId}` : ""}

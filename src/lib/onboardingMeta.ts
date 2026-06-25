@@ -3,8 +3,8 @@
 
 export const ONBOARDING_STATUSES = [
   { value: "yet_to_start", label: "Yet to start", badge: "bg-slate-500 text-white" },
-  { value: "in_progress", label: "In progress", badge: "bg-blue-600 text-white" },
-  { value: "on_hold", label: "On hold", badge: "bg-amber-600 text-white" },
+  { value: "in_progress", label: "In progress", badge: "bg-amber-500 text-white" },
+  { value: "on_hold", label: "On hold", badge: "bg-red-600 text-white" },
   { value: "onboarded", label: "Onboarded", badge: "bg-emerald-600 text-white" },
 ] as const;
 

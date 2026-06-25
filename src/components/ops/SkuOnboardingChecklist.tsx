@@ -826,6 +826,7 @@ export default function SkuOnboardingChecklist({
                       onChange={handleImportFile}
                       accept=".xlsx, .xls, .csv"
                       className="hidden"
+                      style={{ display: "none" }}
                     />
                   </div>
                 </div>

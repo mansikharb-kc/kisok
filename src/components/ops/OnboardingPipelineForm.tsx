@@ -8,6 +8,7 @@ interface OnboardingPipelineFormProps {
   assignmentId: string;
   pipeline: any;
   brands: { id: string; name: string; code: string }[];
+  isDirectConsignment?: boolean;
 }
 
 function formatToDDMMMYYYY(dateStr: Date | string | null | undefined): string {
@@ -76,6 +77,7 @@ export default function OnboardingPipelineForm({
   assignmentId,
   pipeline,
   brands,
+  isDirectConsignment = false,
 }: OnboardingPipelineFormProps) {
   const router = useRouter();
 
@@ -96,6 +98,7 @@ export default function OnboardingPipelineForm({
   const [reqData, setReqData] = useState(pipeline.reqData ?? false);
   const [reqSample, setReqSample] = useState(pipeline.reqSample ?? false);
   const [reqKt, setReqKt] = useState(pipeline.reqKt ?? false);
+  const [directConsignment, setDirectConsignment] = useState(isDirectConsignment);
   const [docAttached, setDocAttached] = useState(pipeline.docAttached ?? "");
   const [itemTarget, setItemTarget] = useState(pipeline.itemTarget ?? "");
   const [nextActionTime, setNextActionTime] = useState(pipeline.nextActionTime ?? "");
@@ -321,6 +324,7 @@ export default function OnboardingPipelineForm({
         payload.remarks = remarks;
         payload.dateToRevisit = dateToRevisit;
         payload.brandId = brandId;
+        payload.isDirectConsignment = directConsignment;
       }
 
       if (actionType === "save-data-sticker") {
@@ -429,7 +433,7 @@ export default function OnboardingPipelineForm({
               <div key={step.key} className="flex items-center gap-2">
                 <div className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5">
                   {stepStatus === "completed" && (
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 animate-led-green border border-emerald-650/30" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600 border border-emerald-650/30" />
                   )}
                   {stepStatus === "active" && (
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 animate-led-yellow border border-amber-650/30" />
@@ -612,6 +616,7 @@ export default function OnboardingPipelineForm({
                         accept="application/pdf,image/*"
                         onChange={handleDocUpload}
                         className="hidden"
+                        style={{ display: "none" }}
                         disabled={uploadingDoc}
                       />
                     </label>
@@ -665,6 +670,7 @@ export default function OnboardingPipelineForm({
                         accept="application/pdf,image/*"
                         onChange={handleTargetUpload}
                         className="hidden"
+                        style={{ display: "none" }}
                         disabled={uploadingTarget}
                       />
                     </label>
@@ -750,6 +756,21 @@ export default function OnboardingPipelineForm({
                       Requested Sample
                     </label>
                   </div>
+
+                  {isDirectConsignment && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/20 text-orange-750 dark:text-orange-300">
+                      <input
+                        type="checkbox"
+                        id="directConsignmentCheck"
+                        checked={directConsignment}
+                        onChange={(e) => setDirectConsignment(e.target.checked)}
+                        className="rounded border-orange-355 h-4 w-4 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                      />
+                      <label htmlFor="directConsignmentCheck" className="font-semibold cursor-pointer select-none">
+                        Direct Consignment
+                      </label>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
                     <input
@@ -1069,6 +1090,7 @@ export default function OnboardingPipelineForm({
                           accept="image/*"
                           onChange={handlePhotoUpload}
                           className="hidden"
+                          style={{ display: "none" }}
                           disabled={uploadingPhoto}
                         />
                       </label>

@@ -1537,6 +1537,7 @@ export default function WarehouseTree({
                       type="file"
                       accept=".xlsx, .xls"
                       className="hidden"
+                      style={{ display: "none" }}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) simulateImportFile(file);

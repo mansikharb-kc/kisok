@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { serialize } from "@/lib/prisma";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 
 function parseId(id: string): bigint | null {
   try {
@@ -25,7 +26,12 @@ export const PUT = handler(async (req: Request, ctx: { params: { id: string } })
       isResolved: true,
       resolvedAt: new Date(),
     },
+    include: {
+      pipeline: true,
+    },
   });
+
+  await updateAssignmentOnboardingStatus(updatedFlag.pipeline.assignmentId);
 
   return ok({ flag: serialize(updatedFlag) });
 });

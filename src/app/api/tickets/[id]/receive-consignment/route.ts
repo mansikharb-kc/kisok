@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { updateAssignmentOnboardingStatus } from "@/lib/onboardingStatusHelper";
 import { requireRole } from "@/lib/auth";
 import { ok, fail, handler } from "@/lib/api";
 import { serialize } from "@/lib/prisma";
@@ -91,6 +92,8 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
         byUserId: BigInt(session.uid),
       },
     });
+
+    await updateAssignmentOnboardingStatus(updatedPipeline.assignmentId, tx);
 
     return { pipeline: updatedPipeline, ticket: updatedTicket };
   });

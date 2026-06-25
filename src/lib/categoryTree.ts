@@ -1,5 +1,5 @@
 // Shared helper: turn a flat category list into level/number-annotated options.
-export type FlatCat = { id: string; name: string; parentId: string | null };
+export type FlatCat = { id: string; name: string; parentId: string | null; code?: string };
 
 export type ParentOption = {
   id: string;
@@ -7,6 +7,7 @@ export type ParentOption = {
   level: number;
   number: string;
   parentId: string | null;
+  code?: string;
 };
 
 export function buildParentOptions(flat: FlatCat[]): ParentOption[] {
@@ -31,6 +32,7 @@ export function buildParentOptions(flat: FlatCat[]): ParentOption[] {
         level: n.level,
         number: n.number,
         parentId: n.parentId,
+        code: n.code,
       });
       assign(n.children, level + 1, n.number);
     });

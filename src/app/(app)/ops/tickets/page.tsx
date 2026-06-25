@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { hasRole } from "@/lib/rbac";
 import { prisma, serialize } from "@/lib/prisma";
-import DashboardTicketsList from "@/components/ops/DashboardTicketsList";
+import TicketsPageClient from "@/components/ops/TicketsPageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -12,25 +12,26 @@ export default async function OpsTicketsPage() {
 
   const isProjectUser = hasRole(session.roles, "PROJECT_USER");
   const isConciergeManager = hasRole(session.roles, "CONCIERGE_MANAGER");
+  const isOnbLead = hasRole(session.roles, "ONB_LEAD");
 
-  if (!isProjectUser && !isConciergeManager) {
+  if (!isProjectUser && !isConciergeManager && !isOnbLead) {
     redirect("/dashboard");
   }
 
   // Find active branch ID
   const roleEntry = session.roles.find(
-    (r) => ["PROJECT_USER", "CONCIERGE_MANAGER"].includes(r.code) && r.branchId
+    (r) => ["PROJECT_USER", "CONCIERGE_MANAGER", "ONB_LEAD"].includes(r.code) && r.branchId
   );
   const branchId = roleEntry?.branchId ? BigInt(roleEntry.branchId) : null;
   if (!branchId) redirect("/dashboard");
 
-  const roleFilter = isProjectUser ? "PROJECT_USER" : "CONCIERGE_MANAGER";
+  const ticketWhere: any = { branchId };
+  if (!isOnbLead) {
+    ticketWhere.currentRole = isProjectUser ? "PROJECT_USER" : "CONCIERGE_MANAGER";
+  }
 
   const ticketRows = await prisma.ticket.findMany({
-    where: {
-      branchId,
-      currentRole: roleFilter,
-    },
+    where: ticketWhere,
     orderBy: { updatedAt: "desc" },
     include: {
       seller: { select: { name: true, sellerCode: true } },
@@ -50,9 +51,7 @@ export default async function OpsTicketsPage() {
         </p>
       </div>
 
-      <div className="bg-white/40 backdrop-blur-md border border-slate-200 p-6 rounded-2xl shadow-sm">
-        <DashboardTicketsList tickets={tickets} userRoles={session.roles.map(r => r.code)} />
-      </div>
+      <TicketsPageClient tickets={tickets} userRoles={session.roles.map(r => r.code)} />
     </div>
   );
 }

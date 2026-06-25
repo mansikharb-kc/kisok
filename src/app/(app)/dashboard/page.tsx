@@ -573,19 +573,6 @@ export default async function DashboardPage() {
           events: { orderBy: { createdAt: "asc" } },
         },
       });
-    } else if (isOnbLead) {
-      dashboardTickets = await prisma.ticket.findMany({
-        where: {
-          branchId: targetBranchId,
-          type: { in: ["SAMPLE_REQUEST", "SPACE_RACK", "KT_REQUEST"] },
-        },
-        orderBy: { updatedAt: "desc" },
-        include: {
-          seller: { select: { name: true, sellerCode: true } },
-          brand: { select: { name: true } },
-          events: { orderBy: { createdAt: "asc" } },
-        },
-      });
     }
   }
   const serializedDashboardTickets = serialize(dashboardTickets) as any[];
@@ -875,11 +862,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Onboarding Request Tickets */}
-              <div className="space-y-3">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Onboarding Request Tickets</div>
-                <DashboardTicketsList tickets={serializedDashboardTickets} userRoles={session.roles.map(r => r.code)} />
-              </div>
+
             </div>
           )}
 

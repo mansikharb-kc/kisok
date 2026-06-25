@@ -71,6 +71,16 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
   const [picked, setPicked] = useState<string[]>(brand?.categoryIds ?? []); // category ids
   const [categorySearch, setCategorySearch] = useState("");
 
+  const matchedCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return [];
+    return parents.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.number.toLowerCase().includes(query)
+    ).slice(0, 50);
+  }, [parents, categorySearch]);
+
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -358,7 +368,7 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
               )}
               <label className="flex-1 cursor-pointer rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 text-center">
                 {logoBusy ? "Uploading…" : logoUrl ? "Change logo" : " Choose Logo File"}
-                <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
+                <input type="file" accept="image/*" onChange={onLogo} className="hidden" style={{ display: "none" }} />
               </label>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">PNG/JPG/WEBP, max 5 MB.</p>
@@ -391,6 +401,47 @@ export default function BrandForm({ flat, brand }: { flat: FlatCat[]; brand?: Br
               >
                 ✕
               </button>
+            )}
+
+            {/* Dynamic Search Results Dropdown */}
+            {categorySearch.trim() !== "" && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-[110] max-h-60 overflow-y-auto divide-y divide-slate-100 dark:bg-slate-900 dark:border-slate-800 dark:divide-slate-800">
+                {matchedCategories.length === 0 ? (
+                  <div className="p-3 text-xs text-slate-400 text-center dark:text-slate-500">
+                    No matching categories found
+                  </div>
+                ) : (
+                  matchedCategories.map((o) => {
+                    const lvl = levelMeta(o.level);
+                    const isAlreadyPicked = picked.includes(o.id);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        disabled={isAlreadyPicked}
+                        onClick={() => {
+                          setPicked((prev) => [...prev, o.id]);
+                          setCategorySearch("");
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between text-xs transition-colors disabled:opacity-50 disabled:hover:bg-transparent dark:hover:bg-slate-800/50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${lvl.badge}`}>
+                            {lvl.label}
+                          </span>
+                          <span className="font-mono font-bold text-slate-450 dark:text-slate-500">{o.number}</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-350">{o.name}</span>
+                        </div>
+                        {isAlreadyPicked ? (
+                          <span className="text-[10px] text-emerald-600 font-bold dark:text-emerald-400">Added</span>
+                        ) : (
+                          <span className="text-[10px] text-brand-600 font-semibold dark:text-brand-400">+ Add</span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             )}
           </div>
           {LEVELS.map((lvl, idx) => {

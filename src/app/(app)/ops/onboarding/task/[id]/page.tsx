@@ -169,6 +169,12 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
     },
   });
 
+  const dcTicket = await prisma.ticket.findFirst({
+    where: { sellerId: assignment.sellerId, type: "DIRECT_CONSIGNMENT" },
+    select: { id: true },
+  });
+  const isDirectConsignment = !!dcTicket;
+
   // Fetch all active products under these brands
   const products = await prisma.brandProduct.findMany({
     where: {
@@ -280,8 +286,10 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
   let isTodayInFitout = false;
   let isTodayInCollaboration = false;
   let fitoutDaysRemaining = 0;
+  let fitoutExtensionDays = 0;
 
   if (c) {
+    const isPipelineCompleted = a.onboardingStatus === "onboarded";
     fitoutStr = c.fitoutPeriod ? c.fitoutPeriod.replace(/\D/g, "") : "";
     startStr = c.contractStart ? c.contractStart.slice(0, 10) : "";
     endStr = c.contractEnd ? c.contractEnd.slice(0, 10) : "";
@@ -289,8 +297,21 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
     fitoutEnd = baseStartDate && fitoutStr ? subtractDays(startStr, "1") : "";
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    isTodayInFitout = !!(baseStartDate && fitoutEnd && todayStr >= baseStartDate && todayStr <= fitoutEnd);
-    isTodayInCollaboration = !!(startStr && endStr && todayStr >= startStr && todayStr <= endStr);
+    isTodayInFitout = !!(
+      baseStartDate &&
+      fitoutEnd &&
+      (
+        (todayStr >= baseStartDate && todayStr <= fitoutEnd) ||
+        (todayStr > fitoutEnd && !isPipelineCompleted)
+      )
+    );
+    isTodayInCollaboration = !!(
+      startStr &&
+      endStr &&
+      todayStr >= startStr &&
+      todayStr <= endStr &&
+      isPipelineCompleted
+    );
 
     if (baseStartDate && fitoutEnd) {
       if (todayStr <= fitoutEnd) {
@@ -301,6 +322,12 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
         fitoutDaysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
       } else {
         fitoutDaysRemaining = 0;
+        if (!isPipelineCompleted) {
+          const date1 = new Date(fitoutEnd + "T00:00:00Z");
+          const date2 = new Date(todayStr + "T00:00:00Z");
+          const diffTime = date2.getTime() - date1.getTime();
+          fitoutExtensionDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        }
       }
     }
   }
@@ -393,7 +420,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
                 {isTodayInFitout && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
                     <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
-                    In Fitout
+                    In Fitout{fitoutExtensionDays > 0 ? " (Extended)" : ""}
                   </span>
                 )}
                 {isTodayInCollaboration && (
@@ -406,9 +433,16 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
               <div className="group-open:hidden flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 sm:border-l sm:border-slate-200 sm:pl-3">
                 {baseStartDate && fitoutEnd && (
                   <span className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">Fitout Remaining:</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider">
+                      {fitoutExtensionDays > 0 ? "Fitout Extension:" : "Fitout Remaining:"}
+                    </span>
                     <span className="text-slate-700 font-mono text-[11px] bg-slate-100/80 px-1.5 py-0.5 rounded">
-                      {fitoutDaysRemaining > 0 ? `${fitoutDaysRemaining} ${fitoutDaysRemaining === 1 ? "Day" : "Days"}` : "Ended"}
+                      {fitoutExtensionDays > 0 
+                        ? `${fitoutExtensionDays} ${fitoutExtensionDays === 1 ? "Day" : "Days"} Past Schedule`
+                        : fitoutDaysRemaining > 0 
+                          ? `${fitoutDaysRemaining} ${fitoutDaysRemaining === 1 ? "Day" : "Days"}` 
+                          : "Ended"
+                      }
                     </span>
                   </span>
                 )}
@@ -450,11 +484,18 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
                           </span>
                           {baseStartDate && fitoutEnd && (
                             <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded border ${
-                              fitoutDaysRemaining > 0
-                                ? "text-sky-700 bg-sky-50 border-sky-200"
-                                : "text-rose-700 bg-rose-50 border-rose-200"
+                              fitoutExtensionDays > 0
+                                ? "text-amber-700 bg-amber-50 border-amber-200"
+                                : fitoutDaysRemaining > 0
+                                  ? "text-sky-700 bg-sky-50 border-sky-200"
+                                  : "text-rose-700 bg-rose-50 border-rose-200"
                             }`}>
-                              {fitoutDaysRemaining > 0 ? `${fitoutDaysRemaining} Days Left` : "Ended"}
+                              {fitoutExtensionDays > 0 
+                                ? `${fitoutExtensionDays} Days Extended` 
+                                : fitoutDaysRemaining > 0 
+                                  ? `${fitoutDaysRemaining} Days Left` 
+                                  : "Ended"
+                              }
                             </span>
                           )}
                         </div>
@@ -552,6 +593,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
           assignmentId={a.id}
           pipeline={pLine}
           brands={[serialize(activeBrand) as any]}
+          isDirectConsignment={isDirectConsignment}
         />
       )}
 

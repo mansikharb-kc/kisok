@@ -1551,6 +1551,7 @@ export default function SellerForm({
                               accept="application/pdf"
                               onChange={(e) => onContractPdf(p.id, e)}
                               className="hidden"
+                              style={{ display: "none" }}
                               disabled={!!contractUploadingMap[p.id]}
                             />
                           </label>

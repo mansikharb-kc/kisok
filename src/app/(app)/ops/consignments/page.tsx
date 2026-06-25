@@ -31,7 +31,10 @@ export default async function ConsignmentsPage({
   const uid = BigInt(session.uid);
 
   // Filter tickets by active branch context
-  const ticketWhere = { branchId };
+  const ticketWhere: any = { branchId };
+  if (isConsign) {
+    ticketWhere.type = { in: ["SAMPLE_REQUEST", "FABRICATION", "DAMAGE"] };
+  }
 
   const [ticketRows, assignments, obExecs, consignmentRows] = await Promise.all([
     prisma.ticket.findMany({

@@ -55,7 +55,7 @@ export default async function Page() {
     }),
     prisma.category.findMany({
       where: { status: "active" },
-      select: { id: true, name: true, parentId: true },
+      select: { id: true, name: true, code: true, parentId: true },
     }),
     prisma.seller.findMany({
       where: {
