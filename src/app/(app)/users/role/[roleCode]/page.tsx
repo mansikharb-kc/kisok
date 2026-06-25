@@ -33,6 +33,7 @@ type User = {
   phone: string | null;
   status: string;
   roles: UserRoleAssignment[];
+  avatarUrl?: string | null;
 };
 
 const SLUG_TO_ROLE: Record<string, string> = {
@@ -252,8 +253,13 @@ export default function RoleUsersPage({ params }: PageProps) {
                     <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                            <UserIcon className="w-4 h-4 text-slate-600" />
+                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
+                            {user.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                            ) : (
+                              <UserIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                            )}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-800">{user.fullName}</div>

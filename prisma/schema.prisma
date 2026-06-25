@@ -29,6 +29,7 @@ model User {
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+  avatarUrl    String?   @map("avatar_url") @db.VarChar(512)
 
   roles       UserRole[]
   assignments SellerAssignment[] @relation("ExecAssignments")

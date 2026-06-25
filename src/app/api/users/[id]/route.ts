@@ -12,6 +12,7 @@ const updateUserSchema = z.object({
   phone: z.string().trim().max(20).optional().nullable(),
   password: z.string().min(4).optional(),
   status: z.enum(["active", "disabled"]),
+  avatarUrl: z.string().trim().max(512).optional().nullable(),
   roles: z.array(
     z.object({
       roleId: z.string(),
@@ -177,6 +178,7 @@ export const PUT = handler(async (req: Request, { params }: { params: Promise<{ 
     username: string | null;
     phone: string | null;
     status: string;
+    avatarUrl?: string | null;
     passwordHash?: string;
   } = {
     fullName: data.fullName,
@@ -184,6 +186,7 @@ export const PUT = handler(async (req: Request, { params }: { params: Promise<{ 
     username: data.username ? data.username.toLowerCase() : null,
     phone: data.phone ?? null,
     status: data.status,
+    avatarUrl: data.avatarUrl ?? null,
   };
 
   if (data.password) {
@@ -231,12 +234,14 @@ export const PUT = handler(async (req: Request, { params }: { params: Promise<{ 
       email: targetUser.email,
       status: targetUser.status,
       rolesCount: targetUser.roles.length,
+      avatarUrl: targetUser.avatarUrl,
     },
     after: {
       fullName: updatedUser.fullName,
       email: updatedUser.email,
       status: updatedUser.status,
       rolesCount: updatedUser.roles.length,
+      avatarUrl: updatedUser.avatarUrl,
     },
   });
 

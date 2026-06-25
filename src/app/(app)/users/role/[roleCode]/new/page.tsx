@@ -29,6 +29,7 @@ export default function NewRoleUserPage({ params }: PageProps) {
       password: formData.password,
       status: formData.status,
       roles: assignments,
+      avatarUrl: formData.avatarUrl || null,
     };
 
     try {

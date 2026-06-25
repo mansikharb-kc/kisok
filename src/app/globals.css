@@ -504,3 +504,153 @@ button {
     animation: none;
   }
 }
+
+/* ── Consignment Overview Cards (Light Mode) ──────────────────── */
+.overview-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+}
+
+.overview-card:hover {
+  transform: translateY(-2px);
+}
+
+.overview-card-initiated {
+  background-color: rgba(239, 246, 255, 0.5);
+  border-color: rgb(191, 219, 254); /* blue-200 */
+  color: rgb(29, 78, 216); /* blue-700 */
+}
+.overview-card-initiated:hover {
+  background-color: rgb(239, 246, 255);
+  border-color: rgb(147, 197, 253); /* blue-300 */
+}
+
+.overview-card-received {
+  background-color: rgba(238, 242, 255, 0.5);
+  border-color: rgb(199, 210, 254); /* indigo-200 */
+  color: rgb(67, 56, 202); /* indigo-700 */
+}
+.overview-card-received:hover {
+  background-color: rgb(238, 242, 255);
+  border-color: rgb(165, 180, 252); /* indigo-300 */
+}
+
+.overview-card-buffer {
+  background-color: rgba(254, 243, 199, 0.5);
+  border-color: rgb(253, 230, 138); /* amber-200 */
+  color: rgb(180, 83, 9); /* amber-700 */
+}
+.overview-card-buffer:hover {
+  background-color: rgb(254, 243, 199);
+  border-color: rgb(252, 211, 77); /* amber-300 */
+}
+
+.overview-card-fabricating {
+  background-color: rgba(255, 237, 213, 0.5);
+  border-color: rgb(254, 215, 170); /* orange-200 */
+  color: rgb(194, 65, 12); /* orange-700 */
+}
+.overview-card-fabricating:hover {
+  background-color: rgb(255, 237, 213);
+  border-color: rgb(253, 186, 116); /* orange-300 */
+}
+
+.overview-card-qc {
+  background-color: rgba(243, 232, 255, 0.5);
+  border-color: rgb(233, 213, 255); /* purple-200 */
+  color: rgb(109, 40, 217); /* purple-700 */
+}
+.overview-card-qc:hover {
+  background-color: rgb(243, 232, 255);
+  border-color: rgb(216, 180, 254); /* purple-300 */
+}
+
+.overview-card-passed {
+  background-color: rgba(209, 250, 229, 0.5);
+  border-color: rgb(167, 243, 208); /* emerald-200 */
+  color: rgb(4, 120, 87); /* emerald-700 */
+}
+.overview-card-passed:hover {
+  background-color: rgb(209, 250, 229);
+  border-color: rgb(110, 231, 183); /* emerald-300 */
+}
+
+/* ── Consignment Overview Cards (Dark Mode - Glassmorphic Glow) ── */
+html.dark .overview-card {
+  background: rgba(20, 20, 25, 0.65) !important;
+  backdrop-filter: blur(12px) saturate(140%) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card:hover {
+  transform: translateY(-2px);
+}
+
+html.dark .overview-card-initiated {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  color: #93c5fd !important; /* blue-300 */
+}
+html.dark .overview-card-initiated:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card-received {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  color: #a5b4fc !important; /* indigo-300 */
+}
+html.dark .overview-card-received:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(99, 102, 241, 0.55) !important;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card-buffer {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #fcd34d !important; /* amber-300 */
+}
+html.dark .overview-card-buffer:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(245, 158, 11, 0.55) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card-fabricating {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(249, 115, 22, 0.25) !important;
+  color: #fdba74 !important; /* orange-300 */
+}
+html.dark .overview-card-fabricating:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.14) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(249, 115, 22, 0.55) !important;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card-qc {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+  color: #d8b4fe !important; /* purple-300 */
+}
+html.dark .overview-card-qc:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.14) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(168, 85, 247, 0.55) !important;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .overview-card-passed {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  color: #6ee7b7 !important; /* emerald-300 */
+}
+html.dark .overview-card-passed:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(20, 20, 25, 0.65) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
