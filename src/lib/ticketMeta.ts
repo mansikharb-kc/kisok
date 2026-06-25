@@ -7,7 +7,6 @@ export const TICKET_TYPES = [
   { value: "DAMAGE", label: "Damage / Re-request" },
   { value: "SPACE_RACK", label: "Space & Rack Request" },
   { value: "KT_REQUEST", label: "Knowledge Transfer Request" },
-  { value: "DIRECT_CONSIGNMENT", label: "Direct Consignment" },
 ] as const;
 
 export const TICKET_TYPE_VALUES = TICKET_TYPES.map((t) => t.value);

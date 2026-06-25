@@ -187,10 +187,40 @@ export default function TicketsClient({
     const qty = parseInt(pipelineQtyReceived[ticketId] || "0", 10);
     const boxQc = pipelineBoxQc[ticketId] || "Good";
     const date = pipelineReceivedDate[ticketId] || new Date().toISOString().slice(0, 10);
-    const vehicle = pipelineVehicleDetails[ticketId] || "";
+    const vehicle = (pipelineVehicleDetails[ticketId] || "").trim().toUpperCase();
     const photo = pipelinePhotoUrl[ticketId] || "";
     const packingList = pipelinePackingListDoc[ticketId] || "";
     const remarks = pipelineRemarks[ticketId] || "";
+
+    if (!vehicle) {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Vehicle Details are required." }));
+      return;
+    }
+
+    // Standard Indian vehicle number plate regex format (e.g. KA-01-MX-1234 or MH 12 AB 1234)
+    const vehicleRegex = /^[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,3}[ -]?[0-9]{4}$/i;
+    const dummyKeywords = ["TEST", "DUMMY", "TEMP", "VEHICLE", "1234", "ABCD", "N/A", "NONE", "NIL", "ASD", "QWE", "1111", "0000", "XXXX"];
+    const isDummy = dummyKeywords.some(keyword => vehicle.includes(keyword)) || vehicle.length < 5;
+
+    if (!vehicleRegex.test(vehicle) || isDummy) {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Please enter a valid vehicle registration number (e.g., KA-01-MX-1234) without using dummy values." }));
+      return;
+    }
+
+    if (isNaN(qty) || qty <= 0) {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Quantity received must be greater than 0." }));
+      return;
+    }
+
+    if (!photo) {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Photograph is required. Please upload a photograph." }));
+      return;
+    }
+
+    if (!packingList) {
+      setPipelineErrors((p) => ({ ...p, [ticketId]: "Packing List Document is required. Please upload a packing list." }));
+      return;
+    }
 
     setBusy(true);
     setPipelineErrors((p) => ({ ...p, [ticketId]: "" }));
@@ -242,7 +272,6 @@ export default function TicketsClient({
   // Direct consignment raise form
   const [showRaiseDirect, setShowRaiseDirect] = useState(false);
   const [dcSellerName, setDcSellerName] = useState("");
-  const [dcBrandName, setDcBrandName] = useState("");
   const [dcReceivedDate, setDcReceivedDate] = useState(new Date().toISOString().slice(0, 10));
   const [dcVehicleDetails, setDcVehicleDetails] = useState("");
   const [dcQtyReceived, setDcQtyReceived] = useState("");
@@ -253,12 +282,6 @@ export default function TicketsClient({
   const [dcErr, setDcErr] = useState("");
   const [uploadingDcPhoto, setUploadingDcPhoto] = useState(false);
   const [uploadingDcPacking, setUploadingDcPacking] = useState(false);
-  const [dcMembershipId, setDcMembershipId] = useState("");
-  const [dcMemberType, setDcMemberType] = useState("");
-  const [dcSalesperson, setDcSalesperson] = useState("");
-  const [dcSpocName, setDcSpocName] = useState("");
-  const [dcSpocPhone, setDcSpocPhone] = useState("");
-  const [dcSpocEmail, setDcSpocEmail] = useState("");
 
   async function handleDcPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -314,7 +337,7 @@ export default function TicketsClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sellerName: dcSellerName,
-          brandName: dcBrandName,
+          brandName: "N/A",
           receivedDate: dcReceivedDate,
           vehicleDetails: dcVehicleDetails,
           quantityReceived: parseInt(dcQtyReceived, 10),
@@ -322,12 +345,6 @@ export default function TicketsClient({
           photographUrl: dcPhotoUrl,
           packingListDoc: dcPackingListDoc,
           remarks: dcRemarks,
-          membershipId: dcMembershipId || null,
-          memberType: dcMemberType || null,
-          salesperson: dcSalesperson || null,
-          spocName: dcSpocName || null,
-          spocPhone: dcSpocPhone || null,
-          spocEmail: dcSpocEmail || null,
         }),
       });
       const data = await res.json();
@@ -338,7 +355,6 @@ export default function TicketsClient({
       setShowRaiseDirect(false);
       // Reset form
       setDcSellerName("");
-      setDcBrandName("");
       setDcReceivedDate(new Date().toISOString().slice(0, 10));
       setDcVehicleDetails("");
       setDcQtyReceived("");
@@ -346,12 +362,6 @@ export default function TicketsClient({
       setDcPhotoUrl("");
       setDcPackingListDoc("");
       setDcRemarks("");
-      setDcMembershipId("");
-      setDcMemberType("");
-      setDcSalesperson("");
-      setDcSpocName("");
-      setDcSpocPhone("");
-      setDcSpocEmail("");
       router.refresh();
     } catch {
       setDcErr("A network error occurred.");
@@ -669,6 +679,7 @@ export default function TicketsClient({
                                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-semibold">Vehicle Details</label>
                                     <input
                                       type="text"
+                                      required
                                       placeholder="e.g. KA-01-MX-1234"
                                       value={pipelineVehicleDetails[t.id] || ""}
                                       onChange={(e) => setPipelineVehicleDetails((p) => ({ ...p, [t.id]: e.target.value }))}
@@ -707,10 +718,10 @@ export default function TicketsClient({
                                     <div className="flex gap-2">
                                       <input
                                         type="text"
-                                        placeholder="e.g. DSC_1092.jpg"
-                                        value={pipelinePhotoUrl[t.id] || ""}
-                                        onChange={(e) => setPipelinePhotoUrl((p) => ({ ...p, [t.id]: e.target.value }))}
-                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                        readOnly
+                                        placeholder="Upload file to populate"
+                                        value={pipelinePhotoUrl[t.id] ? pipelinePhotoUrl[t.id].split("/").pop() || "" : ""}
+                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:outline-none bg-slate-55 cursor-not-allowed font-mono text-slate-500"
                                       />
                                       <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPhotoMap[t.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
                                         {uploadingPhotoMap[t.id] ? "Uploading..." : "Upload File"}
@@ -757,10 +768,10 @@ export default function TicketsClient({
                                     <div className="flex gap-2">
                                       <input
                                         type="text"
-                                        placeholder="e.g. PKG-551.pdf"
-                                        value={pipelinePackingListDoc[t.id] || ""}
-                                        onChange={(e) => setPipelinePackingListDoc((p) => ({ ...p, [t.id]: e.target.value }))}
-                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-brand-500 bg-white"
+                                        readOnly
+                                        placeholder="Upload file to populate"
+                                        value={pipelinePackingListDoc[t.id] ? pipelinePackingListDoc[t.id].split("/").pop() || "" : ""}
+                                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 text-xs focus:outline-none bg-slate-55 cursor-not-allowed font-mono text-slate-500"
                                       />
                                       <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPackingMap[t.id] ? "opacity-60 cursor-not-allowed" : ""}`}>
                                         {uploadingPackingMap[t.id] ? "Uploading..." : "Upload File"}
@@ -1127,107 +1138,16 @@ export default function TicketsClient({
             )}
 
             {/* Seller & Brand Name Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Seller Name</label>
-                <input
-                  type="text"
-                  required
-                  value={dcSellerName}
-                  onChange={(e) => setDcSellerName(e.target.value)}
-                  placeholder="e.g. Century Limited"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Brand Name</label>
-                <input
-                  type="text"
-                  required
-                  value={dcBrandName}
-                  onChange={(e) => setDcBrandName(e.target.value)}
-                  placeholder="e.g. Asian Paints"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-            </div>
-
-            <div className="border-t border-slate-800/80 my-2" />
-
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Seller Profile &amp; Contact Details
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Membership ID (Optional)</label>
-                <input
-                  type="text"
-                  value={dcMembershipId}
-                  onChange={(e) => setDcMembershipId(e.target.value)}
-                  placeholder="e.g. MEM-1234"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Member Type</label>
-                <select
-                  value={dcMemberType}
-                  onChange={(e) => setDcMemberType(e.target.value)}
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 cursor-pointer"
-                >
-                  <option value="">Select Member Type</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Sponsor">Sponsor</option>
-                  <option value="Barter">Barter</option>
-                  <option value="Free">Free</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Salesperson</label>
-                <input
-                  type="text"
-                  value={dcSalesperson}
-                  onChange={(e) => setDcSalesperson(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">SPOC Name</label>
-                <input
-                  type="text"
-                  value={dcSpocName}
-                  onChange={(e) => setDcSpocName(e.target.value)}
-                  placeholder="e.g. Jane Smith"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">SPOC Phone</label>
-                <input
-                  type="text"
-                  value={dcSpocPhone}
-                  onChange={(e) => setDcSpocPhone(e.target.value)}
-                  placeholder="e.g. +91 9988776655"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">SPOC Email</label>
-                <input
-                  type="email"
-                  value={dcSpocEmail}
-                  onChange={(e) => setDcSpocEmail(e.target.value)}
-                  placeholder="e.g. jane@century.com"
-                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Seller Name &amp; Brand Name</label>
+              <input
+                type="text"
+                required
+                value={dcSellerName}
+                onChange={(e) => setDcSellerName(e.target.value)}
+                placeholder="e.g. Century Limited / Asian Paints"
+                className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
+              />
             </div>
 
             <div className="border-t border-slate-800/80 my-2" />
@@ -1287,52 +1207,58 @@ export default function TicketsClient({
                 </select>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Photograph Reference</label>
-                <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. DSC_1092.jpg"
+                  value={dcPhotoUrl}
+                  onChange={(e) => setDcPhotoUrl(e.target.value)}
+                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
+                />
+                <label className={`cursor-pointer rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 flex items-center justify-center shadow-sm transition active:scale-[0.98] w-full ${uploadingDcPhoto ? "opacity-60 cursor-not-allowed" : ""}`}>
+                  {uploadingDcPhoto ? "Uploading..." : dcPhotoUrl ? "Change Photograph" : "Upload Photograph"}
                   <input
-                    type="text"
-                    placeholder="e.g. DSC_1092.jpg"
-                    value={dcPhotoUrl}
-                    onChange={(e) => setDcPhotoUrl(e.target.value)}
-                    className="flex-1 rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleDcPhotoUpload}
+                    className="hidden"
+                    style={{ display: "none" }}
+                    disabled={uploadingDcPhoto}
                   />
-                  <label className={`cursor-pointer rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingDcPhoto ? "opacity-60 cursor-not-allowed" : ""}`}>
-                    {uploadingDcPhoto ? "..." : "Upload"}
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={handleDcPhotoUpload}
-                      className="hidden"
-                      style={{ display: "none" }}
-                      disabled={uploadingDcPhoto}
-                    />
-                  </label>
-                </div>
+                </label>
+                {dcPhotoUrl && (
+                  <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                    ✓ File uploaded successfully
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Packing List Doc</label>
-                <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. PKG-551.pdf"
+                  value={dcPackingListDoc}
+                  onChange={(e) => setDcPackingListDoc(e.target.value)}
+                  className="w-full rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
+                />
+                <label className={`cursor-pointer rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 flex items-center justify-center shadow-sm transition active:scale-[0.98] w-full ${uploadingDcPacking ? "opacity-60 cursor-not-allowed" : ""}`}>
+                  {uploadingDcPacking ? "Uploading..." : dcPackingListDoc ? "Change Packing List" : "Upload Packing List"}
                   <input
-                    type="text"
-                    placeholder="e.g. PKG-551.pdf"
-                    value={dcPackingListDoc}
-                    onChange={(e) => setDcPackingListDoc(e.target.value)}
-                    className="flex-1 rounded border border-slate-800 bg-slate-950 px-3 py-2 text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none text-slate-200 placeholder:text-slate-600"
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={handleDcPackingUpload}
+                    className="hidden"
+                    style={{ display: "none" }}
+                    disabled={uploadingDcPacking}
                   />
-                  <label className={`cursor-pointer rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingDcPacking ? "opacity-60 cursor-not-allowed" : ""}`}>
-                    {uploadingDcPacking ? "..." : "Upload"}
-                    <input
-                      type="file"
-                      accept="application/pdf,image/*"
-                      onChange={handleDcPackingUpload}
-                      className="hidden"
-                      style={{ display: "none" }}
-                      disabled={uploadingDcPacking}
-                    />
-                  </label>
-                </div>
+                </label>
+                {dcPackingListDoc && (
+                  <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                    ✓ File uploaded successfully
+                  </div>
+                )}
               </div>
 
               <div className="sm:col-span-2 md:col-span-3 space-y-1">

@@ -195,22 +195,26 @@ Remarks: ${remarks || "None"}`;
     const result = await prisma.$transaction(async (tx) => {
       let primaryTicketId: bigint | null = null;
       let primaryTicketNo: string | null = null;
-
+      let primaryDirectConsignmentId: bigint | null = null;
       let details: any = {};
       if (isDirectConsignment) {
-        const dcTicket = await tx.ticket.findFirst({
+        const dcRecord = await tx.directConsignment.findFirst({
           where: {
             sellerId: assignment.sellerId,
-            type: "DIRECT_CONSIGNMENT",
             status: "RESOLVED",
           },
         });
-        if (dcTicket && dcTicket.description) {
-          try {
-            details = JSON.parse(dcTicket.description);
-          } catch (err) {
-            console.error("Failed to parse direct consignment details:", err);
-          }
+        if (dcRecord) {
+          primaryDirectConsignmentId = dcRecord.id;
+          details = {
+            receivedDate: dcRecord.receivedDate,
+            vehicleDetails: dcRecord.vehicleDetails,
+            quantityReceived: dcRecord.quantityReceived,
+            boxQc: dcRecord.boxQc,
+            photographUrl: dcRecord.photographUrl,
+            packingListDoc: dcRecord.packingListDoc,
+            remarks: dcRecord.remarks,
+          };
         }
       }
 
@@ -354,6 +358,7 @@ Remarks: ${remarks || "None"}`;
           dateToRevisit,
           status: targetStatus,
           ticketId: primaryTicketId,
+          directConsignmentId: primaryDirectConsignmentId,
           ...receiptFields,
         },
         create: {
@@ -371,6 +376,7 @@ Remarks: ${remarks || "None"}`;
           remarks,
           dateToRevisit,
           ticketId: primaryTicketId,
+          directConsignmentId: primaryDirectConsignmentId,
           ...receiptFields,
         },
       });

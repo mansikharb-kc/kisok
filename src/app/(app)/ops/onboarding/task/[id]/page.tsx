@@ -169,11 +169,11 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
     },
   });
 
-  const dcTicket = await prisma.ticket.findFirst({
-    where: { sellerId: assignment.sellerId, type: "DIRECT_CONSIGNMENT" },
+  const dcRecord = await prisma.directConsignment.findFirst({
+    where: { sellerId: assignment.sellerId },
     select: { id: true },
   });
-  const isDirectConsignment = !!dcTicket;
+  const isDirectConsignment = !!dcRecord;
 
   // Fetch all active products under these brands
   const products = await prisma.brandProduct.findMany({
@@ -589,7 +589,7 @@ export default async function TaskPage({ params, searchParams }: TaskPageProps) 
       {/* Onboarding Pipeline Tracker & Interactive forms */}
       {activeBrand && (
         <OnboardingPipelineForm
-          key={activeBrand.id.toString()}
+          key={`${activeBrand.id.toString()}_${pLine.status}`}
           assignmentId={a.id}
           pipeline={pLine}
           brands={[serialize(activeBrand) as any]}

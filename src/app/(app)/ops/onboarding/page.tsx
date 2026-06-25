@@ -50,7 +50,7 @@ export default async function OnboardingPage() {
             membershipId: true,
             status: true,
             sellerBrands: { include: { brand: { select: { id: true, name: true, code: true } } } },
-            tickets: { where: { type: "DIRECT_CONSIGNMENT" }, select: { id: true } },
+            directConsignments: { select: { id: true } },
           },
         },
         program: { select: { id: true, name: true, code: true } },
@@ -157,7 +157,7 @@ export default async function OnboardingPage() {
                       <td className="px-5 py-3.5">
                         <div className="font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
                           {a.seller.name}
-                          {a.seller.tickets && a.seller.tickets.length > 0 && (
+                          {a.seller.directConsignments && a.seller.directConsignments.length > 0 && (
                             <span className="inline-block text-[9px] bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider">
                               Direct Consignment
                             </span>

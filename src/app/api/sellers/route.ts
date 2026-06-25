@@ -33,6 +33,7 @@ const createSchema = z.object({
   status: z.enum(["active", "retired", "archived"]).optional().default("active"),
   brandIds: z.array(z.coerce.bigint()).optional().default([]),
   categoryIds: z.array(z.coerce.bigint()).optional().default([]),
+  directConsignmentId: z.coerce.bigint().optional().nullable(),
   contracts: z.array(z.object({
     programId: z.coerce.bigint(),
     collaborationTenure: z.string().trim().max(60).optional().nullable(),
@@ -76,7 +77,7 @@ export const POST = handler(async (req: Request) => {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
-  const { brandIds, categoryIds, contracts, customFields, ...rest } = parsed.data;
+  const { brandIds, categoryIds, contracts, customFields, directConsignmentId, ...rest } = parsed.data;
 
   // Verify unique sellerCode globally
   const existingCode = await prisma.seller.findUnique({
@@ -136,6 +137,18 @@ export const POST = handler(async (req: Request) => {
         },
       },
     });
+
+    if (directConsignmentId) {
+      await tx.directConsignment.update({
+        where: { id: directConsignmentId },
+        data: {
+          status: "RESOLVED",
+          sellerId: created.id,
+          brandId: uniqBrandIds[0] || null,
+          resolvedAt: new Date(),
+        },
+      });
+    }
 
     const assignmentsToCreate = [];
     for (const c of contracts) {

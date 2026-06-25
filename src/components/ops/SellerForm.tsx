@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { slugFromName } from "@/lib/attributeMeta";
 import { BRAND_TYPES, AGREEMENT_DURATIONS, durationMonths, addMonths, formatDMY, isValidGstin, brandCodeBase, parseFitoutDays, subtractDays, formatDaysToYMD } from "@/lib/brandMeta";
 import { isNonEmptyString } from "@/lib/validation";
@@ -124,13 +124,19 @@ export default function SellerForm({
   currentUserId?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const editing = !!seller;
+
+  // Retrieve query params for prefill (e.g. from direct consignment)
+  const prefillName = !editing ? (searchParams.get("name") || "") : "";
+  const directConsignmentId = !editing ? (searchParams.get("directConsignmentId") || "") : "";
+
   console.log("CLIENT EXECS PROP:", execs);
 
   // Basic Information
-  const [name, setName] = useState(seller?.name ?? "");
-  const [sellerCode, setSellerCode] = useState(seller?.sellerCode ?? "");
-  const [codeTouched, setCodeTouched] = useState(editing);
+  const [name, setName] = useState(() => seller?.name ?? prefillName);
+  const [sellerCode, setSellerCode] = useState(() => seller?.sellerCode ?? (prefillName ? slugFromName(prefillName) : ""));
+  const [codeTouched, setCodeTouched] = useState(editing || !!prefillName);
   const [membershipId, setMembershipId] = useState(seller?.membershipId ?? "");
   const [status, setStatus] = useState(seller?.status ?? "active");
 
@@ -706,6 +712,7 @@ export default function SellerForm({
         brandIds: selectedBrandIds,
         categoryIds: pickedCategoryIds,
         contracts: contractPayload,
+        directConsignmentId: directConsignmentId || null,
       };
 
       const res = await fetch(editing ? `/api/sellers/${seller!.id}` : "/api/sellers", {
@@ -720,7 +727,11 @@ export default function SellerForm({
         return;
       }
 
-      router.push("/ops/sellers");
+      if (directConsignmentId) {
+        router.push("/ops/direct-consignments");
+      } else {
+        router.push("/ops/sellers");
+      }
       router.refresh();
     } catch {
       setError("Network error");

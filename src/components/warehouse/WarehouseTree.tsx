@@ -155,7 +155,7 @@ export default function WarehouseTree({
   const totalCategories = new Set(initial.filter((n) => n.categoryId).map((n) => String(n.categoryId))).size;
   const totalQuantity = initial.reduce((sum, n) => sum + (n._count?.copies ?? 0), 0);
 
-  const [pendingAction, setPendingAction] = useState<"export_template" | "export_locations" | "import" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"export_locations" | "import" | null>(null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [showImportModal, setShowImportModal] = useState(false);
 
@@ -184,10 +184,14 @@ export default function WarehouseTree({
     return initial.filter((n) => n.nodeType === rootLevel);
   }, [initial, flowSteps]);
 
-  function handleExportTemplate(warehouseId: string) {
+  function handleExportTemplate(nodeTypeOrId?: string) {
+    const startIdx = nodeTypeOrId && nodeTypeOrId.startsWith("L")
+      ? flowSteps.findIndex((s) => s.level === nodeTypeOrId)
+      : 0;
+
     const headers: string[] = [];
     flowSteps.forEach((s, idx) => {
-      if (idx === 0) return; // Skip step 0 (Warehouse)
+      if (idx <= startIdx) return;
       headers.push(`${s.name} Name`);
       headers.push(`${s.name} Code (Optional)`);
     });
@@ -199,7 +203,12 @@ export default function WarehouseTree({
     const ws = XLSX.utils.aoa_to_sheet([headers]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, `${programName.replace(/[^a-zA-Z0-9]/g, "_")}_Warehouse_Template.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `${programName.replace(/[^a-zA-Z0-9]/g, "_")}_${
+        startIdx > 0 ? flowSteps[startIdx].name.replace(/[^a-zA-Z0-9]/g, "_") + "_" : ""
+      }Template.xlsx`
+    );
   }
 
   function handleExportLocations(warehouseId: string) {
@@ -397,13 +406,22 @@ export default function WarehouseTree({
           h.toLowerCase().includes("category")
         );
 
-        // Validate that we have at least columns for step 1
-        if (flowSteps.length > 1 && stepColIndices[1].nameIdx === -1) {
-          throw new Error(`Required column "${flowSteps[1].name}" or "${flowSteps[1].name} Name" not found in spreadsheet.`);
+        const selectedParentNode = initial.find((n) => String(n.id) === String(selectedWarehouseId));
+        const startStepIdx = selectedParentNode
+          ? flowSteps.findIndex((s) => s.level === selectedParentNode.nodeType)
+          : 0;
+
+        // Validate that we have at least columns for the first child level
+        const firstChildStepIdx = startStepIdx + 1;
+        if (flowSteps.length > firstChildStepIdx && stepColIndices[firstChildStepIdx].nameIdx === -1) {
+          throw new Error(`Required column "${flowSteps[firstChildStepIdx].name}" or "${flowSteps[firstChildStepIdx].name} Name" not found in spreadsheet.`);
         }
 
         const currentNodes = JSON.parse(JSON.stringify(initial)) as LocationNode[];
         const nodesToCreateList: any[] = [];
+
+        // Track last non-empty name/code for hierarchical parent inheritance
+        const lastNonEmptyValues = flowSteps.map(() => ({ name: "", code: "" }));
 
         for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex++) {
           const row = rows[rowIndex];
@@ -413,35 +431,59 @@ export default function WarehouseTree({
           const hasAnyValue = row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== "");
           if (!hasAnyValue) continue;
 
-          let parentId = selectedWarehouseId;
+          // Resolve name/code for all levels using parent inheritance
+          const resolvedRowNames: string[] = [];
+          const resolvedRowCodes: string[] = [];
+          let hasAnyLevel = false;
+
           for (let i = 1; i < flowSteps.length; i++) {
+            const indices = stepColIndices[i];
+            if (indices.nameIdx === -1) {
+              resolvedRowNames.push("");
+              resolvedRowCodes.push("");
+              continue;
+            }
+
+            const cellName = row[indices.nameIdx];
+            const cellCode = indices.codeIdx !== -1 ? row[indices.codeIdx] : null;
+
+            if (cellName === undefined || cellName === null || String(cellName).trim() === "") {
+              resolvedRowNames.push(lastNonEmptyValues[i].name);
+              resolvedRowCodes.push(lastNonEmptyValues[i].code);
+            } else {
+              lastNonEmptyValues[i].name = String(cellName).trim();
+              lastNonEmptyValues[i].code = cellCode !== null && cellCode !== undefined ? String(cellCode).trim() : "";
+              
+              // When a parent level changes, reset all child levels
+              for (let childIdx = i + 1; childIdx < flowSteps.length; childIdx++) {
+                lastNonEmptyValues[childIdx] = { name: "", code: "" };
+              }
+
+              resolvedRowNames.push(lastNonEmptyValues[i].name);
+              resolvedRowCodes.push(lastNonEmptyValues[i].code);
+            }
+
+            if (resolvedRowNames[resolvedRowNames.length - 1]) {
+              hasAnyLevel = true;
+            }
+          }
+
+          if (!hasAnyLevel) continue;
+
+          let parentId = selectedWarehouseId;
+          for (let i = startStepIdx + 1; i < flowSteps.length; i++) {
             const step = flowSteps[i];
             const indices = stepColIndices[i];
             if (indices.nameIdx === -1) continue;
 
-            const rawName = row[indices.nameIdx];
-            if (rawName === undefined || rawName === null || String(rawName).trim() === "") {
-              break; // Stop climbing down hierarchy for this row
+            const nodeName = resolvedRowNames[i - 1];
+            if (!nodeName) {
+              break;
             }
 
-            let nodeName = String(rawName).trim();
-            const rawCode = indices.codeIdx !== -1 ? row[indices.codeIdx] : null;
-            let nodeCode = rawCode !== null && rawCode !== undefined ? String(rawCode).trim() : "";
+            let nodeCode = resolvedRowCodes[i - 1];
             if (step.datatype.toLowerCase() === "string") {
               nodeCode = nodeCode.toUpperCase();
-            }
-
-            // Parse Name and Code if Name contains " - CODE" format
-            if (nodeName.includes(" - ")) {
-              const parts = nodeName.split(" - ");
-              nodeName = parts[0].trim();
-              if (!nodeCode) {
-                nodeCode = parts[1].trim();
-              }
-            }
-
-            if (step.datatype.toLowerCase() === "string") {
-              nodeName = nodeName.toUpperCase();
             }
 
             // Clean code
@@ -449,14 +491,13 @@ export default function WarehouseTree({
               nodeCode = nodeCode.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "");
             }
 
-            // Auto-generate code if empty (short, sequential based on cleaned name)
+            // Auto-generate code if empty
             if (!nodeCode) {
               let cleanName = nodeName.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "").replace(/-+/g, "-");
               if (step.datatype.toLowerCase() === "string") {
                 cleanName = cleanName.toUpperCase();
               }
               
-              // Ensure code is unique among sibling nodes under this parent
               let uniqueCode = cleanName;
               let suffix = 1;
               while (currentNodes.some((n) => 
@@ -486,9 +527,7 @@ export default function WarehouseTree({
               const isLeaf =
                 i === flowSteps.length - 1 ||
                 !stepColIndices[i + 1] ||
-                row[stepColIndices[i + 1].nameIdx] === undefined ||
-                row[stepColIndices[i + 1].nameIdx] === null ||
-                String(row[stepColIndices[i + 1].nameIdx]).trim() === "";
+                !resolvedRowNames[i];
 
               let isPlacementEligible = false;
               let quantity = 1;
@@ -949,7 +988,7 @@ export default function WarehouseTree({
   }
 
   // Recursive renderer
-  function renderNodes(nodes: TreeNode[], depth = 0): React.ReactNode {
+  function renderNodes(nodes: TreeNode[], depth = 0, ancestorCodes: string[] = []): React.ReactNode {
     return nodes.map((n) => {
       if (visible && !visible.has(n.id)) return null;
       const meta = nodeMeta(n.nodeType);
@@ -962,6 +1001,10 @@ export default function WarehouseTree({
         const hasNextStep = currentStepIdx !== -1 && currentStepIdx < flowSteps.length - 1;
         allowedChildren = hasNextStep ? [flowSteps[currentStepIdx + 1].level] : [];
       }
+
+      // Compute full path starting from Level 1 (Block)
+      const currentPathCodes = depth > 0 ? [...ancestorCodes, n.code || n.name] : ancestorCodes;
+      const fullLocationPath = currentPathCodes.join("-");
 
       return (
         <div key={n.id}>
@@ -993,6 +1036,14 @@ export default function WarehouseTree({
             <span className="text-sm font-medium text-slate-800 truncate">{n.name}</span>
             {n.code && (
               <span className="font-mono text-[11px] text-slate-400 shrink-0">{n.code}</span>
+            )}
+            {depth > 1 && fullLocationPath && (
+              <span 
+                title="Full Location Code Path" 
+                className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-brand-50/60 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-100 dark:border-brand-900/50 shrink-0"
+              >
+                {fullLocationPath}
+              </span>
             )}
 
             {/* Category tag */}
@@ -1057,9 +1108,27 @@ export default function WarehouseTree({
             {/* Hover actions */}
             <div className="ml-auto hidden group-hover:flex items-center gap-3 shrink-0">
               {canEdit && allowedChildren.length > 0 && (
-                <Link href={newHref({ parentId: n.id })} className="text-xs text-brand-600 hover:underline whitespace-nowrap">
-                  + Sub
-                </Link>
+                <>
+                  <Link href={newHref({ parentId: n.id })} className="text-xs text-brand-600 hover:underline whitespace-nowrap">
+                    + Sub
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setSelectedWarehouseId(String(n.id));
+                      setPendingAction("import");
+                      setShowImportModal(true);
+                    }}
+                    className="text-xs text-indigo-600 hover:underline cursor-pointer"
+                  >
+                    Import
+                  </button>
+                  <button
+                    onClick={() => handleExportTemplate(n.nodeType)}
+                    className="text-xs text-slate-500 hover:underline cursor-pointer"
+                  >
+                    Template
+                  </button>
+                </>
               )}
               {canEdit && (
                 <Link href={newHref({ editId: n.id })} className="text-xs text-slate-600 hover:underline">Edit</Link>
@@ -1086,13 +1155,34 @@ export default function WarehouseTree({
           </div>
 
           {/* Children */}
-          {isOpen && hasChildren && renderNodes(n.children, depth + 1)}
+          {isOpen && hasChildren && renderNodes(n.children, depth + 1, currentPathCodes)}
         </div>
       );
     });
   }
 
   if (!flowDefined) {
+    if (!canEdit) {
+      return (
+        <div className="space-y-5">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Warehouse &amp; Locations</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Locations flow structure for program <span className="font-semibold text-slate-700">{programName}</span>.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-md p-6 shadow-sm text-center py-16 text-slate-500">
+            <p className="text-sm">
+              The warehouse flow nomenclature has not been configured yet for this program.
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Please contact a Branch Admin to set up the flow steps.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-5">
         {/* Header */}
@@ -1183,16 +1273,33 @@ export default function WarehouseTree({
           </div>
 
           <div className="flex justify-between items-center">
-            <button
-              type="button"
-              onClick={() => {
-                const nextId = `L${flowSteps.length + 1}`;
-                setFlowSteps([...flowSteps, { id: nextId, name: "", level: `L${flowSteps.length}`, datatype: "String" }]);
-              }}
-              className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
-            >
-              + Add Level
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextId = `L${flowSteps.length + 1}`;
+                  setFlowSteps([...flowSteps, { id: nextId, name: "", level: `L${flowSteps.length}`, datatype: "String" }]);
+                }}
+                className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
+              >
+                + Add Level
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (flowSteps.some((s) => !s.name.trim())) {
+                    alert("Please enter names for all flow levels before exporting the template.");
+                    return;
+                  }
+                  handleExportTemplate("");
+                }}
+                className="rounded-md border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Template</span>
+              </button>
+            </div>
 
             <button
               type="button"
@@ -1261,17 +1368,19 @@ export default function WarehouseTree({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Active Nomenclature &amp; Onboarding Flow
           </span>
-          <button
-            onClick={() => {
-              if (confirm("Are you sure you want to adjust the nomenclature flow? Your created locations will remain, but you can adjust the flow level structure.")) {
-                localStorage.setItem(`wh_flow_defined_${programId}`, "false");
-                setFlowDefined(false);
-              }
-            }}
-            className="text-[11px] text-brand-600 hover:text-brand-855 font-bold hover:underline"
-          >
-            Adjust Flow Setup
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to adjust the nomenclature flow? Your created locations will remain, but you can adjust the flow level structure.")) {
+                  localStorage.setItem(`wh_flow_defined_${programId}`, "false");
+                  setFlowDefined(false);
+                }
+              }}
+              className="text-[11px] text-brand-600 hover:text-brand-855 font-bold hover:underline"
+            >
+              Adjust Flow Setup
+            </button>
+          )}
         </div>
         
         <div className="flex flex-wrap items-center gap-3 py-1">
@@ -1332,17 +1441,17 @@ export default function WarehouseTree({
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handleExportTemplate("")}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 hover:border-slate-300 transition-all duration-200 shadow-sm cursor-pointer"
+            title="Download blank template file"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Template</span>
+          </button>
+          
           {warehouses.length > 0 && (
             <>
-              <button
-                onClick={() => setPendingAction("export_template")}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 hover:border-slate-300 transition-all duration-200 shadow-sm cursor-pointer"
-                title="Download blank template file"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Template</span>
-              </button>
-              
               <button
                 onClick={() => setPendingAction("export_locations")}
                 className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 hover:border-slate-300 transition-all duration-200 shadow-sm cursor-pointer"
@@ -1425,7 +1534,7 @@ export default function WarehouseTree({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    {pendingAction === "export_template" ? "Export Template" : pendingAction === "export_locations" ? "Export Locations" : "Import Locations"}
+                    {pendingAction === "export_locations" ? "Export Locations" : "Import Locations"}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Select target warehouse to proceed</p>
                 </div>
@@ -1460,11 +1569,7 @@ export default function WarehouseTree({
                 <button
                   onClick={() => {
                     if (!selectedWarehouseId) return;
-                    if (pendingAction === "export_template") {
-                      handleExportTemplate(selectedWarehouseId);
-                      setPendingAction(null);
-                      setSelectedWarehouseId("");
-                    } else if (pendingAction === "export_locations") {
+                    if (pendingAction === "export_locations") {
                       handleExportLocations(selectedWarehouseId);
                       setPendingAction(null);
                       setSelectedWarehouseId("");
@@ -1515,7 +1620,7 @@ export default function WarehouseTree({
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">Import Locations</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Importing into: <span className="font-semibold text-brand-600 dark:text-brand-400">
-                      {warehouses.find(w => String(w.id) === String(selectedWarehouseId))?.name || ""}
+                      {initial.find(item => String(item.id) === String(selectedWarehouseId))?.name || ""}
                     </span>
                   </p>
                 </div>

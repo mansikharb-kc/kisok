@@ -14,12 +14,12 @@ function parseId(id: string): bigint | null {
 }
 
 const receiveSchema = z.object({
-  receivedDate: z.string().trim().optional(),
-  vehicleDetails: z.string().trim().nullable().optional(),
-  quantityReceived: z.coerce.number().int().nonnegative("Quantity received must be a non-negative integer"),
+  receivedDate: z.string().trim().min(1, "Received Date is required"),
+  vehicleDetails: z.string().trim().min(1, "Vehicle Details is required").max(255),
+  quantityReceived: z.coerce.number().int().positive("Quantity received must be greater than 0"),
   boxQc: z.string().trim().min(2, "Please select/specify box QC status"),
-  photographUrl: z.string().trim().nullable().optional(),
-  packingListDoc: z.string().trim().nullable().optional(),
+  photographUrl: z.string().trim().min(1, "Photograph Reference upload is required").max(255),
+  packingListDoc: z.string().trim().min(1, "Packing List Document upload is required").max(255),
   consignmentRemarks: z.string().trim().nullable().optional(),
 });
 
@@ -34,11 +34,11 @@ export const POST = handler(async (req: Request, ctx: { params: { id: string } }
 
   const {
     receivedDate,
-    vehicleDetails = null,
+    vehicleDetails,
     quantityReceived,
     boxQc,
-    photographUrl = null,
-    packingListDoc = null,
+    photographUrl,
+    packingListDoc,
     consignmentRemarks = null,
   } = parsed.data;
 

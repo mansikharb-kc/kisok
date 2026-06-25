@@ -4,6 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Send, Package, CheckCircle2, ChevronRight, HelpCircle, Bell, Flag as FlagIcon, AlertTriangle } from "lucide-react";
 
+const steps = [
+  { key: "INITIATION", label: "Initiation" },
+  { key: "SAMPLE_REQUEST", label: "Sample Request" },
+  { key: "DATA_AND_STICKER", label: "Data & Sticker" },
+  { key: "CLOSED", label: "Verification" },
+];
+
 interface OnboardingPipelineFormProps {
   assignmentId: string;
   pipeline: any;
@@ -80,6 +87,17 @@ export default function OnboardingPipelineForm({
   isDirectConsignment = false,
 }: OnboardingPipelineFormProps) {
   const router = useRouter();
+
+  const getStepKeyFromStatus = (statusStr: string) => {
+    if (statusStr === "INITIATION") return "INITIATION";
+    if (statusStr === "TICKET_RAISED" || statusStr === "CONSIGNMENT_RECEIVED") return "SAMPLE_REQUEST";
+    if (statusStr === "DATA_AND_STICKER") return "DATA_AND_STICKER";
+    if (statusStr === "VERIFICATION" || statusStr === "CLOSED") return "CLOSED";
+    return "INITIATION";
+  };
+
+  const [activeViewStep, setActiveViewStep] = useState<string>(getStepKeyFromStatus(pipeline.status));
+  const currentActiveStepKey = getStepKeyFromStatus(pipeline.status);
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -368,13 +386,6 @@ export default function OnboardingPipelineForm({
     }
   }
 
-  // Visual steps
-  const steps = [
-    { key: "INITIATION", label: "Initiation" },
-    { key: "SAMPLE_REQUEST", label: "Sample Request" },
-    { key: "DATA_AND_STICKER", label: "Data & Sticker" },
-    { key: "CLOSED", label: "Verification" },
-  ];
 
   const getStepStatusOrder = (stepKey: string) => {
     if (status === "INITIATION") {
@@ -404,6 +415,10 @@ export default function OnboardingPipelineForm({
 
   const cardStyle = "bg-white/60 backdrop-blur-md rounded-2xl border border-slate-200 p-6 shadow-sm";
 
+  const currentStepIndex = steps.findIndex((s) => s.key === activeViewStep);
+  const prevStepIndex = currentStepIndex > 0 ? currentStepIndex - 1 : -1;
+  const nextStepIndex = currentStepIndex < steps.length - 1 ? currentStepIndex + 1 : -1;
+
   return (
     <div className="space-y-3">
       <div
@@ -425,35 +440,53 @@ export default function OnboardingPipelineForm({
         </div>
 
         {/* Inline steps tracker */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-500 lg:border-l lg:border-slate-200 lg:pl-4 flex-1 justify-start lg:justify-end pr-4">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-xs font-semibold text-slate-500 lg:border-l lg:border-slate-200 lg:pl-4 flex-1 justify-start lg:justify-end pr-4">
           {steps.map((step, idx) => {
             const stepStatus = getStepStatusOrder(step.key);
+            const isViewing = activeViewStep === step.key;
 
             return (
               <div key={step.key} className="flex items-center gap-2">
-                <div className="relative flex items-center justify-center shrink-0 w-3.5 h-3.5">
-                  {stepStatus === "completed" && (
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600 border border-emerald-650/30" />
-                  )}
-                  {stepStatus === "active" && (
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 animate-led-yellow border border-amber-650/30" />
-                  )}
-                  {stepStatus === "pending" && (
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 border-2 border-slate-300 bg-white shadow-2xs" />
-                  )}
-                </div>
-                <span
-                  className={`text-[11px] font-bold tracking-wide transition-colors ${stepStatus === "active"
-                      ? "text-amber-700"
-                      : stepStatus === "completed"
-                        ? "text-slate-700"
-                        : "text-slate-400"
-                    }`}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(true);
+                    setActiveViewStep(step.key);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all border ${
+                    isViewing
+                      ? "bg-slate-900 text-white border-slate-950 shadow-sm"
+                      : "hover:bg-slate-100 bg-transparent border-transparent"
+                  }`}
                 >
-                  {step.label}
-                </span>
+                  <div className="relative flex items-center justify-center shrink-0 w-3 h-3">
+                    {stepStatus === "completed" && (
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${isViewing ? "bg-emerald-400" : "bg-emerald-600"}`} />
+                    )}
+                    {stepStatus === "active" && (
+                      <span className={`relative inline-flex rounded-full h-2 w-2 animate-led-yellow ${isViewing ? "bg-amber-300" : "bg-amber-500"}`} />
+                    )}
+                    {stepStatus === "pending" && (
+                      <span className="relative inline-flex rounded-full h-2 w-2 border border-slate-300 bg-white" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-bold tracking-wide transition-colors ${
+                      isViewing
+                        ? "text-white"
+                        : stepStatus === "active"
+                          ? "text-amber-700"
+                          : stepStatus === "completed"
+                            ? "text-slate-700"
+                            : "text-slate-400"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </button>
                 {idx < steps.length - 1 && (
-                  <ChevronRight className="h-3 w-3 text-slate-350 shrink-0 ml-1" />
+                  <ChevronRight className="h-3 w-3 text-slate-350 shrink-0" />
                 )}
               </div>
             );
@@ -471,26 +504,84 @@ export default function OnboardingPipelineForm({
       {/* Interactive Form Content (Collapsible) */}
       {isExpanded && (
         <div className={`${cardStyle} space-y-6`}>
-          <div className="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+          {/* Navigation Bar between stages */}
+          <div className="flex items-center justify-between bg-slate-50/80 border border-slate-200 rounded-xl p-3 text-xs mb-4 select-none">
+            <button
+              type="button"
+              disabled={prevStepIndex === -1}
+              onClick={() => {
+                if (prevStepIndex !== -1) {
+                  setActiveViewStep(steps[prevStepIndex].key);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                prevStepIndex === -1
+                  ? "bg-slate-100/60 text-slate-400 border-slate-200 cursor-not-allowed"
+                  : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300 active:scale-[0.98]"
+              }`}
+            >
+              ← Previous Stage
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px]">
+                Viewing:
+              </span>
+              <span className="font-bold text-slate-800 bg-slate-200/80 px-2.5 py-0.5 rounded-full text-[11px]">
+                {steps.find((s) => s.key === activeViewStep)?.label}
+              </span>
+              {activeViewStep === currentActiveStepKey ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                  Active Stage
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                  Read-Only
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={nextStepIndex === -1}
+              onClick={() => {
+                if (nextStepIndex !== -1) {
+                  setActiveViewStep(steps[nextStepIndex].key);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                nextStepIndex === -1
+                  ? "bg-slate-100/60 text-slate-400 border-slate-200 cursor-not-allowed"
+                  : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300 active:scale-[0.98]"
+              }`}
+            >
+              Next Stage →
+            </button>
+          </div>
+
+          <div className="border-b border-slate-100 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="font-bold text-slate-950 text-sm">Onboarding Pipeline Stage</h3>
+              <h3 className="font-bold text-slate-950 text-sm">
+                Stage Details: {steps.find((s) => s.key === activeViewStep)?.label}
+              </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                {status === "INITIATION" && "Initiate discussion and prepare consignment request"}
-                {status === "TICKET_RAISED" && "Consignment ticket raised, awaiting arrival at warehouse"}
-                {status === "CONSIGNMENT_RECEIVED" && "Consignment received by warehouse, pending executive verification"}
-                {status === "CLOSED" && "Onboarding pipeline complete. Proceed to onboard products"}
+                {activeViewStep === "INITIATION" && "Initiate discussion and prepare consignment request"}
+                {activeViewStep === "SAMPLE_REQUEST" && "Consignment sample request and receipt tracking"}
+                {activeViewStep === "DATA_AND_STICKER" && "Verify SKU details, attributes, and paste layout stickers"}
+                {activeViewStep === "CLOSED" && "Verify physical placement of samples in racks and upload confirmation photo"}
               </p>
             </div>
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${status === "CLOSED"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-250"
-                  : status === "CONSIGNMENT_RECEIVED"
-                    ? "bg-indigo-50 text-indigo-700 border-indigo-255"
-                    : "bg-brand-50 text-brand-700 border-brand-200 animate-pulse"
-                }`}
-            >
-              {status.replace(/_/g, " ")}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pipeline Status:</span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${status === "CLOSED"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-250"
+                    : status === "CONSIGNMENT_RECEIVED"
+                      ? "bg-indigo-50 text-indigo-700 border-indigo-255"
+                      : "bg-brand-50 text-brand-700 border-brand-200 animate-pulse"
+                  }`}
+              >
+                {status.replace(/_/g, " ")}
+              </span>
+            </div>
           </div>
 
           {error && (
@@ -503,10 +594,8 @@ export default function OnboardingPipelineForm({
             <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 font-semibold mb-4">
               {successMsg}
             </div>
-          )}
-
-          {/* Phase 1: Initiation Form */}
-          {status === "INITIATION" && (
+          )}          {/* Phase 1: Initiation Form */}
+          {activeViewStep === "INITIATION" && (
             <div className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {/* 1. Target Brand */}
@@ -518,7 +607,8 @@ export default function OnboardingPipelineForm({
                     <select
                       value={brandId}
                       onChange={(e) => setBrandId(e.target.value)}
-                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white cursor-pointer font-semibold"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white cursor-pointer font-semibold disabled:opacity-75 disabled:cursor-not-allowed"
                     >
                       {brands.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -550,7 +640,8 @@ export default function OnboardingPipelineForm({
                     placeholder="e.g. Call brand manager for SKU details"
                     value={nextActionTime}
                     onChange={(e) => setNextActionTime(e.target.value)}
-                    className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                    disabled={activeViewStep !== currentActiveStepKey}
+                    className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white disabled:opacity-75 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -566,9 +657,10 @@ export default function OnboardingPipelineForm({
                       value={dateToRevisit}
                       onChange={(e) => setDateToRevisit(e.target.value)}
                       onBlur={() => setDateToRevisit(formatToDDMMMYYYY(dateToRevisit))}
-                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white disabled:opacity-75 disabled:cursor-not-allowed"
                     />
-                    {dateToRevisit.trim() && (
+                    {activeViewStep === currentActiveStepKey && dateToRevisit.trim() && (
                       <button
                         type="button"
                         onClick={handleSetReminder}
@@ -607,19 +699,22 @@ export default function OnboardingPipelineForm({
                       placeholder="e.g. MoU-Kohler-2026.pdf"
                       value={docAttached}
                       onChange={(e) => setDocAttached(e.target.value)}
-                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white disabled:opacity-75 disabled:cursor-not-allowed"
                     />
-                    <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingDoc ? "opacity-60 cursor-not-allowed" : ""}`}>
-                      {uploadingDoc ? "Uploading..." : "Upload File"}
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleDocUpload}
-                        className="hidden"
-                        style={{ display: "none" }}
-                        disabled={uploadingDoc}
-                      />
-                    </label>
+                    {activeViewStep === currentActiveStepKey && (
+                      <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingDoc ? "opacity-60 cursor-not-allowed" : ""}`}>
+                        {uploadingDoc ? "Uploading..." : "Upload File"}
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleDocUpload}
+                          className="hidden"
+                          style={{ display: "none" }}
+                          disabled={uploadingDoc}
+                        />
+                      </label>
+                    )}
                   </div>
                   {docAttached && (
                     <div className="mt-1 flex items-center gap-2">
@@ -638,13 +733,15 @@ export default function OnboardingPipelineForm({
                       ) : (
                         <span className="text-slate-500 text-[11px] italic">Ref: {docAttached}</span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setDocAttached("")}
-                        className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
-                      >
-                        Remove
-                      </button>
+                      {activeViewStep === currentActiveStepKey && (
+                        <button
+                          type="button"
+                          onClick={() => setDocAttached("")}
+                          className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -661,19 +758,22 @@ export default function OnboardingPipelineForm({
                       value={itemTarget}
                       onChange={(e) => setItemTarget(e.target.value)}
                       required
-                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white font-medium"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white font-medium disabled:opacity-75 disabled:cursor-not-allowed"
                     />
-                    <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingTarget ? "opacity-60 cursor-not-allowed" : ""}`}>
-                      {uploadingTarget ? "Uploading..." : "Upload File"}
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={handleTargetUpload}
-                        className="hidden"
-                        style={{ display: "none" }}
-                        disabled={uploadingTarget}
-                      />
-                    </label>
+                    {activeViewStep === currentActiveStepKey && (
+                      <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingTarget ? "opacity-60 cursor-not-allowed" : ""}`}>
+                        {uploadingTarget ? "Uploading..." : "Upload File"}
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleTargetUpload}
+                          className="hidden"
+                          style={{ display: "none" }}
+                          disabled={uploadingTarget}
+                        />
+                      </label>
+                    )}
                   </div>
                   {itemTarget && (
                     <div className="mt-1 flex items-center gap-2">
@@ -682,7 +782,7 @@ export default function OnboardingPipelineForm({
                           href={itemTarget}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
+                          className="text-brand-600 hover:text-brand-855 hover:underline font-semibold text-[11px] flex items-center gap-1"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -692,26 +792,29 @@ export default function OnboardingPipelineForm({
                       ) : (
                         <span className="text-slate-500 text-[11px] italic">Target: {itemTarget}</span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setItemTarget("")}
-                        className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
-                      >
-                        Remove
-                      </button>
+                      {activeViewStep === currentActiveStepKey && (
+                        <button
+                          type="button"
+                          onClick={() => setItemTarget("")}
+                          className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Checkboxes Row */}
-                <div className="sm:col-span-2 md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2">
+                <div className="sm:col-span-2 md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2 select-none">
                   <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
                     <input
                       type="checkbox"
                       id="discussCheck"
                       checked={discussionDone}
                       onChange={(e) => setDiscussionDone(e.target.checked)}
-                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                     <label htmlFor="discussCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
                       Discussion with Brand Done
@@ -724,7 +827,8 @@ export default function OnboardingPipelineForm({
                       id="reqSpaceCheck"
                       checked={reqSpaceAndRack}
                       onChange={(e) => setReqSpaceAndRack(e.target.checked)}
-                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                     <label htmlFor="reqSpaceCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
                       Requested Space/Rack
@@ -737,7 +841,8 @@ export default function OnboardingPipelineForm({
                       id="reqDataCheck"
                       checked={reqData}
                       onChange={(e) => setReqData(e.target.checked)}
-                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                     <label htmlFor="reqDataCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
                       Requested Data
@@ -750,7 +855,8 @@ export default function OnboardingPipelineForm({
                       id="reqSampleCheck"
                       checked={reqSample}
                       onChange={(e) => setReqSample(e.target.checked)}
-                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                     <label htmlFor="reqSampleCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
                       Requested Sample
@@ -764,7 +870,8 @@ export default function OnboardingPipelineForm({
                         id="directConsignmentCheck"
                         checked={directConsignment}
                         onChange={(e) => setDirectConsignment(e.target.checked)}
-                        className="rounded border-orange-355 h-4 w-4 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                        disabled={activeViewStep !== currentActiveStepKey}
+                        className="rounded border-orange-355 h-4 w-4 text-orange-600 focus:ring-orange-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                       />
                       <label htmlFor="directConsignmentCheck" className="font-semibold cursor-pointer select-none">
                         Direct Consignment
@@ -778,7 +885,8 @@ export default function OnboardingPipelineForm({
                       id="reqKtCheck"
                       checked={reqKt}
                       onChange={(e) => setReqKt(e.target.checked)}
-                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                      disabled={activeViewStep !== currentActiveStepKey}
+                      className="rounded border-slate-355 h-4 w-4 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     />
                     <label htmlFor="reqKtCheck" className="font-semibold text-slate-700 cursor-pointer select-none">
                       Requested Knowledge Transfer
@@ -796,433 +904,523 @@ export default function OnboardingPipelineForm({
                   placeholder="Details of discussions..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white"
+                  disabled={activeViewStep !== currentActiveStepKey}
+                  className="w-full rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => handleAction("save-initiation")}
-                  disabled={busy}
-                  className="rounded-lg border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
-                >
-                  Save Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAction("raise-ticket")}
-                  disabled={busy}
-                  className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition"
-                >
-                  {busy ? "Initiating..." : "OB Initiated"}
-                </button>
-              </div>
+              {activeViewStep === currentActiveStepKey ? (
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleAction("save-initiation")}
+                    disabled={busy}
+                    className="rounded-lg border border-slate-300 text-slate-700 bg-white px-4 py-2 text-xs font-semibold hover:bg-slate-50 transition"
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAction("raise-ticket")}
+                    disabled={busy}
+                    className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition"
+                  >
+                    {busy ? "Initiating..." : "OB Initiated"}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2 p-2 rounded-lg border border-emerald-250 bg-emerald-50 text-emerald-800 font-semibold w-fit">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span>Initiation Details Completed</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Phase 2: Awaiting Package Receipt */}
-          {status === "TICKET_RAISED" && (
+          {/* Phase 2: Awaiting Package Receipt or Receipt Details */}
+          {activeViewStep === "SAMPLE_REQUEST" && (
             <div className="space-y-4 text-xs">
-              <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
-                <HelpCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-amber-900 block">Awaiting Package Receipt by Consignment User</span>
-                  <p className="text-amber-750 mt-1">
-                    The ticket has been successfully raised. The consignment user will record the received date, vehicle, quantity, box QC, and package photograph when it arrives at the warehouse.
-                  </p>
+              {/* If future stage (actual status is INITIATION) */}
+              {status === "INITIATION" && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3 text-slate-500">
+                  <HelpCircle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-700 block">Sample Request Stage Pending</span>
+                    <p className="mt-1">
+                      Onboarding requests have not been initiated yet. Once you fill out the Initiation details and click "OB Initiated", this stage will begin.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="bg-slate-50/80 border border-slate-150 rounded-xl p-4 space-y-3 font-medium">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Raised Ticket Details</span>
-                  {pipeline.ticket?.ticketNo && (
-                    <span className="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded">
-                      {pipeline.ticket.ticketNo}
+              {/* If active stage: status is TICKET_RAISED */}
+              {status === "TICKET_RAISED" && (
+                <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+                  <HelpCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-amber-900 block">Awaiting Package Receipt by Consignment User</span>
+                    <p className="text-amber-750 mt-1">
+                      The ticket has been successfully raised. The consignment user will record the received date, vehicle, quantity, box QC, and package photograph when it arrives at the warehouse.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* If active stage: status is CONSIGNMENT_RECEIVED, OR completed (status is DATA_AND_STICKER, VERIFICATION, CLOSED) */}
+              {(status === "CONSIGNMENT_RECEIVED" || ["DATA_AND_STICKER", "VERIFICATION", "CLOSED"].includes(status)) && (
+                <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
+                  <Package className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-indigo-900 block">Package Received &amp; QC'ed by Warehouse</span>
+                    <p className="text-indigo-700 mt-1">
+                      {status === "CONSIGNMENT_RECEIVED"
+                        ? "Please review the receipt details uploaded by the consignment user. Check the 'Received Consignment' box and verify to close the ticket and enable SKU onboarding."
+                        : "The consignment package has been successfully received, QC'ed, and verified."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Show Ticket Details (if status is not INITIATION) */}
+              {status !== "INITIATION" && (
+                <div className="bg-slate-50/80 border border-slate-150 rounded-xl p-4 space-y-3 font-medium">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Raised Ticket Details</span>
+                    {pipeline.ticket?.ticketNo && (
+                      <span className="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded">
+                        {pipeline.ticket.ticketNo}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Target Samples List</span>
+                      {itemTarget ? (
+                        itemTarget.startsWith("/api/uploads/") ? (
+                          <a
+                            href={itemTarget}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-600 hover:text-brand-800 font-semibold hover:underline flex items-center gap-1 mt-0.5"
+                          >
+                            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            View Target List File
+                          </a>
+                        ) : (
+                          <span className="text-slate-800 mt-0.5 block">{itemTarget}</span>
+                        )
+                      ) : (
+                        <span className="text-slate-800 mt-0.5 block">—</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Document Attached</span>
+                      {docAttached ? (
+                        docAttached.startsWith("/api/uploads/") ? (
+                          <a
+                            href={docAttached}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-600 hover:text-brand-800 font-semibold hover:underline flex items-center gap-1 mt-0.5"
+                          >
+                            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            View Attached Document
+                          </a>
+                        ) : (
+                          <span className="text-slate-800 mt-0.5 block">{docAttached}</span>
+                        )
+                      ) : (
+                        <span className="text-slate-800 mt-0.5 block">None</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Date to Revisit</span>
+                      <span className="text-slate-800 mt-0.5 block">{formatToDDMMMYYYY(dateToRevisit) || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show Received Consignment Details (if consignment is received or in later stages) */}
+              {(status === "CONSIGNMENT_RECEIVED" || ["DATA_AND_STICKER", "VERIFICATION", "CLOSED"].includes(status)) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-150 rounded-xl p-4 font-medium text-slate-700">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Date Received</span>
+                    <span className="text-slate-900 block mt-0.5">
+                      {pipeline.receivedDate ? formatToDDMMMYYYY(pipeline.receivedDate) : "—"}
                     </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Quantity Received</span>
+                    <span className="text-slate-900 block mt-0.5 font-bold">
+                      {pipeline.quantityReceived ?? "—"} unit(s)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Box QC Status</span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-semibold text-[10px] uppercase mt-1 ${pipeline.boxQc === "Good"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-150"
+                          : "bg-amber-50 text-amber-700 border border-amber-150"
+                        }`}
+                    >
+                      {pipeline.boxQc || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Vehicle Details</span>
+                    <span className="text-slate-900 block mt-0.5">{pipeline.vehicleDetails || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Photograph Reference</span>
+                    <span className="text-slate-900 block mt-0.5 font-mono text-[11px]">{pipeline.photographUrl || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Packing List Document</span>
+                    <span className="text-slate-900 block mt-0.5 font-mono text-[11px]">{pipeline.packingListDoc || "—"}</span>
+                  </div>
+                  {pipeline.consignmentRemarks && (
+                    <div className="sm:col-span-2 md:col-span-3 pt-2 border-t border-slate-100">
+                      <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Consignment Remarks</span>
+                      <span className="text-slate-800 block mt-0.5 italic">"{pipeline.consignmentRemarks}"</span>
+                    </div>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Target Samples List</span>
-                    {itemTarget ? (
-                      itemTarget.startsWith("/api/uploads/") ? (
-                        <a
-                          href={itemTarget}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-brand-600 hover:text-brand-800 font-semibold hover:underline flex items-center gap-1 mt-0.5"
-                        >
-                          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          View Target List File
-                        </a>
-                      ) : (
-                        <span className="text-slate-800 mt-0.5 block">{itemTarget}</span>
-                      )
-                    ) : (
-                      <span className="text-slate-800 mt-0.5 block">—</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Document Attached</span>
-                    {docAttached ? (
-                      docAttached.startsWith("/api/uploads/") ? (
-                        <a
-                          href={docAttached}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-brand-600 hover:text-brand-800 font-semibold hover:underline flex items-center gap-1 mt-0.5"
-                        >
-                          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          View Attached Document
-                        </a>
-                      ) : (
-                        <span className="text-slate-800 mt-0.5 block">{docAttached}</span>
-                      )
-                    ) : (
-                      <span className="text-slate-800 mt-0.5 block">None</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wider block text-[10px] font-bold">Date to Revisit</span>
-                    <span className="text-slate-800 mt-0.5 block">{formatToDDMMMYYYY(dateToRevisit) || "—"}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Phase 3: Consignment Received (Verify Box) */}
-          {status === "CONSIGNMENT_RECEIVED" && (
-            <div className="space-y-4 text-xs">
-              <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
-                <Package className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-indigo-900 block">Package Received &amp; QC'ed by Warehouse</span>
-                  <p className="text-indigo-700 mt-1">
-                    Please review the receipt details uploaded by the consignment user. Check the "Received Consignment" box and verify to close the ticket and enable SKU onboarding.
-                  </p>
-                </div>
-              </div>
+              {/* Show check verification controls only if active and status is CONSIGNMENT_RECEIVED */}
+              {status === "CONSIGNMENT_RECEIVED" && activeViewStep === currentActiveStepKey && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2 p-2 bg-indigo-50/20 border border-indigo-100 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="receivedCheck"
+                      checked={execVerified}
+                      onChange={(e) => setExecVerified(e.target.checked)}
+                      className="rounded border-slate-350 h-4 w-4 text-brand-650 focus:ring-brand-500 cursor-pointer"
+                    />
+                    <label htmlFor="receivedCheck" className="font-bold text-indigo-900 cursor-pointer">
+                      Received Consignment
+                    </label>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-50/50 border border-slate-150 rounded-xl p-4 font-medium text-slate-700">
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Date Received</span>
-                  <span className="text-slate-900 block mt-0.5">
-                    {pipeline.receivedDate ? formatToDDMMMYYYY(pipeline.receivedDate) : "—"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Quantity Received</span>
-                  <span className="text-slate-900 block mt-0.5 font-bold">
-                    {pipeline.quantityReceived ?? "—"} unit(s)
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Box QC Status</span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-semibold text-[10px] uppercase mt-1 ${pipeline.boxQc === "Good"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-150"
-                        : "bg-amber-50 text-amber-700 border border-amber-150"
-                      }`}
+                  <button
+                    type="button"
+                    onClick={() => handleAction("verify-consignment")}
+                    disabled={busy}
+                    className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
                   >
-                    {pipeline.boxQc || "—"}
-                  </span>
+                    {busy ? "Verifying..." : "Verify & Close Ticket"}
+                  </button>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Vehicle Details</span>
-                  <span className="text-slate-900 block mt-0.5">{pipeline.vehicleDetails || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Photograph Reference</span>
-                  <span className="text-slate-900 block mt-0.5 font-mono text-[11px]">{pipeline.photographUrl || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Packing List Document</span>
-                  <span className="text-slate-900 block mt-0.5 font-mono text-[11px]">{pipeline.packingListDoc || "—"}</span>
-                </div>
-                {pipeline.consignmentRemarks && (
-                  <div className="sm:col-span-2 md:col-span-3 pt-2 border-t border-slate-100">
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Consignment Remarks</span>
-                    <span className="text-slate-800 block mt-0.5 italic">"{pipeline.consignmentRemarks}"</span>
-                  </div>
-                )}
-              </div>
+              )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-2 p-2 bg-indigo-50/20 border border-indigo-100 rounded-lg">
-                  <input
-                    type="checkbox"
-                    id="receivedCheck"
-                    checked={execVerified}
-                    onChange={(e) => setExecVerified(e.target.checked)}
-                    className="rounded border-slate-350 h-4 w-4 text-brand-650 focus:ring-brand-500 cursor-pointer"
-                  />
-                  <label htmlFor="receivedCheck" className="font-bold text-indigo-900 cursor-pointer">
-                    Received Consignment
-                  </label>
+              {/* Show check verification completed badge if past stage */}
+              {["DATA_AND_STICKER", "VERIFICATION", "CLOSED"].includes(status) && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-emerald-250 bg-emerald-50 text-emerald-800 font-semibold w-fit ml-auto">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <span>Consignment Verified and Closed</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleAction("verify-consignment")}
-                  disabled={busy}
-                  className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
-                >
-                  {busy ? "Verifying..." : "Verify & Close Ticket"}
-                </button>
-              </div>
+              )}
             </div>
           )}
 
           {/* Phase 3: Data Verification & Sticker Pasting */}
-          {status === "DATA_AND_STICKER" && (
+          {activeViewStep === "DATA_AND_STICKER" && (
             <div className="space-y-4 text-xs animate-[fadeIn_0.2s_ease-out]">
-              <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
-                <Package className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-amber-900 block">Pending Data &amp; Sticker Verification</span>
-                  <p className="text-amber-800 mt-1">
-                    {pipeline.reqSample
-                      ? "Please verify that all technical data is complete and correct (resolving any pending data flags), and that the physical layout stickers have been pasted on the samples."
-                      : "Please verify that all technical data is complete and correct (resolving any pending data flags) to complete the onboarding pipeline."}
-                  </p>
+              {/* If future stage (actual status is INITIATION, TICKET_RAISED, CONSIGNMENT_RECEIVED) */}
+              {["INITIATION", "TICKET_RAISED", "CONSIGNMENT_RECEIVED"].includes(status) && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3 text-slate-500">
+                  <HelpCircle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-700 block">Data &amp; Sticker Stage Pending</span>
+                    <p className="mt-1">
+                      Data &amp; Sticker verification is pending. This stage will become active after the consignment is received and verified.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
-                <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Verification Checklist</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className={`flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs ${!pipeline.reqSample ? "sm:col-span-2" : ""}`}>
-                    <input
-                      type="checkbox"
-                      id="dataPendingResolvedCheck"
-                      checked={dataPendingResolved}
-                      onChange={(e) => setDataPendingResolved(e.target.checked)}
-                      className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                    />
-                    <label htmlFor="dataPendingResolvedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
-                      Data Pending Resolved / Data Done
-                    </label>
+              {/* If active or completed */}
+              {!["INITIATION", "TICKET_RAISED", "CONSIGNMENT_RECEIVED"].includes(status) && (
+                <>
+                  <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+                    <Package className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-amber-900 block">Pending Data &amp; Sticker Verification</span>
+                      <p className="text-amber-800 mt-1">
+                        {pipeline.reqSample
+                          ? "Please verify that all technical data is complete and correct (resolving any pending data flags), and that the physical layout stickers have been pasted on the samples."
+                          : "Please verify that all technical data is complete and correct (resolving any pending data flags) to complete the onboarding pipeline."}
+                      </p>
+                    </div>
                   </div>
 
-                  {pipeline.reqSample && (
-                    <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
-                      <input
-                        type="checkbox"
-                        id="stickerPastedCheck"
-                        checked={stickerPasted}
-                        onChange={(e) => setStickerPasted(e.target.checked)}
-                        className="rounded border-slate-355 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                      />
-                      <label htmlFor="stickerPastedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
-                        Sticker Pasted on Sample
-                      </label>
+                  <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
+                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Verification Checklist</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className={`flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs ${!pipeline.reqSample ? "sm:col-span-2" : ""}`}>
+                        <input
+                          type="checkbox"
+                          id="dataPendingResolvedCheck"
+                          checked={dataPendingResolved}
+                          onChange={(e) => setDataPendingResolved(e.target.checked)}
+                          disabled={activeViewStep !== currentActiveStepKey}
+                          className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                        />
+                        <label htmlFor="dataPendingResolvedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                          Data Pending Resolved / Data Done
+                        </label>
+                      </div>
+
+                      {pipeline.reqSample && (
+                        <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                          <input
+                            type="checkbox"
+                            id="stickerPastedCheck"
+                            checked={stickerPasted}
+                            onChange={(e) => setStickerPasted(e.target.checked)}
+                            disabled={activeViewStep !== currentActiveStepKey}
+                            className="rounded border-slate-355 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                          />
+                          <label htmlFor="stickerPastedCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                            Sticker Pasted on Sample
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {activeViewStep === currentActiveStepKey && (
+                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleAction("save-data-sticker")}
+                        disabled={busy}
+                        className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
+                      >
+                        {busy ? "Saving..." : "Save & Update Stage"}
+                      </button>
                     </div>
                   )}
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => handleAction("save-data-sticker")}
-                  disabled={busy}
-                  className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
-                >
-                  {busy ? "Saving..." : "Save & Update Stage"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Phase 4: Placement & Photo Verification */}
-          {status === "VERIFICATION" && (
-            <div className="space-y-4 text-xs animate-[fadeIn_0.2s_ease-out]">
-              <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
-                <Package className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-indigo-900 block">Placement &amp; Photograph Verification</span>
-                  <p className="text-indigo-700 mt-1">
-                    Please verify that the samples have been physically placed in the rack, and upload a photograph of the placement (mandatory) to complete the onboarding pipeline.
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
-                <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Placement Verification Checklist</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
-                    <input
-                      type="checkbox"
-                      id="placedInRackCheck"
-                      checked={placedInRack}
-                      onChange={(e) => setPlacedInRack(e.target.checked)}
-                      className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                    />
-                    <label htmlFor="placedInRackCheck" className="font-bold text-slate-800 cursor-pointer select-none">
-                      Placed in Rack
-                    </label>
-                  </div>
-
-                  <div className="flex flex-col gap-1 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Verification Photograph <span className="text-red-500 font-extrabold">*</span>
-                    </label>
-                    <div className="flex gap-2 mt-1">
-                      <input
-                        type="text"
-                        placeholder="e.g. /api/uploads/photo.jpg"
-                        value={verificationPhoto}
-                        onChange={(e) => setVerificationPhoto(e.target.value)}
-                        required
-                        className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold"
-                      />
-                      <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPhoto ? "opacity-60 cursor-not-allowed" : ""}`}>
-                        {uploadingPhoto ? "Uploading..." : "Upload Photo"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoUpload}
-                          className="hidden"
-                          style={{ display: "none" }}
-                          disabled={uploadingPhoto}
-                        />
-                      </label>
+                  {activeViewStep !== currentActiveStepKey && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border border-emerald-250 bg-emerald-50 text-emerald-800 font-semibold w-fit ml-auto">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      <span>Data &amp; Stickers Verified</span>
                     </div>
-                    {verificationPhoto && (
-                      <div className="mt-1 flex items-center gap-2">
-                        <a
-                          href={verificationPhoto}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
-                        >
-                          View Verification Photo
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => setVerificationPhoto("")}
-                          className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => handleAction("save-verification")}
-                  disabled={busy}
-                  className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
-                >
-                  {busy ? "Completing..." : "Complete Onboarding Verification"}
-                </button>
-              </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
-          {/* Phase 4: Closed / Completed */}
-          {status === "CLOSED" && (
-            <div className="space-y-3 text-xs">
-              <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-emerald-900 block">Consignment Verified &amp; Closed</span>
-                  <p className="mt-0.5 font-medium">
-                    The consignment workflow is completed. The samples have been verified by you, and the consignment ticket is closed.
-                  </p>
+          {/* Phase 4: Placement & Photo Verification or Summary */}
+          {activeViewStep === "CLOSED" && (
+            <div className="space-y-4 text-xs">
+              {/* If future stage (actual status is not VERIFICATION or CLOSED) */}
+              {!["VERIFICATION", "CLOSED"].includes(status) && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3 text-slate-500">
+                  <HelpCircle className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-slate-700 block">Verification Stage Pending</span>
+                    <p className="mt-1">
+                      Placement &amp; Photograph verification is pending. This stage will become active after Data &amp; Sticker details are verified and completed.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-4 text-slate-700">
-                <p className="font-bold text-slate-850 mb-1 uppercase tracking-wider text-[9px]">Pipeline Summary</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 leading-relaxed">
-                  <div>
-                    <span className="font-semibold text-slate-400">Target items:</span>{" "}
-                    {itemTarget ? (
-                      itemTarget.startsWith("/api/uploads/") ? (
-                        <a
-                          href={itemTarget}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-850 hover:underline font-semibold"
-                        >
-                          View Target List File
-                        </a>
-                      ) : (
-                        itemTarget
-                      )
-                    ) : (
-                      "—"
-                    )}
+              {/* If active stage: status is VERIFICATION */}
+              {status === "VERIFICATION" && (
+                <>
+                  <div className="bg-indigo-50/40 border border-indigo-100 rounded-xl p-4 flex items-start gap-3">
+                    <Package className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-indigo-900 block">Placement &amp; Photograph Verification</span>
+                      <p className="text-indigo-700 mt-1">
+                        Please verify that the samples have been physically placed in the rack, and upload a photograph of the placement (mandatory) to complete the onboarding pipeline.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Received quantity:</span> {pipeline.quantityReceived} units ({pipeline.boxQc})
+
+                  <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-4">
+                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Placement Verification Checklist</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                        <input
+                          type="checkbox"
+                          id="placedInRackCheck"
+                          checked={placedInRack}
+                          onChange={(e) => setPlacedInRack(e.target.checked)}
+                          className="rounded border-slate-350 h-4.5 w-4.5 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                        />
+                        <label htmlFor="placedInRackCheck" className="font-bold text-slate-800 cursor-pointer select-none">
+                          Placed in Rack
+                        </label>
+                      </div>
+
+                      <div className="flex flex-col gap-1 p-3 rounded-lg border border-slate-200 bg-white shadow-xs">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Verification Photograph <span className="text-red-500 font-extrabold">*</span>
+                        </label>
+                        <div className="flex gap-2 mt-1">
+                          <input
+                            type="text"
+                            placeholder="e.g. /api/uploads/photo.jpg"
+                            value={verificationPhoto}
+                            onChange={(e) => setVerificationPhoto(e.target.value)}
+                            required
+                            className="flex-1 rounded border border-slate-350 px-2.5 py-1.5 focus:ring-1 focus:ring-brand-500 bg-white text-xs font-semibold"
+                          />
+                          <label className={`cursor-pointer rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 flex items-center justify-center shrink-0 shadow-sm transition active:scale-[0.98] ${uploadingPhoto ? "opacity-60 cursor-not-allowed" : ""}`}>
+                            {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                              style={{ display: "none" }}
+                              disabled={uploadingPhoto}
+                            />
+                          </label>
+                        </div>
+                        {verificationPhoto && (
+                          <div className="mt-1 flex items-center gap-2">
+                            <a
+                              href={verificationPhoto}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-brand-600 hover:text-brand-850 hover:underline font-semibold text-[11px] flex items-center gap-1"
+                            >
+                              View Verification Photo
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => setVerificationPhoto("")}
+                              className="text-red-500 hover:text-red-700 font-semibold text-[11px]"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Received date:</span> {pipeline.receivedDate ? formatToDDMMMYYYY(pipeline.receivedDate) : "—"}
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => handleAction("save-verification")}
+                      disabled={busy}
+                      className="rounded-lg bg-slate-900 text-white px-4 py-2 text-xs font-semibold hover:bg-slate-800 transition shadow-sm"
+                    >
+                      {busy ? "Completing..." : "Complete Onboarding Verification"}
+                    </button>
                   </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Packing List:</span> {pipeline.packingListDoc || "None"}
+                </>
+              )}
+
+              {/* If completed stage: status is CLOSED */}
+              {status === "CLOSED" && (
+                <div className="space-y-3">
+                  <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-emerald-900 block">Consignment Verified &amp; Closed</span>
+                      <p className="mt-0.5 font-medium">
+                        The consignment workflow is completed. The samples have been verified by you, and the consignment ticket is closed.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Document Attached:</span>{" "}
-                    {pipeline.docAttached ? (
-                      pipeline.docAttached.startsWith("/api/uploads/") ? (
-                        <a
-                          href={pipeline.docAttached}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-850 hover:underline font-semibold"
-                        >
-                          View Attached Document
-                        </a>
-                      ) : (
-                        pipeline.docAttached
-                      )
-                    ) : (
-                      "—"
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Data Status:</span>{" "}
-                    <span className="text-emerald-600 font-bold">Data Completed</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Sticker Status:</span>{" "}
-                    <span className="text-emerald-600 font-bold">Stickers Pasted</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Rack Status:</span>{" "}
-                    <span className="text-emerald-600 font-bold">{pipeline.placedInRack ? "Placed in Rack" : "Not Placed"}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-400">Verification Photo:</span>{" "}
-                    {pipeline.verificationPhoto ? (
-                      <a
-                        href={pipeline.verificationPhoto}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-brand-600 hover:text-brand-850 hover:underline font-bold"
-                      >
-                        View Photo
-                      </a>
-                    ) : (
-                      "—"
-                    )}
+
+                  <div className="bg-slate-50 border border-slate-150 rounded-xl p-4 text-slate-700">
+                    <p className="font-bold text-slate-850 mb-1 uppercase tracking-wider text-[9px]">Pipeline Summary</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 leading-relaxed">
+                      <div>
+                        <span className="font-semibold text-slate-400">Target items:</span>{" "}
+                        {itemTarget ? (
+                          itemTarget.startsWith("/api/uploads/") ? (
+                            <a
+                              href={itemTarget}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-850 hover:underline font-semibold"
+                            >
+                              View Target List File
+                            </a>
+                          ) : (
+                            itemTarget
+                          )
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Received quantity:</span> {pipeline.quantityReceived} units ({pipeline.boxQc})
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Received date:</span> {pipeline.receivedDate ? formatToDDMMMYYYY(pipeline.receivedDate) : "—"}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Packing List:</span> {pipeline.packingListDoc || "None"}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Document Attached:</span>{" "}
+                        {pipeline.docAttached ? (
+                          pipeline.docAttached.startsWith("/api/uploads/") ? (
+                            <a
+                              href={pipeline.docAttached}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-850 hover:underline font-semibold"
+                            >
+                              View Attached Document
+                            </a>
+                          ) : (
+                            pipeline.docAttached
+                          )
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Data Status:</span>{" "}
+                        <span className="text-emerald-600 font-bold">Data Completed</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Sticker Status:</span>{" "}
+                        <span className="text-emerald-600 font-bold">Stickers Pasted</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Rack Status:</span>{" "}
+                        <span className="text-emerald-600 font-bold">{pipeline.placedInRack ? "Placed in Rack" : "Not Placed"}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-400">Verification Photo:</span>{" "}
+                        {pipeline.verificationPhoto ? (
+                          <a
+                            href={pipeline.verificationPhoto}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-600 hover:text-brand-850 hover:underline font-bold"
+                          >
+                            View Photo
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

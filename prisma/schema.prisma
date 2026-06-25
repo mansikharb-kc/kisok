@@ -71,6 +71,7 @@ model Branch {
   productCopies  ProductCopy[]
   screens        Screen[]
   tickets        Ticket[]
+  directConsignments DirectConsignment[]
 
   @@map("branches")
 }
@@ -240,6 +241,7 @@ model Brand {
   brandCategories BrandCategory[]
   tickets         Ticket[]
   onboardingPipelines OnboardingPipeline[]
+  directConsignments DirectConsignment[]
 
   @@map("brands")
 }
@@ -456,6 +458,7 @@ model Seller {
   consignments     Consignment[]
   localRecords     LocalOnboardingRecord[]
   tickets          Ticket[]
+  directConsignments DirectConsignment[]
 
   @@map("sellers")
 }
@@ -957,6 +960,7 @@ model OnboardingPipeline {
 
   // Ticket association
   ticketId        BigInt?   @unique @map("ticket_id") @db.UnsignedBigInt
+  directConsignmentId BigInt?   @unique @map("direct_consignment_id") @db.UnsignedBigInt
 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -967,6 +971,7 @@ model OnboardingPipeline {
   assignment      SellerAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   brand           Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
   ticket          Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  directConsignment DirectConsignment? @relation(fields: [directConsignmentId], references: [id], onDelete: SetNull)
 
   @@unique([assignmentId, brandId])
   @@map("onboarding_pipelines")
@@ -1022,3 +1027,34 @@ model UserSessionLog {
   @@map("user_session_logs")
 }
 
+model DirectConsignment {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  dcNo             String    @unique @map("dc_no") @db.VarChar(20)
+  branchId         BigInt    @map("branch_id") @db.UnsignedBigInt
+  sellerName       String    @map("seller_name") @db.VarChar(150)
+  brandName        String    @map("brand_name") @db.VarChar(150)
+  receivedDate     DateTime  @map("received_date") @db.Date
+  vehicleDetails   String?   @map("vehicle_details") @db.VarChar(255)
+  quantityReceived Int       @map("quantity_received")
+  boxQc            String    @map("box_qc") @db.VarChar(100)
+  photographUrl    String?   @map("photograph_url") @db.VarChar(255)
+  packingListDoc   String?   @map("packing_list_doc") @db.VarChar(255)
+  remarks          String?   @db.Text
+  status           String    @default("WITH_LEAD") @db.VarChar(20) // WITH_LEAD | RESOLVED
+  raisedBy         BigInt    @map("raised_by") @db.UnsignedBigInt
+  sellerId         BigInt?   @map("seller_id") @db.UnsignedBigInt
+  brandId          BigInt?   @map("brand_id") @db.UnsignedBigInt
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  resolvedAt       DateTime? @map("resolved_at")
+
+  branch           Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  seller           Seller?   @relation(fields: [sellerId], references: [id])
+  brand            Brand?    @relation(fields: [brandId], references: [id])
+
+  onboardingPipelines OnboardingPipeline[]
+
+  @@index([branchId])
+  @@index([status])
+  @@map("direct_consignments")
+}

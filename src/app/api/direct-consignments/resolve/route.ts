@@ -5,7 +5,7 @@ import { ok, fail, handler } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
 const resolveSchema = z.object({
-  ticketId: z.coerce.bigint(),
+  directConsignmentId: z.coerce.bigint(),
   sellerName: z.string().trim().min(1).max(150),
   sellerCode: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - and _ only"),
   brandId: z.coerce.bigint(),
@@ -44,7 +44,7 @@ export const POST = handler(async (req: Request) => {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input", 422);
 
   const {
-    ticketId,
+    directConsignmentId,
     sellerName,
     sellerCode,
     brandId,
@@ -76,12 +76,12 @@ export const POST = handler(async (req: Request) => {
     finalMembershipId = await nextMembershipId();
   }
 
-  // 3. Verify ticket exists and is direct consignment
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
+  // 3. Verify direct consignment exists and is open
+  const dc = await prisma.directConsignment.findUnique({
+    where: { id: directConsignmentId },
   });
-  if (!ticket || ticket.type !== "DIRECT_CONSIGNMENT" || ticket.branchId !== branchId) {
-    return fail("Invalid or unauthorized Direct Consignment ticket", 422);
+  if (!dc || dc.branchId !== branchId) {
+    return fail("Invalid or unauthorized Direct Consignment", 422);
   }
 
   // 4. Verify OB Exec belongs to the user's branch and has OB_EXEC role
@@ -94,7 +94,7 @@ export const POST = handler(async (req: Request) => {
   });
   if (!execRole) return fail("Onboarding executive not found or not in your branch", 400);
 
-  // Create seller, brand, category, program contract, assignment, and resolve ticket in transaction
+  // Create seller, brand, category, program contract, assignment, and resolve direct consignment in transaction
   const result = await prisma.$transaction(async (tx) => {
     const createdSeller = await tx.seller.create({
       data: {
@@ -118,7 +118,7 @@ export const POST = handler(async (req: Request) => {
           create: [{
             programId,
             verified: true,
-            remarks: "Created from direct consignment ticket",
+            remarks: "Created from direct consignment resolution",
           }],
         },
       },
@@ -133,9 +133,9 @@ export const POST = handler(async (req: Request) => {
       },
     });
 
-    // Resolve the direct consignment ticket
-    const updatedTicket = await tx.ticket.update({
-      where: { id: ticketId },
+    // Resolve the direct consignment
+    const updatedDc = await tx.directConsignment.update({
+      where: { id: directConsignmentId },
       data: {
         status: "RESOLVED",
         sellerId: createdSeller.id,
@@ -144,18 +144,7 @@ export const POST = handler(async (req: Request) => {
       },
     });
 
-    await tx.ticketEvent.create({
-      data: {
-        ticketId,
-        byUserId: BigInt(session.uid),
-        action: "resolve",
-        fromRole: "ONB_LEAD",
-        toRole: "OB_EXEC",
-        note: `Seller registered: ${sellerName} (${sellerCode}). Assignment created for executive. Ticket resolved.`,
-      },
-    });
-
-    return { createdSeller, assignment, updatedTicket };
+    return { createdSeller, assignment, updatedDc };
   });
 
   await writeAudit({
@@ -169,6 +158,6 @@ export const POST = handler(async (req: Request) => {
   return ok({
     sellerId: result.createdSeller.id.toString(),
     assignmentId: result.assignment.id.toString(),
-    ticketId: result.updatedTicket.id.toString(),
+    directConsignmentId: result.updatedDc.id.toString(),
   });
 });
