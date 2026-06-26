@@ -182,7 +182,7 @@ export default function KioskHome({
           <p className="mt-3 text-xs font-medium text-slate-400">No categories found</p>
         </div>
       ) : (
-        <div className="px-4 grid grid-cols-2 gap-3">
+        <div className="px-4 grid grid-cols-3 gap-2">
           {isSubLevel
             ? // --- SUB CATEGORY CARDS ---
               (displayedList as SubCategory[]).map((sub, idx) => (
