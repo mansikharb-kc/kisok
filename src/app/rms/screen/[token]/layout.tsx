@@ -83,13 +83,14 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
     }, 1000);
   }, []);
 
-  useEffect(() => {
-    wishlistInterval.current = setInterval(openWishlistPopup, WISHLIST_INTERVAL_MS);
-    return () => {
-      if (wishlistInterval.current) clearInterval(wishlistInterval.current);
-      if (wishlistCountdownRef.current) clearInterval(wishlistCountdownRef.current);
-    };
-  }, [openWishlistPopup]);
+  // Disable wishlist export popup for now
+  // useEffect(() => {
+  //   wishlistInterval.current = setInterval(openWishlistPopup, WISHLIST_INTERVAL_MS);
+  //   return () => {
+  //     if (wishlistInterval.current) clearInterval(wishlistInterval.current);
+  //     if (wishlistCountdownRef.current) clearInterval(wishlistCountdownRef.current);
+  //   };
+  // }, [openWishlistPopup]);
 
   const handleExportWishlist = () => {
     setBomOpen(true);
