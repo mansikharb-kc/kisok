@@ -232,23 +232,28 @@ export default function BrandGrid({
                     key={b.id}
                     type="button"
                     onClick={() => handleBrandClick(b.id)}
-                    className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97]"
+                    className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97] flex flex-col relative h-[270px]"
                   >
                     {/* Image / gradient area */}
-                    <div className="relative h-28 bg-gradient-to-b from-[#e3dac9] to-[#bca685] flex flex-col justify-end p-3">
-                      <span className="text-[13px] font-extrabold text-white leading-tight drop-shadow-md">{b.name}</span>
+                    <div className="relative h-32 w-full bg-gradient-to-b from-[#e3dac9] to-[#bca685] flex flex-col justify-end p-2.5 shrink-0">
+                      <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">{b.name}</span>
                     </div>
-                    <div className="p-3 flex flex-col gap-1.5">
-                      <div>
-                        <span className="inline-block rounded-full bg-purple-50 px-2 py-0.5 text-[8.5px] font-bold text-purple-600 border border-purple-100/50">
-                          {b.materialTypeCount} Material type
+                    <div className="p-2.5 flex flex-col gap-1 flex-grow w-full justify-between">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center">
+                          <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
+                            {b.materialTypeCount} Material type
+                          </span>
+                        </div>
+                        <span className="text-[8px] font-bold text-slate-400 mt-1">
+                          {b.totalProductsCount} Total Products
                         </span>
                       </div>
-                      <div className="text-[9.5px] text-slate-500 font-medium">
-                        {b.totalProductsCount} Total Products
-                      </div>
-                      <div className="mt-1 flex items-center justify-end text-[9px] font-extrabold text-purple-600 gap-0.5">
-                        View <span className="text-[10px]">→</span>
+                      
+                      <div className="w-full mt-2.5">
+                        <span className="flex w-full items-center justify-center rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 transition-all">
+                          View →
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -405,14 +410,25 @@ export default function BrandGrid({
                       {/* Gradient card image */}
                       <div className={`relative h-[90px] bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-2`}>
                         {compareMode && (
-                          <div className="absolute top-2 right-2 z-10">
-                            <input
-                              type="checkbox"
-                              checked={selectedProductIds.includes(p.id)}
-                              onChange={() => toggleSelectProduct(p)}
-                              className="h-4.5 w-4.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 bg-white cursor-pointer"
-                            />
-                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleSelectProduct(p); }}
+                            className={`absolute top-1.5 right-1.5 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-all active:scale-90 ${
+                              selectedProductIds.includes(p.id)
+                                ? "bg-purple-600 border-purple-600 text-white"
+                                : "bg-white/90 border-purple-400 text-purple-600"
+                            }`}
+                          >
+                            {selectedProductIds.includes(p.id) ? (
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                              </svg>
+                            )}
+                          </button>
                         )}
                         <span className="text-[10px] font-extrabold text-white leading-tight drop-shadow line-clamp-2">{p.name}</span>
                       </div>

@@ -29,6 +29,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Inactivity + Wishlist popup state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showWishlistPopup, setShowWishlistPopup] = useState(false);
   const [wishlistDismissCountdown, setWishlistDismissCountdown] = useState(15);
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,17 +114,12 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
       const productsList = rawProducts ? JSON.parse(rawProducts) : list.map((id: string) => ({ id, name: `Product ${id}` }));
       setCompareProducts(productsList);
 
-      // Dynamically toggle compareMode based on list count
+      // Auto-open drawer when 4 items selected
       if (list.length === 4) {
-        localStorage.setItem("rms_compare_mode", "false");
-        window.dispatchEvent(new Event("compare-mode-updated"));
         setCompareDrawerOpen(true);
-      } else if (list.length > 0 && list.length < 4) {
-        localStorage.setItem("rms_compare_mode", "true");
-        window.dispatchEvent(new Event("compare-mode-updated"));
-      } else if (list.length === 0) {
-        localStorage.setItem("rms_compare_mode", "false");
-        window.dispatchEvent(new Event("compare-mode-updated"));
+      }
+      // Auto-close drawer when no items left
+      if (list.length === 0) {
         setCompareDrawerOpen(false);
       }
     } catch { 
@@ -140,17 +136,29 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
   };
 
   const toggleCompareMode = () => {
-    if (compareCount > 0) {
+    if (compareCount > 1) {
+      // Already have 2+ items — open the drawer to show them
       setCompareDrawerOpen(true);
+      return;
+    }
+
+    if (compareCount === 1) {
+      // Only 1 item selected: show toast instructing them to select the next product
+      window.dispatchEvent(new CustomEvent("show-toast", { detail: "Please select 1 more product to compare." }));
       return;
     }
     
     try {
-      const nextMode = !compareMode;
+      const currentMode = localStorage.getItem("rms_compare_mode") === "true";
+      const nextMode = !currentMode;
       localStorage.setItem("rms_compare_mode", String(nextMode));
+      setCompareMode(nextMode);
       if (!nextMode) {
+        // Turning OFF — clear all selections
         localStorage.removeItem("rms_compare");
         localStorage.removeItem("rms_compare_products");
+        setCompareCount(0);
+        setCompareProducts([]);
         window.dispatchEvent(new Event("compare-updated"));
       }
       window.dispatchEvent(new Event("compare-mode-updated"));
@@ -168,7 +176,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
       window.removeEventListener("compare-updated", checkCompareItems);
       window.removeEventListener("compare-mode-updated", checkCompareMode);
     };
-  }, [compareMode]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (token === "scr-b") {
@@ -179,8 +187,22 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
   }, [token]);
 
   useEffect(() => {
-    function handleNeedHelp() { setNeedHelpOpen(true); setBomOpen(false); }
-    function handleBom() { setBomOpen(true); setNeedHelpOpen(false); }
+    function handleNeedHelp() {
+      setNeedHelpOpen(true);
+      setBomOpen(false);
+      setTimeout(() => {
+        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+        window.scrollTo(0, 0);
+      }, 0);
+    }
+    function handleBom() {
+      setBomOpen(true);
+      setNeedHelpOpen(false);
+      setTimeout(() => {
+        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+        window.scrollTo(0, 0);
+      }, 0);
+    }
     window.addEventListener("open-need-help", handleNeedHelp);
     window.addEventListener("open-bom-drawer", handleBom);
     return () => {
@@ -203,10 +225,28 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const openWishlist = () => {
+    setBomOpen(true);
+    setNeedHelpOpen(false);
+    setTimeout(() => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }, 0);
+  };
+
+  const openNeedHelp = () => {
+    setNeedHelpOpen(true);
+    setBomOpen(false);
+    setTimeout(() => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }, 0);
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#f1f5f9] flex justify-center items-stretch">
       <div className="relative w-full max-w-[480px] bg-[#fbfaff] shadow-2xl flex flex-col justify-between overflow-hidden border-x border-slate-200/60">
-        <div className="flex-1 w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
+        <div ref={scrollContainerRef} className="flex-1 w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
 
         {!isBomPage && (
           <div className="mt-8 px-6 pb-6 flex justify-between gap-3 w-full">
@@ -215,7 +255,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                 {/* Bill of Materials Button */}
                 <button
                   type="button"
-                  onClick={() => { setBomOpen(true); setNeedHelpOpen(false); }}
+                  onClick={openWishlist}
                   className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-center hover:bg-purple-50/20 active:scale-[0.98] transition-all"
                 >
                   <div className="h-7 w-7 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
@@ -226,12 +266,14 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                   <div className="text-[9.5px] font-extrabold text-slate-800 leading-none">Start Wishlist</div>
                 </button>
 
-                {/* Compare Products Button */}
+                 {/* Compare Products Button */}
                 <button
                   type="button"
                   onClick={toggleCompareMode}
                   className={`flex-1 flex items-center justify-center gap-1.5 p-2 rounded-full border transition-all active:scale-95 shadow-md ${
-                    compareMode
+                    compareCount === 1
+                      ? "bg-[#a855f7] text-white border-purple-400 animate-pulse"
+                      : compareMode
                       ? "bg-[#9333ea] text-white border-purple-500"
                       : "bg-white text-slate-800 border-purple-100 hover:bg-purple-50/20"
                   }`}
@@ -247,14 +289,14 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                     </svg>
                   </div>
                   <div className="text-[9.5px] font-extrabold leading-none text-center">
-                    {compareCount === 0 ? "Compare Products" : `Compare (${compareCount}/4)`}
+                    {compareCount === 0 ? "Compare Products" : compareCount === 1 ? "Select Next Product" : `Compare (${compareCount}/4)`}
                   </div>
                 </button>
 
                 {/* Bill of Concierge Button */}
                 <button
                   type="button"
-                  onClick={() => { setNeedHelpOpen(true); setBomOpen(false); }}
+                  onClick={openNeedHelp}
                   className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-center hover:bg-purple-50/20 active:scale-[0.98] transition-all"
                 >
                   <div className="h-7 w-7 rounded-full bg-purple-600 flex items-center justify-center text-white shrink-0">
@@ -270,7 +312,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                 {/* Bill of Materials Button */}
                 <button
                   type="button"
-                  onClick={() => { setBomOpen(true); setNeedHelpOpen(false); }}
+                  onClick={openWishlist}
                   className="flex-1 flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left hover:bg-purple-50/20 active:scale-[0.98] transition-all"
                 >
                   <div className="h-8 w-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
@@ -287,7 +329,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                 {/* Bill of Concierge Button */}
                 <button
                   type="button"
-                  onClick={() => { setNeedHelpOpen(true); setBomOpen(false); }}
+                  onClick={openNeedHelp}
                   className="flex-1 flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left hover:bg-purple-50/20 active:scale-[0.98] transition-all"
                 >
                   <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white shrink-0">

@@ -29,7 +29,7 @@ export default function CategoryGrid({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rackId = searchParams.get("rack") || "";
+  // rackId no longer used — all data is screen-wide
   const [query, setQuery] = useState("");
   const [addedId, setAddedId] = useState<string | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(() => {
@@ -96,7 +96,7 @@ export default function CategoryGrid({
 
   function handleCategoryClick(catId: string) {
     setQuery("");
-    router.push(`/rms/screen/${token}/category?cat=${catId}&rack=${rackId}`);
+    router.push(`/rms/screen/${token}/category?cat=${catId}`);
   }
 
   function handleBackClick() {
@@ -182,7 +182,7 @@ export default function CategoryGrid({
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-purple-500/70 mb-3 px-0.5">
           <button 
-            onClick={() => router.push(`/rms/screen/${token}?rack=${rackId}`)} 
+            onClick={() => router.push(`/rms/screen/${token}`)} 
             className="hover:text-purple-600 flex items-center gap-1"
           >
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -192,7 +192,7 @@ export default function CategoryGrid({
           </button>
           <span className="text-slate-300">›</span>
           <button
-            onClick={() => router.push(`/rms/screen/${token}/category?rack=${rackId}`)}
+            onClick={() => router.push(`/rms/screen/${token}/category`)}
             className="hover:text-purple-600"
           >
             Category
@@ -275,21 +275,26 @@ export default function CategoryGrid({
               <button
                 key={b.id}
                 type="button"
-                onClick={() => router.push(`/rms/screen/${token}/category?cat=${selectedCategory.id}&rack=${rackId}&brand=${b.id}`)}
-                className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97]"
+                onClick={() => router.push(`/rms/screen/${token}/category?cat=${selectedCategory.id}&brand=${b.id}`)}
+                className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97] flex flex-col relative h-[270px]"
               >
-                <div className="relative h-28 bg-gradient-to-b from-[#e3dac9] to-[#bca685] flex flex-col justify-end p-3">
-                  <span className="text-[13px] font-extrabold text-white leading-tight drop-shadow-md">{b.name}</span>
+                <div className="relative h-32 w-full bg-gradient-to-b from-[#e3dac9] to-[#bca685] flex flex-col justify-end p-2.5 shrink-0">
+                  <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">{b.name}</span>
                 </div>
-                <div className="p-3 flex flex-col gap-1.5">
-                  <div>
-                    <span className="inline-block rounded-full bg-purple-50 px-2 py-0.5 text-[8.5px] font-bold text-purple-600 border border-purple-100/50">
-                      {b.materialTypeCount} Material type
-                    </span>
+                <div className="p-2.5 flex flex-col gap-1 flex-grow w-full justify-between">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center">
+                      <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
+                        {b.materialTypeCount} Material type
+                      </span>
+                    </div>
+                    <span className="text-[8px] font-bold text-slate-400 mt-1">{b.totalProductsCount} Total Products</span>
                   </div>
-                  <div className="text-[9.5px] text-slate-500 font-medium">{b.totalProductsCount} Total Products</div>
-                  <div className="mt-1 flex items-center justify-end text-[9px] font-extrabold text-purple-600 gap-0.5">
-                    View <span className="text-[10px]">→</span>
+                  
+                  <div className="w-full mt-2.5">
+                    <span className="flex w-full items-center justify-center rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 transition-all">
+                      View →
+                    </span>
                   </div>
                 </div>
               </button>
@@ -311,23 +316,25 @@ export default function CategoryGrid({
                     key={cat.id}
                     type="button"
                     onClick={() => handleCategoryClick(cat.id)}
-                    className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97]"
+                    className="overflow-hidden rounded-[18px] border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] active:scale-[0.97] flex flex-col relative h-[270px]"
                   >
-                    <div className={`relative h-28 bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-3`}>
-                      <span className="text-[13px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <div className={`relative h-32 w-full bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-2.5 shrink-0`}>
+                      <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                         {cat.name}
                       </span>
                     </div>
-                    <div className="p-3 flex flex-col gap-1.5">
-                      <div>
-                        <span className="inline-block rounded-full bg-purple-50 px-2 py-0.5 text-[8.5px] font-bold text-purple-600 border border-purple-100/50">
+                    <div className="p-2.5 flex flex-col gap-1 flex-grow w-full justify-between">
+                      <div className="flex items-center">
+                        <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
                           {categories.filter((c) => c.parentId === cat.id).length > 0
                             ? `${categories.filter((c) => c.parentId === cat.id).length} Subcategories`
                             : "Products"}
                         </span>
                       </div>
-                      <div className="mt-1 flex items-center justify-end text-[9px] font-extrabold text-purple-600 gap-0.5">
-                        View <span className="text-[10px]">→</span>
+                      <div className="w-full mt-2.5">
+                        <span className="flex w-full items-center justify-center rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 transition-all">
+                          View →
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -353,37 +360,35 @@ export default function CategoryGrid({
                   return (
                     <div
                       key={p.id}
-                      className={`overflow-hidden rounded-[18px] bg-white border shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative transition-all duration-200 ${
+                      className={`overflow-hidden rounded-[18px] bg-white border shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative transition-all duration-200 h-[270px] ${
                         isSelected
                           ? "border-purple-400 shadow-[0_0_0_2px_rgba(147,51,234,0.2),0_4px_16px_rgba(0,0,0,0.06)]"
                           : "border-slate-100"
                       }`}
                     >
                       {/* Gradient Card Area */}
-                      <div className={`relative h-32 bg-gradient-to-b ${grad} flex flex-col justify-end p-2.5`}>
-                        {/* Comparison Checkbox */}
+                      <div className={`relative h-32 bg-gradient-to-b ${grad} flex flex-col justify-end p-2.5 shrink-0`}>
+                        {/* Comparison Button */}
                         {compareMode && (
-                          <label className="absolute top-2 right-2 z-10 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelectProduct(p)}
-                              className="sr-only"
-                            />
-                            <span
-                              className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${
-                                isSelected
-                                  ? "bg-purple-600 border-purple-600"
-                                  : "bg-white/80 border-white/70"
-                              }`}
-                            >
-                              {isSelected && (
-                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </span>
-                          </label>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleSelectProduct(p); }}
+                            className={`absolute top-2 right-2 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-all active:scale-90 ${
+                              isSelected
+                                ? "bg-purple-600 border-purple-600 text-white"
+                                : "bg-white/90 border-purple-400 text-purple-600"
+                            }`}
+                          >
+                            {isSelected ? (
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                              </svg>
+                            )}
+                          </button>
                         )}
                         <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                           {p.name}
@@ -391,51 +396,53 @@ export default function CategoryGrid({
                       </div>
 
                       {/* Card Content Info */}
-                      <div className="flex flex-col gap-1 p-2.5 flex-grow">
-                        <span className="text-[8px] font-bold text-slate-400">by {p.brandName || brandName || "Brand X"}</span>
-                        <div className="flex items-center mt-1">
-                          <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
-                            Finishes
-                          </span>
+                      <div className="flex flex-col gap-1 p-2.5 flex-grow justify-between">
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400">by {p.brandName || brandName || "Brand X"}</span>
+                          <div className="flex items-center mt-1">
+                            <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
+                              Finishes
+                            </span>
+                          </div>
+
+                          {p.locations.length > 0 && (
+                            <div className="flex items-center gap-0.5 mt-0.5 text-[7px] text-slate-500 font-semibold px-0.5">
+                              <svg className="h-2 w-2 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg>
+                              <span className="truncate">{p.locations[0].split(" › ").join(".")}</span>
+                            </div>
+                          )}
                         </div>
 
-                        {p.locations.length > 0 && (
-                          <div className="flex items-center gap-0.5 mt-0.5 text-[7px] text-slate-500 font-semibold px-0.5">
-                            <svg className="h-2 w-2 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg>
-                            <span>{p.locations[0].split(" › ").join(".")}</span>
-                          </div>
-                        )}
+                        <div className="w-full">
+                          {/* Add to Wishlist */}
+                          <button
+                            type="button"
+                            onClick={() => handleAddToBom(p)}
+                            className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-1 ${
+                              isAdded
+                                ? "bg-emerald-500 text-white"
+                                : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"
+                            }`}
+                          >
+                            {isAdded ? "✓ Added!" : "Add to Wishlist"}
+                          </button>
 
-                        <div className="flex-grow" />
-
-                        {/* Add to Wishlist */}
-                        <button
-                          type="button"
-                          onClick={() => handleAddToBom(p)}
-                          className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-2.5 ${
-                            isAdded
-                              ? "bg-emerald-500 text-white"
-                              : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"
-                          }`}
-                        >
-                          {isAdded ? "✓ Added!" : "Add to Wishlist"}
-                        </button>
-
-                        {/* View Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const catId = searchParams.get("cat") || "";
-                            const brandId = searchParams.get("brand") || "";
-                            let url = `/rms/screen/${token}/product/${p.id}?rack=${rackId}`;
-                            if (catId) url += `&cat=${catId}`;
-                            if (brandId) url += `&brand=${brandId}`;
-                            router.push(url);
-                          }}
-                          className="w-full rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 active:scale-[0.97] transition-all mt-1"
-                        >
-                          View →
-                        </button>
+                          {/* View Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              let url = `/rms/screen/${token}/product/${p.id}?`;
+                              const catId2 = searchParams.get("cat") || "";
+                              const brandId2 = searchParams.get("brand") || "";
+                              if (catId2) url += `cat=${catId2}&`;
+                              if (brandId2) url += `brand=${brandId2}`;
+                              router.push(url.replace(/[?&]$/, ""));
+                            }}
+                            className="w-full rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 active:scale-[0.97] transition-all mt-1"
+                          >
+                            View →
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

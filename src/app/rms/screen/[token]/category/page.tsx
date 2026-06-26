@@ -1,5 +1,7 @@
-import { prisma, serialize } from "@/lib/prisma";
+// Category page — shows products/brands for a chosen category using static JSON data
 import CategoryGrid from "@/components/rms/CategoryGrid";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -8,334 +10,137 @@ export default async function RmsCategoryPage({
   searchParams,
 }: {
   params: { token: string };
-  searchParams: { cat?: string; brand?: string; rack?: string };
+  searchParams: { cat?: string; brand?: string };
 }) {
-  // 1. Fetch screen and branch context
-  const screen = await prisma.screen.findFirst({
-    where: { token: params.token },
-    include: {
-      branch: { select: { id: true, name: true } },
-    },
-  });
-
-  if (!screen) {
+  const filePath = path.join(process.cwd(), "prisma", "scr_b_data.json");
+  if (!fs.existsSync(filePath)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f6f5fa] p-8 text-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Screen not found</h1>
-          <p className="mt-2 text-sm text-slate-500">This kiosk URL is not configured.</p>
+          <h1 className="text-xl font-bold text-slate-800">Static data not found</h1>
+          <p className="mt-2 text-sm text-slate-500">Run the dump script to generate scr_b_data.json.</p>
         </div>
       </div>
     );
   }
 
-  const branchId = screen.branch.id;
-  const branchName = screen.branch.name;
+  const fileData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const branchName = fileData.branchName || "KC Broadway";
+  const allCategories = fileData.categories || [];
+  const dbProducts = fileData.products || [];
 
-  // 2. Fetch categories linked to the branch and brand statistics in branch
-  const [allCategories, allProductsInBranch] = await Promise.all([
-    prisma.category.findMany({
-      where: { status: "active" },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        parentId: true,
-      },
-    }),
-    prisma.brandProduct.findMany({
-      where: {
-        status: "active",
-        copies: {
-          some: {
-            branchId,
-            status: "active"
-          }
-        }
-      },
-      select: {
-        brandId: true,
-        categoryId: true
-      }
-    })
-  ]);
-
-  const brandStats = new Map<string, { categoryIds: Set<string>; total: number }>();
-  for (const p of allProductsInBranch) {
-    const bId = String(p.brandId);
-    if (!brandStats.has(bId)) {
-      brandStats.set(bId, { categoryIds: new Set(), total: 0 });
-    }
-    const stats = brandStats.get(bId)!;
-    stats.total += 1;
-    if (p.categoryId) stats.categoryIds.add(String(p.categoryId));
-  }
-
-  // Extract all categories of interest
-  let categoriesList = allCategories;
-
-  // 3. Fetch selected category details if provided
-  let selectedCategory = null;
-  let products: any[] = [];
+  let selectedCategory: any = null;
   let subCategories: any[] = [];
+  let products: any[] = [];
   let categoryBrands: any[] = [];
   let brandName = "";
+  let categoriesList: any[] = [];
 
-  if (searchParams.cat || searchParams.brand) {
-    let catId: bigint | null = null;
-    if (searchParams.cat) {
-      catId = BigInt(searchParams.cat);
-      
-      // Fetch current category info
-      selectedCategory = await prisma.category.findUnique({
-        where: { id: catId },
-        include: {
-          parent: { select: { id: true, name: true } },
-        },
-      });
+  if (searchParams.cat && !searchParams.cat.startsWith('parent:')) {
+    const catId = searchParams.cat;
 
-      if (selectedCategory) {
-        // Fetch subcategories
-        subCategories = await prisma.category.findMany({
-          where: { parentId: catId, status: "active" },
-          select: { id: true, name: true, code: true },
-        });
-      }
+    // Find category metadata
+    const currentCat = allCategories.find((c: any) => c.id === catId);
+    if (currentCat) {
+      const parentCat = currentCat.parentId
+        ? allCategories.find((c: any) => c.id === currentCat.parentId)
+        : null;
+
+      selectedCategory = {
+        id: currentCat.id,
+        name: currentCat.name,
+        code: currentCat.code,
+        parentId: currentCat.parentId,
+        parent: parentCat ? { id: parentCat.id, name: parentCat.name } : null
+      };
+    } else {
+      // Create fallback if not found in metadata
+      // Find category name from products list
+      const pMatch = dbProducts.find((p: any) => p.categoryId === catId);
+      selectedCategory = {
+        id: catId,
+        name: pMatch ? pMatch.categoryName : "Category",
+        code: "",
+        parentId: null,
+        parent: null
+      };
     }
 
-      // Resolve active parent BLOCK from rack parameter
-      let blockId: bigint | null = null;
-      let blockName: string | null = null;
-      let descendantIds: bigint[] = [];
-
-      if (searchParams.rack) {
-        let currentNodeId = BigInt(searchParams.rack);
-        while (currentNodeId) {
-          const node = await prisma.locationNode.findUnique({
-            where: { id: currentNodeId },
-            select: {
-              id: true,
-              name: true,
-              nodeType: true,
-              parentId: true,
-            }
-          });
-          if (!node) break;
-          if (node.nodeType?.toUpperCase() === "BLOCK") {
-            blockId = node.id;
-            blockName = node.name;
-            break;
-          }
-          if (!node.parentId) {
-            blockId = node.id;
-            blockName = node.name;
-            break;
-          }
-          currentNodeId = node.parentId;
-        }
-
-        if (blockId) {
-          const ids: bigint[] = [blockId];
-          let currentParentIds = [blockId];
-          while (currentParentIds.length > 0) {
-            const children = await prisma.locationNode.findMany({
-              where: {
-                parentId: { in: currentParentIds },
-                status: "active"
-              },
-              select: { id: true }
-            });
-            if (children.length === 0) break;
-            const childIds = children.map((c: any) => c.id);
-            ids.push(...childIds);
-            currentParentIds = childIds;
-          }
-          descendantIds = ids;
-        }
-      }
-
-      const copiesFilter: any = {
-        branchId,
-        status: "active",
-      };
-      if (searchParams.cat && searchParams.rack) {
-        copiesFilter.locationNodeId = BigInt(searchParams.rack);
-      } else if (descendantIds.length > 0) {
-        copiesFilter.locationNodeId = { in: descendantIds };
-      }
-
-      const productWhere: any = {
-        status: "active",
-        copies: {
-          some: copiesFilter,
-        },
-      };
-      if (catId) {
-        productWhere.categoryId = catId;
-      }
-      if (searchParams.brand) {
-        productWhere.brandId = BigInt(searchParams.brand);
-      }
-
-      // Fetch products in this category (with copies available in the specific block/rack)
-      const dbProducts = await prisma.brandProduct.findMany({
-        where: productWhere,
-        include: {
-          brand: { select: { id: true, name: true, code: true } },
-          copies: {
-            where: copiesFilter,
-            select: {
-              location: {
-                select: {
-                  name: true,
-                  parent: {
-                    select: {
-                      name: true,
-                      parent: {
-                        select: {
-                          name: true,
-                          parent: {
-                            select: {
-                              name: true,
-                              parent: {
-                                select: {
-                                  name: true,
-                                },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // Fetch all products in this block/rack to compute brand stats
-      const rackAllProducts = await prisma.brandProduct.findMany({
-        where: {
-          status: "active",
-          copies: {
-            some: copiesFilter,
-          },
-        },
-        select: { brandId: true, categoryId: true },
-      });
-
-      // Build block/rack-specific brand stats (categories per brand within this block/rack)
-      const rackBrandStats = new Map<string, { categoryIds: Set<string>; total: number }>();
-      for (const p of rackAllProducts) {
-        const bId = String(p.brandId);
-        if (!rackBrandStats.has(bId)) rackBrandStats.set(bId, { categoryIds: new Set(), total: 0 });
-        const s = rackBrandStats.get(bId)!;
-        s.total += 1;
-        if (p.categoryId) s.categoryIds.add(String(p.categoryId));
-      }
-
-      // Calculate brands available in this category
-      const categoryBrandMap = new Map<string, { id: string; name: string; code: string; productCount: number }>();
-      for (const p of dbProducts) {
-        const bId = String(p.brand.id);
-        if (!categoryBrandMap.has(bId)) {
-          categoryBrandMap.set(bId, { id: bId, name: p.brand.name, code: p.brand.code || "", productCount: 0 });
-        }
-        categoryBrandMap.get(bId)!.productCount += 1;
-      }
-
-      categoryBrands = [...categoryBrandMap.values()].map((b) => ({
-        id: b.id,
-        name: b.name,
-        code: b.code,
-        // Use rack-specific category count so badge reflects this rack, not whole branch
-        materialTypeCount: rackBrandStats.get(b.id)?.categoryIds.size || 1,
-        totalProductsCount: b.productCount
+    // Subcategories: categories that have this parentId
+    subCategories = allCategories
+      .filter((c: any) => c.parentId === catId)
+      .map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        code: c.code
       }));
 
-      // Filter products by brand parameter if present
-      let filteredDbProducts = dbProducts;
-      if (searchParams.brand) {
-        const brandId = BigInt(searchParams.brand);
-        filteredDbProducts = dbProducts.filter((p) => p.brandId === brandId);
-        
-        const brand = await prisma.brand.findUnique({
-          where: { id: brandId },
-          select: { name: true }
-        });
-        brandName = brand?.name || "";
+    // All active categories
+    categoriesList = allCategories;
+
+    // Filter products by category
+    const catProducts = dbProducts.filter((p: any) => p.categoryId === catId);
+    const filteredProducts = searchParams.brand
+      ? catProducts.filter((p: any) => p.brandId === searchParams.brand)
+      : catProducts;
+
+    // Build brand list from products in this category
+    const catBrandMap = new Map<string, { id: string; name: string; code: string; productCount: number }>();
+    for (const p of catProducts) {
+      if (!p.brandId) continue;
+      const bId = p.brandId;
+      if (!catBrandMap.has(bId)) {
+        catBrandMap.set(bId, { id: bId, name: p.brandName, code: p.brandCode || "", productCount: 0 });
       }
+      catBrandMap.get(bId)!.productCount += 1;
+    }
 
-      // Filter categoriesList to only include those that have products in this block/brand (and their parents)
-      const validCategoryIds = new Set<string>();
-      for (const p of filteredDbProducts) {
-        let currentCatId = p.categoryId ? String(p.categoryId) : null;
-        while (currentCatId) {
-          validCategoryIds.add(currentCatId);
-          const cat = categoriesList.find((c) => String(c.id) === currentCatId);
-          currentCatId = cat?.parentId ? String(cat.parentId) : null;
-        }
-      }
-      if (filteredDbProducts.length > 0) {
-        categoriesList = categoriesList.filter((c) => validCategoryIds.has(String(c.id)));
-      } else {
-        categoriesList = [];
-      }
+    // Material type count count per brand
+    const brandCatCount = new Map<string, Set<string>>();
+    for (const p of dbProducts) {
+      if (!p.brandId || !p.categoryId) continue;
+      const bId = p.brandId;
+      if (!brandCatCount.has(bId)) brandCatCount.set(bId, new Set());
+      brandCatCount.get(bId)!.add(p.categoryId);
+    }
 
-      const buildLocationPath = (loc: any, productId?: bigint): string => {
-        const parts: string[] = [];
-        let curr = loc;
-        while (curr) {
-          if (curr.name) parts.unshift(curr.name);
-          curr = curr.parent;
-        }
-        // Simulate Tray assignment for UI demo
-        if (productId !== undefined) {
-           const trayNum = (Number(productId) % 4) + 1;
-           parts.push(`Tray ${trayNum}`);
-        }
-        return parts.join(" › ");
-      };
+    categoryBrands = [...catBrandMap.values()].map((b) => ({
+      id: b.id,
+      name: b.name,
+      code: b.code,
+      materialTypeCount: brandCatCount.get(b.id)?.size || 1,
+      totalProductsCount: b.productCount,
+    }));
 
-      products = filteredDbProducts.map((p) => {
-        // Group placement nodes for display
-        const locationsSet = new Set<string>();
-        for (const c of p.copies) {
-          if (c.location) {
-            locationsSet.add(buildLocationPath(c.location, p.id));
-          }
-        }
+    if (searchParams.brand) {
+      const match = dbProducts.find((p: any) => p.brandId === searchParams.brand);
+      brandName = match ? match.brandName : "";
+    }
 
-        return {
-          id: String(p.id),
-          name: p.name,
-          sku: p.sku,
-          brandId: String(p.brandId),
-          brandName: p.brand.name,
-          locations: Array.from(locationsSet),
-        };
-      });
+    products = filteredProducts.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      brandId: p.brandId,
+      brandName: p.brandName,
+      locations: p.locations || []
+    }));
+  } else {
+    // No category selected — show all categories that have products
+    const catIds = new Set(dbProducts.map((p: any) => p.categoryId).filter(Boolean));
+    categoriesList = allCategories.filter((c: any) => catIds.has(c.id));
   }
-
-  const sBranch = serialize(screen.branch);
-  const sCategoriesList = serialize(categoriesList);
-  const sSelectedCategory = serialize(selectedCategory);
-  const sSubCategories = serialize(subCategories);
-  const sProducts = serialize(products);
-  const sCategoryBrands = serialize(categoryBrands);
 
   return (
     <CategoryGrid
       token={params.token}
-      branchName={sBranch.name}
-      categories={sCategoriesList}
-      selectedCategory={sSelectedCategory}
-      subCategories={sSubCategories}
-      products={sProducts}
+      branchName={branchName}
+      categories={categoriesList}
+      selectedCategory={selectedCategory}
+      subCategories={subCategories}
+      products={products}
       brandName={brandName}
-      brands={sCategoryBrands}
+      brands={categoryBrands}
     />
   );
 }

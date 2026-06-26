@@ -164,20 +164,32 @@ export default function ProductGrid({
               {filteredProducts.map((p, idx) => (
                 <div
                   key={p.id}
-                  className="overflow-hidden rounded-[18px] bg-white border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative"
+                  onClick={() => router.push(`/rms/screen/${token}/product/${p.id}?rack=${rackId}`)}
+                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative h-[235px]"
                 >
                   {/* Gradient Card Area */}
                   <div className={`relative h-32 bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-2.5`}>
-                    {/* Comparison Checkbox */}
+                    {/* Comparison Button */}
                     {compareMode && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedProductIds.includes(p.id)}
-                          onChange={() => toggleSelectProduct(p)}
-                          className="h-4.5 w-4.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 bg-white cursor-pointer"
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); toggleSelectProduct(p); }}
+                        className={`absolute top-2 right-2 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-all active:scale-90 ${
+                          selectedProductIds.includes(p.id)
+                            ? "bg-purple-600 border-purple-600 text-white"
+                            : "bg-white/90 border-purple-400 text-purple-600"
+                        }`}
+                      >
+                        {selectedProductIds.includes(p.id) ? (
+                          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          </svg>
+                        )}
+                      </button>
                     )}
                     <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {p.name}
@@ -205,7 +217,7 @@ export default function ProductGrid({
                     {/* Add to Wishlist */}
                     <button
                       type="button"
-                      onClick={() => handleAddToBom(p)}
+                      onClick={(e) => { e.stopPropagation(); handleAddToBom(p); }}
                       className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-2.5 ${
                         addedId === p.id
                           ? "bg-emerald-500 text-white"
@@ -213,15 +225,6 @@ export default function ProductGrid({
                       }`}
                     >
                       {addedId === p.id ? "✓ Added!" : "Add to Wishlist"}
-                    </button>
-
-                    {/* View Button */}
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/rms/screen/${token}/product/${p.id}?rack=${rackId}`)}
-                      className="w-full rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 active:scale-[0.97] transition-all mt-1"
-                    >
-                      View →
                     </button>
                   </div>
                 </div>

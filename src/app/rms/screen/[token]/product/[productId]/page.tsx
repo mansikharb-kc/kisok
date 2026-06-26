@@ -1,5 +1,7 @@
-import { prisma, serialize } from "@/lib/prisma";
+// Product detail page — loads detail completely from static JSON file
 import ProductDetail from "@/components/rms/ProductDetail";
+import fs from "fs";
+import path from "path";
 
 export const dynamic = "force-dynamic";
 
@@ -8,74 +10,24 @@ export default async function RmsProductPage({
 }: {
   params: { token: string; productId: string };
 }) {
-  const branchId = 1; // Default fallback branch ID
-  
-  // 1. Fetch screen and branch context
-  const screen = await prisma.screen.findFirst({
-    where: { token: params.token },
-    include: {
-      branch: { select: { id: true, name: true } },
-    },
-  });
+  const filePath = path.join(process.cwd(), "prisma", "scr_b_data.json");
+  if (!fs.existsSync(filePath)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f5fa] p-8 text-center">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Static data not found</h1>
+          <p className="mt-2 text-sm text-slate-500">Run the dump script to generate scr_b_data.json.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const activeBranchId = screen?.branch.id ?? branchId;
+  const fileData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const dbProducts = fileData.products || [];
 
-  // 2. Fetch BrandProduct
-  const product = await prisma.brandProduct.findUnique({
-    where: { id: BigInt(params.productId) },
-    include: {
-      brand: { select: { id: true, name: true } },
-      category: { select: { id: true, name: true } },
-      attrValues: {
-        include: {
-          attribute: { select: { name: true, code: true, dataType: true, unit: true } },
-          option: { select: { optionValue: true } },
-        },
-      },
-      copies: {
-        where: { branchId: activeBranchId, status: "active" },
-        include: {
-          location: {
-            select: {
-              id: true,
-              name: true,
-              nodeType: true,
-              parent: {
-                select: {
-                  id: true,
-                  name: true,
-                  nodeType: true,
-                  parent: {
-                    select: {
-                      id: true,
-                      name: true,
-                      nodeType: true,
-                      parent: {
-                        select: {
-                          id: true,
-                          name: true,
-                          nodeType: true,
-                          parent: {
-                            select: {
-                              id: true,
-                              name: true,
-                              nodeType: true,
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const rawProduct = dbProducts.find((p: any) => p.id === params.productId);
 
-  if (!product) {
+  if (!rawProduct) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f6f5fa] p-8 text-center">
         <div>
@@ -86,70 +38,62 @@ export default async function RmsProductPage({
     );
   }
 
-  // 3. Fetch similar products (same brand, limit 4)
-  const similarProducts = await prisma.brandProduct.findMany({
-    where: {
-      brandId: product.brandId,
-      id: { not: product.id },
-      status: "active",
-      copies: {
-        some: { branchId: activeBranchId, status: "active" },
-      },
+  // Format product to match the exact schema expected by ProductDetail
+  const product = {
+    id: rawProduct.id,
+    name: rawProduct.name,
+    sku: rawProduct.sku,
+    brandId: rawProduct.brandId,
+    brand: {
+      id: rawProduct.brandId,
+      name: rawProduct.brandName
     },
-    take: 8,
-    select: {
-      id: true,
-      name: true,
-      sku: true,
-      copies: {
-        where: { branchId: activeBranchId, status: "active" },
-        select: {
-          location: {
-            select: {
-              name: true,
-              nodeType: true,
-              parent: {
-                select: {
-                  name: true,
-                  nodeType: true,
-                  parent: { select: { name: true, nodeType: true } },
-                },
-              },
-            },
-          },
-        },
-      },
+    category: {
+      id: rawProduct.categoryId || "",
+      name: rawProduct.categoryName || ""
     },
-  });
+    attrValues: (rawProduct.attrValues || []).map((av: any) => ({
+      attribute: {
+        name: av.attribute?.name || "",
+        code: av.attribute?.code || "",
+        dataType: av.attribute?.dataType || "text",
+        unit: av.attribute?.unit || null
+      },
+      option: av.option ? { optionValue: av.option.optionValue } : null
+    })),
+    // Convert location strings to the location hierarchy format expected
+    copies: (rawProduct.locations || []).map((locStr: string, idx: number) => {
+      const parts = locStr.split(" › ");
+      return {
+        id: `copy-${idx}`,
+        location: {
+          id: `loc-${idx}`,
+          name: parts[parts.length - 1] || "",
+          nodeType: "SHELF",
+          parent: {
+            id: `parent-${idx}`,
+            name: parts[parts.length - 2] || "",
+            nodeType: "RACK",
+            parent: {
+              id: `gparent-${idx}`,
+              name: parts[parts.length - 3] || "",
+              nodeType: "BLOCK",
+              parent: null
+            }
+          }
+        }
+      };
+    })
+  };
 
-  const specs = (product.attrValues || []).map((av: any) => {
-    const val = av.option?.optionValue ?? av.valueText ?? (av.valueNumber !== null ? String(av.valueNumber) : null) ?? "—";
-    const unit = av.attribute.unit ? ` ${av.attribute.unit}` : "";
-    return {
-      name: av.attribute.name,
-      value: `${val}${unit}`,
-    };
-  });
-
-  const serializedProduct = serialize({
-    id: product.id,
-    name: product.name,
-    sku: product.sku,
-    brand: product.brand,
-    category: product.category,
-    specs,
-    copies: product.copies,
-  });
-
-  const sSimilarProducts = serialize(similarProducts);
+  const similarProducts = rawProduct.similar || [];
 
   return (
     <ProductDetail
       token={params.token}
       productId={params.productId}
-      product={serializedProduct as any}
-      similarProducts={sSimilarProducts}
+      product={product as any}
+      similarProducts={similarProducts as any[]}
     />
   );
 }
-

@@ -277,14 +277,26 @@ export default function ProductDetail({
           {/* Main Image */}
           <div className="relative aspect-[1.2] w-full rounded-[12px] bg-gradient-to-b from-[#e3dac9] to-[#bca685] overflow-hidden">
             {compareMode && (
-              <div className="absolute top-2 right-2 z-10">
-                <input
-                  type="checkbox"
-                  checked={selectedProductIds.includes(product.id)}
-                  onChange={() => toggleSelectProduct(product)}
-                  className="h-6 w-6 rounded-md border-white/50 text-purple-600 focus:ring-purple-500 bg-white/50 cursor-pointer backdrop-blur-sm"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleSelectProduct(product)}
+                className={`absolute top-2 right-2 z-20 h-8 w-8 rounded-full border-2 flex items-center justify-center shadow-lg transition-all active:scale-90 ${
+                  selectedProductIds.includes(product.id)
+                    ? "bg-purple-600 border-purple-600 text-white"
+                    : "bg-white/90 border-purple-400 text-purple-600"
+                }`}
+                title={selectedProductIds.includes(product.id) ? "Remove from compare" : "Add to compare"}
+              >
+                {selectedProductIds.includes(product.id) ? (
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                )}
+              </button>
             )}
             <div className="absolute top-2 left-2 bg-green-100 text-green-600 border border-green-200 text-[8px] font-extrabold tracking-wide px-2 py-0.5 rounded-full shadow-sm">
               In Stock
@@ -318,7 +330,7 @@ export default function ProductDetail({
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex justify-center mt-2 pb-1 w-full">
+          <div className="flex flex-col gap-1.5 mt-2 pb-1 w-full">
             <button
               type="button"
               onClick={() => handleAddToBom()}
@@ -330,6 +342,19 @@ export default function ProductDetail({
             >
               {addedToBom ? "✓ Added!" : "Add to Wishlist"}
             </button>
+            {compareMode && (
+              <button
+                type="button"
+                onClick={() => toggleSelectProduct(product)}
+                className={`w-full py-1.5 rounded-full font-bold text-[9px] border-2 transition-all active:scale-[0.98] ${
+                  selectedProductIds.includes(product.id)
+                    ? "bg-purple-600 border-purple-600 text-white"
+                    : "bg-white border-purple-400 text-purple-600"
+                }`}
+              >
+                {selectedProductIds.includes(product.id) ? "✓ Selected for Compare" : "+ Add to Compare"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -342,12 +367,12 @@ export default function ProductDetail({
 
           {/* Material type tags */}
           <div className="flex flex-wrap gap-1.5 mt-3">
-            {product.specs.slice(0, 4).map((spec, i) => (
+            {(product.specs || []).slice(0, 4).map((spec, i) => (
               <span key={i} className="rounded-full bg-purple-50 border border-purple-100/60 px-2 py-0.5 text-[8px] font-bold text-purple-700">
                 {spec.value}
               </span>
             ))}
-            {product.specs.length === 0 && (
+            {(product.specs || []).length === 0 && (
               <>
                 <span className="rounded-full bg-purple-50 border border-purple-100/60 px-2 py-0.5 text-[8px] font-bold text-purple-700">Natural</span>
                 <span className="rounded-full bg-purple-50 border border-purple-100/60 px-2 py-0.5 text-[8px] font-bold text-purple-700">Textile</span>
@@ -386,7 +411,7 @@ export default function ProductDetail({
                   <span className="text-slate-500 font-semibold">Category</span>
                   <span className="text-slate-700 font-bold truncate max-w-[80px] text-right">{product.brand.name}</span>
                 </div>
-                {product.specs.slice(0, 2).map((spec, i) => (
+                {(product.specs || []).slice(0, 2).map((spec, i) => (
                   <div key={i} className="flex justify-between px-3 py-2 text-[9px]">
                     <span className="text-slate-500 font-semibold">{spec.name}</span>
                     <span className="text-slate-700 font-bold truncate max-w-[80px] text-right">{spec.value}</span>
@@ -430,14 +455,25 @@ export default function ProductDetail({
                 {/* Card image */}
                 <div className={`relative h-[90px] bg-gradient-to-b ${GRADIENTS[idx % GRADIENTS.length]} flex flex-col justify-end p-2`}>
                   {compareMode && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedProductIds.includes(sp.id)}
-                        onChange={() => toggleSelectProduct(sp)}
-                        className="h-4.5 w-4.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 bg-white cursor-pointer"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSelectProduct(sp); }}
+                      className={`absolute top-1.5 right-1.5 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-all active:scale-90 ${
+                        selectedProductIds.includes(sp.id)
+                          ? "bg-purple-600 border-purple-600 text-white"
+                          : "bg-white/90 border-purple-400 text-purple-600"
+                      }`}
+                    >
+                      {selectedProductIds.includes(sp.id) ? (
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                      )}
+                    </button>
                   )}
                   <span className="text-[10px] font-extrabold text-white leading-tight drop-shadow line-clamp-2">{sp.name}</span>
                 </div>

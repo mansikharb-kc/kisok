@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 type WishlistItem = {
   id: string;
@@ -13,6 +15,18 @@ type WishlistItem = {
 };
 
 export default function WishlistSharePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#fbfaff] flex flex-col items-center justify-center">
+        <div className="h-8 w-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <WishlistShareContent />
+    </Suspense>
+  );
+}
+
+function WishlistShareContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [error, setError] = useState(false);

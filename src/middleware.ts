@@ -6,7 +6,7 @@ import { SESSION_COOKIE } from "@/lib/auth";
 const AUTH_PAGES = ["/login", "/forgot-password"];
 // No-auth-required paths. "/rms" = public kiosk screens (/rms/screen/<token>...).
 // NOTE: admin pages /rms-screens, /rms-blocks, /rms-preview do NOT start with "/rms/" so stay protected.
-const PUBLIC = [...AUTH_PAGES, "/rms"];
+const PUBLIC = [...AUTH_PAGES, "/rms", "/"];
 
 async function valid(token: string | undefined): Promise<boolean> {
   if (!token) return false;
@@ -19,26 +19,6 @@ async function valid(token: string | undefined): Promise<boolean> {
 }
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const authed = await valid(token);
-
-  const isPublic = PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  const isAuthPage = AUTH_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/"));
-
-  if (!authed && !isPublic) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // Only bounce logged-in users away from auth pages (login/forgot) — NOT from the kiosk.
-  if (authed && isAuthPage) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 

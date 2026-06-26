@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Root path: send to dashboard (middleware bounces unauthenticated users to /login).
+// Root path: send directly to the RMS kiosk screen
 export default function Home() {
-  redirect("/dashboard");
+  redirect("/rms/screen/scr-b");
 }

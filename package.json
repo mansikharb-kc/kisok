@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node -e \"console.log('\\n  ▲ Next.js 14.2.18\\n  - Local:        http://localhost:3000\\n  - Network:      http://192.168.1.148:3000/rms/screen/scr-b?rack=\\n  - Environments: .env\\n'); require('child_process').spawn('next', ['dev', '-H', '0.0.0.0'], { stdio: 'inherit', shell: true });\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,7 +12,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "setup": "prisma db push && npm run db:patch && npm run db:seed",
-    "db:clear": "tsx prisma/clear-dummy-data.ts"
+    "db:clear": "tsx prisma/clear-dummy-data.ts",
+    "db:import": "node prisma/seed-from-odoo.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

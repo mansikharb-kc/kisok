@@ -80,8 +80,7 @@ export default function BomDrawer({ isOpen, onClose }: BomDrawerProps) {
         category: item.categoryName,
         qty: item.quantity,
       }));
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-      const shareUrl = `${window.location.origin}/rms/wishlist-share?data=${encoded}&token=${token}`;
+      const shareUrl = `https://knowledgecenter.club/`;
 
       const url = await QRCode.toDataURL(shareUrl, {
         width: 180,
