@@ -23,18 +23,14 @@ type Category = {
   directCatId: string | null;
 };
 
-// Category background gradients — cycling through beautiful palettes
+// Category background gradients — cycling through beautiful soft palettes
 const CAT_GRADIENTS = [
-  "from-[#1a052e] to-[#4b1f7c]",
-  "from-[#0f2027] to-[#203a43]",
-  "from-[#2c3e50] to-[#4a6274]",
-  "from-[#3d1c6b] to-[#7b4fa3]",
-  "from-[#0d3b2f] to-[#1a7a5e]",
-  "from-[#1f1c2c] to-[#928dab]",
-  "from-[#3b1e08] to-[#8b5e3c]",
-  "from-[#1b2838] to-[#2d6186]",
-  "from-[#4a0e3c] to-[#8b1a5e]",
-  "from-[#0a2342] to-[#1b5e99]",
+  "from-[#d4c5a9] to-[#a89070]",
+  "from-[#b8c4d4] to-[#7a90a8]",
+  "from-[#c4d4b8] to-[#8aa870]",
+  "from-[#d4b8c4] to-[#a87090]",
+  "from-[#c4c0d4] to-[#8880a8]",
+  "from-[#d4cdb8] to-[#a89a70]",
 ];
 
 export default function KioskHome({
@@ -194,44 +190,30 @@ export default function KioskHome({
                   key={sub.catId}
                   type="button"
                   onClick={() => handleSubCategoryClick(sub)}
-                  className="overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition-all active:scale-[0.96] hover:shadow-[0_8px_24px_rgba(88,28,135,0.12)]"
+                  className="overflow-hidden rounded-[20px] border border-slate-100/80 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:scale-[0.98] flex flex-col relative h-[210px]"
                 >
                   {/* Gradient top */}
                   <div
-                    className={`relative h-28 bg-gradient-to-br ${
+                    className={`relative h-[140px] w-full bg-gradient-to-b ${
                       CAT_GRADIENTS[(idx + 4) % CAT_GRADIENTS.length]
-                    } flex flex-col justify-between p-3`}
+                    } flex flex-col justify-end p-3 shrink-0`}
                   >
-                    <div className="self-end rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold text-white/90 backdrop-blur-sm border border-white/10">
-                      {sub.productCount} products
-                    </div>
-                    <span className="text-[13px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <span className="text-[12px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {sub.name}
                     </span>
                   </div>
 
                   {/* Bottom info */}
-                  <div className="p-2.5">
-                    <div className="flex items-center gap-1 text-[9px] text-slate-500 font-medium">
-                      <svg className="h-3 w-3 text-purple-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="font-bold text-slate-700">{sub.brandCount}</span> Brands
+                  <div className="p-3 flex flex-col justify-between flex-grow w-full">
+                    <div className="flex items-center">
+                      <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] font-extrabold text-[#9333ea]">
+                        {sub.productCount} Products
+                      </span>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {sub.brands.slice(0, 2).map((b) => (
-                        <span
-                          key={b.id}
-                          className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-semibold text-purple-600 border border-purple-100/60"
-                        >
-                          {b.name}
-                        </span>
-                      ))}
-                      {sub.brands.length > 2 && (
-                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-semibold text-slate-500">
-                          +{sub.brands.length - 2}
-                        </span>
-                      )}
+                    <div className="flex justify-end w-full">
+                      <span className="text-[9px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
+                        View →
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -242,82 +224,32 @@ export default function KioskHome({
                   key={cat.id}
                   type="button"
                   onClick={() => handleCategoryClick(cat)}
-                  className="overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition-all active:scale-[0.96] hover:shadow-[0_8px_24px_rgba(88,28,135,0.12)]"
+                  className="overflow-hidden rounded-[20px] border border-slate-100/80 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:scale-[0.98] flex flex-col relative h-[210px]"
                 >
                   {/* Gradient top area */}
                   <div
-                    className={`relative h-28 bg-gradient-to-br ${
+                    className={`relative h-[140px] w-full bg-gradient-to-b ${
                       CAT_GRADIENTS[idx % CAT_GRADIENTS.length]
-                    } flex flex-col justify-between p-3`}
+                    } flex flex-col justify-end p-3 shrink-0`}
                   >
-                    {/* Product count badge */}
-                    <div className="self-end rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold text-white/90 backdrop-blur-sm border border-white/10">
-                      {cat.productCount} products
-                    </div>
-                    {/* Sub indicator badge */}
-                    {cat.hasSubCategories && (
-                      <span className="absolute top-2 left-2 rounded-full bg-white/15 border border-white/25 px-1.5 py-0.5 text-[8px] font-bold text-white/80">
-                        {cat.subCategories.length} subcategories
-                      </span>
-                    )}
-                    {/* Category name */}
-                    <span className="text-[13px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <span className="text-[12px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {cat.name}
                     </span>
                   </div>
 
                   {/* Bottom info */}
-                  <div className="p-2.5">
-                    <div className="flex items-center gap-1 text-[9px] text-slate-500 font-medium">
-                      <svg className="h-3 w-3 text-purple-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="font-bold text-slate-700">{cat.brandCount}</span> Brands
+                  <div className="p-3 flex flex-col justify-between flex-grow w-full">
+                    <div className="flex items-center">
+                      <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] font-extrabold text-[#9333ea]">
+                        {cat.hasSubCategories
+                          ? `${cat.subCategories.length} Subcategories`
+                          : "Products"}
+                      </span>
                     </div>
-
-                    {/* Subcategory chips OR brand chips */}
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {cat.hasSubCategories ? (
-                        <>
-                          {cat.subCategories.slice(0, 2).map((s) => (
-                            <span
-                              key={s.catId}
-                              className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-semibold text-slate-600 border border-slate-200/60"
-                            >
-                              {s.name}
-                            </span>
-                          ))}
-                          {cat.subCategories.length > 2 && (
-                            <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-semibold text-purple-500">
-                              +{cat.subCategories.length - 2} more
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {cat.brands.slice(0, 2).map((b) => (
-                            <span
-                              key={b.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (cat.directCatId) {
-                                  router.push(
-                                    `/rms/screen/${token}/category?cat=${cat.directCatId}&brand=${b.id}`
-                                  );
-                                }
-                              }}
-                              className="cursor-pointer rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-semibold text-purple-600 border border-purple-100/60 hover:bg-purple-100 transition-colors"
-                            >
-                              {b.name}
-                            </span>
-                          ))}
-                          {cat.brands.length > 2 && (
-                            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-semibold text-slate-500">
-                              +{cat.brands.length - 2}
-                            </span>
-                          )}
-                        </>
-                      )}
+                    <div className="flex justify-end w-full">
+                      <span className="text-[9px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
+                        View →
+                      </span>
                     </div>
                   </div>
                 </button>
