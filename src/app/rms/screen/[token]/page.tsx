@@ -22,6 +22,9 @@ export default async function RmsHomePage({ params }: { params: { token: string 
                 select: {
                   product: {
                     select: {
+                      id: true,
+                      name: true,
+                      sku: true,
                       brandId: true,
                       brand: { select: { name: true } },
                       category: { select: { id: true, name: true } },
@@ -55,14 +58,26 @@ export default async function RmsHomePage({ params }: { params: { token: string 
     const rack = sr.rack;
     const block = rack?.parent ?? null;
     const catMap = new Map<string, { id: string; name: string; productCount: number; brands: Map<string, string> }>();
+    const products: any[] = [];
     for (const c of rack?.copies ?? []) {
-      const cat = c.product?.category;
+      const p = c.product;
+      if (!p) continue;
+      const cat = p.category;
       if (!cat) continue;
+      
+      products.push({
+        id: String(p.id),
+        name: p.name,
+        sku: p.sku,
+        brandName: p.brand?.name ?? "Brand",
+        categoryName: p.category?.name ?? "Category",
+      });
+
       const key = String(cat.id);
       if (!catMap.has(key)) catMap.set(key, { id: key, name: cat.name, productCount: 0, brands: new Map() });
       const entry = catMap.get(key)!;
       entry.productCount += 1;
-      if (c.product?.brandId) entry.brands.set(String(c.product.brandId), c.product.brand?.name ?? "Brand");
+      if (p.brandId) entry.brands.set(String(p.brandId), p.brand?.name ?? "Brand");
     }
     return {
       id: String(rack.id),
@@ -75,8 +90,9 @@ export default async function RmsHomePage({ params }: { params: { token: string 
         name: c.name,
         productCount: c.productCount,
         brandCount: c.brands.size,
-        brands: [...c.brands.values()],
+        brands: [...c.brands.entries()].map(([id, name]) => ({ id, name })),
       })),
+      products,
     };
   });
 
