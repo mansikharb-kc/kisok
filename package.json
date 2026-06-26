@@ -13,8 +13,7 @@
     "db:studio": "prisma studio",
     "setup": "prisma db push && npm run db:patch && npm run db:seed",
     "db:clear": "tsx prisma/clear-dummy-data.ts",
-    "db:import": "node prisma/seed-from-odoo.mjs",
-    "postinstall": "prisma generate"
+    "db:import": "node prisma/seed-from-odoo.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
