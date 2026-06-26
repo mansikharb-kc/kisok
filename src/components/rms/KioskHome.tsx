@@ -183,16 +183,6 @@ export default function KioskHome({
         </div>
       ) : (
         <div className="px-4 grid grid-cols-3 gap-x-3 gap-y-6 relative py-2">
-          {/* Vertical grid lines */}
-          <div className="absolute top-0 bottom-0 left-[34.5%] w-px bg-slate-200/80 pointer-events-none" />
-          <div className="absolute top-0 bottom-0 left-[66.5%] w-px bg-slate-200/80 pointer-events-none" />
-
-          {/* Horizontal grid lines */}
-          <div className="absolute left-4 right-4 top-[232px] h-px bg-slate-200/80 pointer-events-none" />
-          <div className="absolute left-4 right-4 top-[476px] h-px bg-slate-200/80 pointer-events-none" />
-          <div className="absolute left-4 right-4 top-[720px] h-px bg-slate-200/80 pointer-events-none" />
-          <div className="absolute left-4 right-4 top-[964px] h-px bg-slate-200/80 pointer-events-none" />
-
           {isSubLevel
             ? // --- SUB CATEGORY CARDS ---
               (displayedList as SubCategory[]).map((sub, idx) => (
