@@ -266,32 +266,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
                   <div className="text-[9.5px] font-extrabold text-slate-800 leading-none">Start Wishlist</div>
                 </button>
 
-                 {/* Compare Products Button */}
-                <button
-                  type="button"
-                  onClick={toggleCompareMode}
-                  className={`flex-1 flex items-center justify-center gap-1.5 p-2 rounded-full border transition-all active:scale-95 shadow-md ${
-                    compareCount === 1
-                      ? "bg-[#a855f7] text-white border-purple-400 animate-pulse"
-                      : compareMode
-                      ? "bg-[#9333ea] text-white border-purple-500"
-                      : "bg-white text-slate-800 border-purple-100 hover:bg-purple-50/20"
-                  }`}
-                >
-                  <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${
-                    compareMode ? "bg-white/20 text-white" : "bg-purple-50 text-purple-600"
-                  }`}>
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <rect x="3" y="3" width="7" height="7" rx="1" />
-                      <rect x="14" y="3" width="7" height="7" rx="1" />
-                      <rect x="14" y="14" width="7" height="7" rx="1" />
-                      <rect x="3" y="14" width="7" height="7" rx="1" />
-                    </svg>
-                  </div>
-                  <div className="text-[9.5px] font-extrabold leading-none text-center">
-                    {compareCount === 0 ? "Compare Products" : compareCount === 1 ? "Select Next Product" : `Compare (${compareCount}/4)`}
-                  </div>
-                </button>
+                {/* Compare Products Button hidden for now */}
 
                 {/* Bill of Concierge Button */}
                 <button
