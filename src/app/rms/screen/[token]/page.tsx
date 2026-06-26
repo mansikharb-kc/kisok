@@ -6,7 +6,13 @@ import path from "path";
 
 export const dynamic = "force-dynamic";
 
-export default async function RmsHomePage({ params }: { params: { token: string } }) {
+export default async function RmsHomePage({
+  params,
+  searchParams,
+}: {
+  params: { token: string };
+  searchParams: { rack?: string };
+}) {
   const filePath = path.join(process.cwd(), "prisma", "scr_b_data.json");
   if (!fs.existsSync(filePath)) {
     return (
@@ -158,11 +164,71 @@ export default async function RmsHomePage({ params }: { params: { token: string 
     })
     .sort((a, b) => b.productCount - a.productCount);
 
+  // Group products by unique rack locations
+  const rackMap = new Map<string, { id: string; displayName: string; products: typeof dbProducts }>();
+  for (const p of dbProducts) {
+    if (!p.locations) continue;
+    for (const loc of p.locations) {
+      if (!loc) continue;
+      if (!rackMap.has(loc)) {
+        rackMap.set(loc, {
+          id: loc,
+          displayName: loc.replace(/ › /g, " • "),
+          products: [],
+        });
+      }
+      rackMap.get(loc)!.products.push(p);
+    }
+  }
+
+  const racks = [...rackMap.values()].map((r) => {
+    // Group products in this rack by category
+    const catMap = new Map<string, { id: string; name: string; products: typeof dbProducts; brandIds: Set<string>; brandNames: Map<string, string> }>();
+    for (const p of r.products) {
+      if (!p.categoryId || !p.categoryName) continue;
+      const cid = String(p.categoryId);
+      const bId = String(p.brandId);
+      const bName = p.brandName ?? "";
+      if (!catMap.has(cid)) {
+        catMap.set(cid, {
+          id: cid,
+          name: p.categoryName,
+          products: [],
+          brandIds: new Set(),
+          brandNames: new Map(),
+        });
+      }
+      const c = catMap.get(cid)!;
+      c.products.push(p);
+      c.brandIds.add(bId);
+      c.brandNames.set(bId, bName);
+    }
+
+    const categoriesInRack = [...catMap.values()].map((c) => ({
+      id: c.id,
+      name: c.name,
+      productCount: c.products.length,
+      brandCount: c.brandIds.size,
+      brands: [...c.brandIds].slice(0, 3).map((bId) => ({
+        id: bId,
+        name: c.brandNames.get(bId) ?? "",
+      })),
+    })).sort((a, b) => b.productCount - a.productCount);
+
+    return {
+      id: r.id,
+      displayName: r.displayName,
+      categories: categoriesInRack,
+    };
+  }).sort((a, b) => a.id.localeCompare(b.id));
+
   return (
     <KioskHome
       token={params.token}
       branchName={branchName}
       categories={categories}
+      racks={racks}
+      initialRackId={searchParams.rack}
     />
   );
 }
