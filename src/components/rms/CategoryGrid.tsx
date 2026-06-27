@@ -270,7 +270,7 @@ export default function CategoryGrid({
 
         {/* Brand selection area if category is selected but brand is not */}
         {selectedCategory && !brandName && brands && brands.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2">
             {brands.map((b) => (
               <button
                 key={b.id}
@@ -306,7 +306,7 @@ export default function CategoryGrid({
                 No categories found.
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2">
                 {filteredCats.map((cat, idx) => (
                   <button
                     key={cat.id}
