@@ -160,7 +160,7 @@ export default function ProductGrid({
               No products found.
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-5">
               {filteredProducts.map((p, idx) => (
                 <div
                   key={p.id}
