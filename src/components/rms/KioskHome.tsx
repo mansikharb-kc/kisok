@@ -182,7 +182,7 @@ export default function KioskHome({
           <p className="mt-3 text-xs font-medium text-slate-400">No categories found</p>
         </div>
       ) : (
-        <div className="px-4 grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-x-5 gap-y-8 relative py-2">
+        <div className="px-4 grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-5 gap-y-8 relative py-2">
           {isSubLevel
             ? // --- SUB CATEGORY CARDS ---
               (displayedList as SubCategory[]).map((sub, idx) => (
@@ -213,14 +213,14 @@ export default function KioskHome({
                         <span className="text-slate-800 font-black">{sub.brandCount}</span> Brands
                       </div>
                     </div>
-                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-slate-700 leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-purple-700 uppercase tracking-wider leading-none mt-1">
                       Brands Available
                     </div>
-                    <div className="flex flex-wrap gap-0.5 mt-0.5 overflow-hidden max-h-[36px]">
+                    <div className="flex flex-wrap gap-1 mt-1 overflow-hidden max-h-[36px]">
                       {sub.brands.slice(0, 3).map((b) => (
                         <span
                           key={b.id}
-                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] sm:text-[8px] font-black text-slate-500 truncate max-w-[50px] sm:max-w-[75px]"
+                          className="rounded-full bg-purple-50 border border-purple-100/70 px-1.5 py-0.5 text-[6.5px] sm:text-[8px] font-extrabold text-purple-700 truncate max-w-[50px] sm:max-w-[75px]"
                         >
                           {b.name}
                         </span>
@@ -258,14 +258,14 @@ export default function KioskHome({
                         <span className="text-slate-800 font-black">{cat.brandCount}</span> Brands
                       </div>
                     </div>
-                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-slate-700 leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-purple-700 uppercase tracking-wider leading-none mt-1">
                       Brands Available
                     </div>
-                    <div className="flex flex-wrap gap-0.5 mt-0.5 overflow-hidden max-h-[36px]">
+                    <div className="flex flex-wrap gap-1 mt-1 overflow-hidden max-h-[36px]">
                       {cat.brands.slice(0, 3).map((b) => (
                         <span
                           key={b.id}
-                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] sm:text-[8px] font-black text-slate-500 truncate max-w-[50px] sm:max-w-[75px]"
+                          className="rounded-full bg-purple-50 border border-purple-100/70 px-1.5 py-0.5 text-[6.5px] sm:text-[8px] font-extrabold text-purple-700 truncate max-w-[50px] sm:max-w-[75px]"
                         >
                           {b.name}
                         </span>
