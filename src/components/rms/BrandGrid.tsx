@@ -458,9 +458,8 @@ export default function BrandGrid({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleAddToBom(p);
                           }}
-                          className={`w-full rounded-full py-1.5 text-[8px] font-extrabold transition-all active:scale-[0.97] mb-1.5 ${
+                          className={`w-full rounded-full py-1.5 text-[8px] font-extrabold mb-1.5 ${
                             addedId === p.id
                               ? "bg-purple-100 text-purple-600 shadow-sm"
                               : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"
@@ -468,6 +467,9 @@ export default function BrandGrid({
                         >
                           {addedId === p.id ? "✓ Added!" : "Add to Wishlist"}
                         </button>
+                        <span className="text-[5.5px] sm:text-[7px] text-slate-400 font-bold text-center mb-1.5 block leading-normal whitespace-nowrap">
+                          "Add to Wishlist" coming soon
+                        </span>
                         
                         <button
                           type="button"

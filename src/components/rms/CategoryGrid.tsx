@@ -360,7 +360,7 @@ export default function CategoryGrid({
                         if (brandId2) url += `brand=${brandId2}`;
                         router.push(url.replace(/[?&]$/, ""));
                       }}
-                      className={`cursor-pointer overflow-hidden rounded-[18px] bg-white border shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative transition-all duration-200 h-[225px] ${
+                      className={`cursor-pointer overflow-hidden rounded-[18px] bg-white border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative h-[255px] transition-all duration-200 ${
                         isSelected
                           ? "border-purple-400 shadow-[0_0_0_2px_rgba(147,51,234,0.2),0_4px_16px_rgba(0,0,0,0.06)]"
                           : "border-slate-100"
@@ -417,8 +417,8 @@ export default function CategoryGrid({
                           {/* Add to Wishlist */}
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); handleAddToBom(p); }}
-                            className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-1 ${
+                            onClick={(e) => { e.stopPropagation(); }}
+                            className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase mt-1 ${
                               isAdded
                                 ? "bg-emerald-500 text-white"
                                 : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"
@@ -426,6 +426,9 @@ export default function CategoryGrid({
                           >
                             {isAdded ? "✓ Added!" : "Add to Wishlist"}
                           </button>
+                          <span className="text-[5.5px] sm:text-[7px] md:text-[8px] text-slate-400 font-bold text-center mt-1 block leading-normal whitespace-nowrap">
+                            "Add to Wishlist" coming soon
+                          </span>
                         </div>
                       </div>
                     </div>

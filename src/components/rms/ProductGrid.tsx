@@ -165,7 +165,7 @@ export default function ProductGrid({
                 <div
                   key={p.id}
                   onClick={() => router.push(`/rms/screen/${token}/product/${p.id}?rack=${rackId}`)}
-                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative h-[235px]"
+                  className="cursor-pointer overflow-hidden rounded-[18px] bg-white border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative h-[255px]"
                 >
                   {/* Gradient Card Area */}
                   <div className={`relative h-32 bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-2.5`}>
@@ -217,8 +217,8 @@ export default function ProductGrid({
                     {/* Add to Wishlist */}
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleAddToBom(p); }}
-                      className={`w-full rounded-full py-1.5 text-[8.5px] sm:text-[10px] md:text-[11.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-2.5 ${
+                      onClick={(e) => { e.stopPropagation(); }}
+                      className={`w-full rounded-full py-1.5 text-[8.5px] sm:text-[10px] md:text-[11.5px] font-extrabold tracking-wide uppercase mt-2.5 ${
                         addedId === p.id
                           ? "bg-emerald-500 text-white"
                           : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"
@@ -226,6 +226,9 @@ export default function ProductGrid({
                     >
                       {addedId === p.id ? "✓ Added!" : "Add to Wishlist"}
                     </button>
+                    <span className="text-[5.5px] sm:text-[7px] md:text-[8px] text-slate-400 font-bold text-center mt-1 block leading-normal whitespace-nowrap">
+                      "Add to Wishlist" coming soon
+                    </span>
                   </div>
                 </div>
               ))}
