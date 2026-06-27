@@ -262,10 +262,6 @@ export default function CategoryGrid({
             {selectedCategory ? selectedCategory.name : "All Categories"}
             <span className="text-[7px]">▼</span>
           </button>
-          <button className="flex items-center gap-1 bg-white border border-slate-100 px-2.5 py-1.5 rounded-lg text-[9px] font-extrabold text-slate-500 shadow-sm">
-            Sort by
-            <span className="text-[8px]">⇅</span>
-          </button>
         </div>
 
         {/* Brand selection area if category is selected but brand is not */}
