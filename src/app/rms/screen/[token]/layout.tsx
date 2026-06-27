@@ -250,76 +250,40 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
         <div ref={scrollContainerRef} className="flex-1 w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
 
         {!isBomPage && (
-          <div className="mt-8 px-6 pb-6 flex justify-between gap-3 w-full">
-            {(pathname?.includes("/category") || pathname?.includes("/product") || pathname?.includes("/brand")) ? (
-              <>
-                {/* Bill of Materials Button */}
-                <button
-                  type="button"
-                  onClick={openWishlist}
-                  className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-center hover:bg-purple-50/20 active:scale-[0.98] transition-all"
-                >
-                  <div className="h-7 w-7 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                  </div>
-                  <div className="text-[9.5px] font-extrabold text-slate-800 leading-none">Start Wishlist</div>
-                </button>
+          <div className="w-full bg-[#fbfaff]">
+            <div className="mt-4 px-6 pb-6 flex justify-between gap-3 w-full">
+              {/* Bill of Materials Button */}
+              <button
+                type="button"
+                className="w-[220px] flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left cursor-default shrink-0"
+              >
+                <div className="h-8 w-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-extrabold text-slate-800 leading-none">Start your Wishlist</div>
+                  <div className="text-[6.5px] font-bold text-slate-400 mt-0.5 leading-none">(coming soon)</div>
+                </div>
+              </button>
 
-                {/* Compare Products Button hidden for now */}
-
-                {/* Bill of Concierge Button */}
-                <button
-                  type="button"
-                  onClick={openNeedHelp}
-                  className="flex-1 flex items-center justify-center gap-1.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-center hover:bg-purple-50/20 active:scale-[0.98] transition-all"
-                >
-                  <div className="h-7 w-7 rounded-full bg-purple-600 flex items-center justify-center text-white shrink-0">
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0118 0v6M4 16h2a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3a1 1 0 011-1z" />
-                    </svg>
-                  </div>
-                  <div className="text-[9.5px] font-extrabold text-slate-800 leading-none">Need help?</div>
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Bill of Materials Button */}
-                <button
-                  type="button"
-                  onClick={openWishlist}
-                  className="flex-1 flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left hover:bg-purple-50/20 active:scale-[0.98] transition-all"
-                >
-                  <div className="h-8 w-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-[7.5px] font-bold text-slate-400 uppercase tracking-wider leading-none">Wishlist</div>
-                    <div className="text-[10px] font-extrabold text-slate-800 mt-0.5 leading-none">Start your Wishlist</div>
-                  </div>
-                </button>
-
-                {/* Bill of Concierge Button */}
-                <button
-                  type="button"
-                  onClick={openNeedHelp}
-                  className="flex-1 flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left hover:bg-purple-50/20 active:scale-[0.98] transition-all"
-                >
-                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white shrink-0">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0118 0v6M4 16h2a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3a1 1 0 011-1zm14 0h2a1 1 0 011 1v3a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-[7.5px] font-bold text-slate-400 uppercase tracking-wider leading-none">Bill of Concierge</div>
-                    <div className="text-[10px] font-extrabold text-slate-800 mt-0.5 leading-none">Need help?</div>
-                  </div>
-                </button>
-              </>
-            )}
+              {/* Bill of Concierge Button */}
+              <button
+                type="button"
+                onClick={openNeedHelp}
+                className="w-[220px] flex items-center gap-2.5 p-2 bg-white rounded-full border border-purple-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] text-left hover:bg-purple-50/20 active:scale-[0.98] transition-all shrink-0"
+              >
+                <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white shrink-0">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 18v-6a9 9 0 0118 0v6M4 16h2a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3a1 1 0 011-1zm14 0h2a1 1 0 011 1v3a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 011-1z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-[10px] font-extrabold text-slate-800 leading-none">Need help?</div>
+                </div>
+              </button>
+            </div>
           </div>
         )}
 

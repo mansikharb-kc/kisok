@@ -225,7 +225,7 @@ export default function ProductDetail({
   }
 
   return (
-    <div className="mx-auto min-h-screen bg-[#f6f5fa] pb-20">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-20">
       {/* ── Header ── */}
       <RmsTopBar 
         onBackClick={handleBackClick}
@@ -248,15 +248,13 @@ export default function ProductDetail({
           </button>
           <span className="text-slate-300">›</span>
           <button onClick={() => router.push(`/rms/screen/${token}/brand`)} className="hover:text-purple-600">Brands</button>
+          <span className="text-slate-300">›</span>
+          <span className="text-purple-700 font-extrabold max-w-[120px] truncate">{product.name}</span>
         </div>
-        <h1 className="mt-1 text-[17px] font-black text-slate-900 leading-tight">
-          <span className="text-purple-600">{product.brand.name}</span> Product
-        </h1>
-
       </div>
 
-      {/* ── Product Section Top (Category/Location) ── */}
-      <div className="px-4 pt-4 pb-2 bg-[#f6f5fa]">
+      {/* ── Main Details Container ── */}
+      <div className="px-4 pt-4 pb-2 bg-[#fbfaff]">
         <h2 className="text-[15px] font-black text-purple-600">{product.category.name}</h2>
         <div className="mt-1 flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
           <span className="h-2 w-1.5 rounded-sm bg-red-500 inline-block" />
@@ -333,8 +331,8 @@ export default function ProductDetail({
           <div className="flex flex-col gap-1.5 mt-2 pb-1 w-full">
             <button
               type="button"
-              onClick={() => handleAddToBom()}
-              className={`w-full py-1.5 rounded-full font-bold text-[9px] transition-all active:scale-[0.98] ${
+              onClick={(e) => { e.stopPropagation(); }}
+              className={`w-full py-1.5 rounded-full font-bold text-[9px] ${
                 addedToBom
                   ? "bg-emerald-500 text-white"
                   : "bg-[#a855f7] text-white hover:bg-[#9333ea]"
@@ -342,6 +340,9 @@ export default function ProductDetail({
             >
               {addedToBom ? "✓ Added!" : "Add to Wishlist"}
             </button>
+            <span className="text-[6.5px] sm:text-[8px] md:text-[9.5px] text-slate-400 font-bold text-center mt-0.5 block leading-normal whitespace-nowrap">
+              "Add to Wishlist" coming soon
+            </span>
             {compareMode && (
               <button
                 type="button"
@@ -498,7 +499,7 @@ export default function ProductDetail({
                   <div className="flex-1" />
                   <button
                     type="button"
-                    className={`w-full rounded-full py-1.5 text-[8px] font-bold transition-all active:scale-[0.97] ${
+                    className={`w-full rounded-full py-1.5 text-[8px] font-bold ${
                       addedSimilarId === sp.id
                         ? "bg-emerald-500 text-white"
                         : "bg-[#a855f7] text-white hover:bg-purple-600"
@@ -506,11 +507,13 @@ export default function ProductDetail({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleAddToBom(sp);
                     }}
                   >
                     {addedSimilarId === sp.id ? "✓ Added!" : "Add to Wishlist"}
                   </button>
+                  <span className="text-[5.5px] sm:text-[7px] md:text-[8px] text-slate-400 font-bold text-center mb-1.5 block leading-normal whitespace-nowrap">
+                    "Add to Wishlist" coming soon
+                  </span>
                   <button
                     type="button"
                     onClick={() => router.push(`/rms/screen/${token}/product/${sp.id}?rack=${rackId}`)}
