@@ -129,7 +129,7 @@ export default function ProductGrid({
   }, [products, query]);
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#fbfaff] pb-12">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-12">
       {/* Kiosk Header */}
       <RmsTopBar onBackClick={handleBackClick} />
 

@@ -91,7 +91,7 @@ export default function BomCart({ token }: { token: string }) {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#fbfaff] pb-12">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-12">
       {/* Kiosk Header */}
       <header className="bg-gradient-to-b from-[#1a052e] to-[#2d0f4d] px-4 py-3.5 text-white shadow-md flex items-center justify-between">
         <button

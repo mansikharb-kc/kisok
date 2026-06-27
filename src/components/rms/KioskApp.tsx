@@ -229,7 +229,7 @@ export default function KioskApp({
   const crumbs = breadcrumb();
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-[#fbfaff]">
+    <div className="mx-auto flex min-h-screen flex-col bg-[#fbfaff]">
 
       {/* ── HEADER ────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-gradient-to-b from-[#1a052e] to-[#2d0f4d] px-4 pb-3 pt-3 text-white shadow-lg">

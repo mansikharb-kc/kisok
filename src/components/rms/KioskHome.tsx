@@ -86,7 +86,7 @@ export default function KioskHome({
   const isSubLevel = expandedParent !== null;
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#fbfaff] pb-28">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-28">
       {/* Header */}
       <header className="bg-gradient-to-b from-[#1a052e] to-[#2d0f4d] px-4 pb-5 pt-4 text-white shadow-lg">
         <div className="text-center text-[10px] uppercase tracking-[0.3em] text-purple-200/60 font-semibold">

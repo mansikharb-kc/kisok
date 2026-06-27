@@ -246,7 +246,7 @@ export default function ScreenLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-[#f1f5f9] flex justify-center items-stretch">
-      <div className="relative w-full max-w-[480px] bg-[#fbfaff] shadow-2xl flex flex-col justify-between overflow-hidden border-x border-slate-200/60">
+      <div className="relative w-full bg-[#fbfaff] shadow-2xl flex flex-col justify-between overflow-hidden border-x border-slate-200/60">
         <div ref={scrollContainerRef} className="flex-1 w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</div>
 
         {!isBomPage && (

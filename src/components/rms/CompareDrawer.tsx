@@ -171,7 +171,7 @@ export default function CompareDrawer({ isOpen, onClose, products }: CompareDraw
           transform: `translateY(${dragY}px)`,
           transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)"
         }}
-        className="w-full h-[85vh] bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col pointer-events-auto relative max-w-[480px] mx-auto overflow-hidden animate-[slideUp_0.4s_cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full h-[85vh] bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col pointer-events-auto relative mx-auto overflow-hidden animate-[slideUp_0.4s_cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Handle for Dragging */}
         <div className="drag-handle w-full flex justify-center pt-4 pb-3 cursor-grab active:cursor-grabbing relative z-10 bg-white">

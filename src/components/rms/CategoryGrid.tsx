@@ -173,7 +173,7 @@ export default function CategoryGrid({
   const showProductsGrid = viewMode !== "categories" && (selectedCategory || brandName) && (!brands || brands.length === 0 || brandName);
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#fbfaff] pb-24 relative">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-24 relative">
       {/* Kiosk Header */}
       <RmsTopBar onBackClick={handleBackClick} />
 
@@ -356,14 +356,22 @@ export default function CategoryGrid({
                   return (
                     <div
                       key={p.id}
-                      className={`overflow-hidden rounded-[18px] bg-white border shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative transition-all duration-200 h-[270px] ${
+                      onClick={() => {
+                        let url = `/rms/screen/${token}/product/${p.id}?`;
+                        const catId2 = searchParams.get("cat") || "";
+                        const brandId2 = searchParams.get("brand") || "";
+                        if (catId2) url += `cat=${catId2}&`;
+                        if (brandId2) url += `brand=${brandId2}`;
+                        router.push(url.replace(/[?&]$/, ""));
+                      }}
+                      className={`cursor-pointer overflow-hidden rounded-[18px] bg-white border shadow-[0_4px_16px_rgba(0,0,0,0.05)] flex flex-col relative transition-all duration-200 h-[225px] ${
                         isSelected
                           ? "border-purple-400 shadow-[0_0_0_2px_rgba(147,51,234,0.2),0_4px_16px_rgba(0,0,0,0.06)]"
                           : "border-slate-100"
                       }`}
                     >
                       {/* Gradient Card Area */}
-                      <div className={`relative h-32 bg-gradient-to-b ${grad} flex flex-col justify-end p-2.5 shrink-0`}>
+                      <div className={`relative h-28 bg-gradient-to-b ${grad} flex flex-col justify-end p-2.5 shrink-0`}>
                         {/* Comparison Button */}
                         {compareMode && (
                           <button
@@ -413,7 +421,7 @@ export default function CategoryGrid({
                           {/* Add to Wishlist */}
                           <button
                             type="button"
-                            onClick={() => handleAddToBom(p)}
+                            onClick={(e) => { e.stopPropagation(); handleAddToBom(p); }}
                             className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-1 ${
                               isAdded
                                 ? "bg-emerald-500 text-white"
@@ -421,22 +429,6 @@ export default function CategoryGrid({
                             }`}
                           >
                             {isAdded ? "✓ Added!" : "Add to Wishlist"}
-                          </button>
-
-                          {/* View Button */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              let url = `/rms/screen/${token}/product/${p.id}?`;
-                              const catId2 = searchParams.get("cat") || "";
-                              const brandId2 = searchParams.get("brand") || "";
-                              if (catId2) url += `cat=${catId2}&`;
-                              if (brandId2) url += `brand=${brandId2}`;
-                              router.push(url.replace(/[?&]$/, ""));
-                            }}
-                            className="w-full rounded-full bg-[#f3e8ff] py-1.5 text-[8.5px] font-extrabold text-[#9333ea] tracking-wide uppercase hover:bg-purple-100 active:scale-[0.97] transition-all mt-1"
-                          >
-                            View →
                           </button>
                         </div>
                       </div>

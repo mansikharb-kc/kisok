@@ -225,7 +225,7 @@ export default function ProductDetail({
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#f6f5fa] pb-20">
+    <div className="mx-auto min-h-screen bg-[#f6f5fa] pb-20">
       {/* ── Header ── */}
       <RmsTopBar 
         onBackClick={handleBackClick}

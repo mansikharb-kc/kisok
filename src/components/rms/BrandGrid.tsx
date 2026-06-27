@@ -165,7 +165,7 @@ export default function BrandGrid({
   ];
 
   return (
-    <div className="mx-auto min-h-screen max-w-[480px] bg-[#fbfaff] pb-16">
+    <div className="mx-auto min-h-screen bg-[#fbfaff] pb-16">
       {/* Kiosk Header */}
       <RmsTopBar onBackClick={handleBackClick} />
 
