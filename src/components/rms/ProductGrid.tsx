@@ -191,22 +191,22 @@ export default function ProductGrid({
                         )}
                       </button>
                     )}
-                    <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <span className="text-[11px] sm:text-[13px] md:text-sm font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {p.name}
                     </span>
                   </div>
 
                   {/* Card Content Info */}
                   <div className="flex flex-col gap-1 p-2.5 flex-grow">
-                    <span className="text-[8px] font-bold text-slate-400">by {p.brandName || "Brand X"}</span>
+                    <span className="text-[8px] sm:text-[10px] md:text-[11px] font-bold text-slate-400">by {p.brandName || "Brand X"}</span>
                     <div className="flex items-center mt-1">
-                      <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
+                      <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[8px] sm:text-[10px] md:text-[11px] font-bold text-purple-600 border border-purple-100/50 uppercase tracking-wide">
                         Finishes
                       </span>
                     </div>
 
                     {p.locations && p.locations.length > 0 && (
-                      <div className="flex items-center gap-0.5 mt-0.5 text-[7px] text-slate-500 font-semibold px-0.5">
+                      <div className="flex items-center gap-0.5 mt-0.5 text-[7px] sm:text-[9px] md:text-[10px] text-slate-500 font-semibold px-0.5">
                         <svg className="h-2 w-2 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/></svg>
                         <span>{p.locations[0].split(" › ").join(".")}</span>
                       </div>
@@ -218,7 +218,7 @@ export default function ProductGrid({
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleAddToBom(p); }}
-                      className={`w-full rounded-full py-1.5 text-[8.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-2.5 ${
+                      className={`w-full rounded-full py-1.5 text-[8.5px] sm:text-[10px] md:text-[11.5px] font-extrabold tracking-wide uppercase transition-all active:scale-[0.97] mt-2.5 ${
                         addedId === p.id
                           ? "bg-emerald-500 text-white"
                           : "bg-[#9333ea] text-white hover:bg-purple-700 shadow-sm"

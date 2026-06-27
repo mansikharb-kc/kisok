@@ -198,25 +198,25 @@ export default function KioskHome({
                       CAT_GRADIENTS[(idx + 4) % CAT_GRADIENTS.length]
                     } flex flex-col justify-end p-2.5 shrink-0`}
                   >
-                    <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <span className="text-[11px] sm:text-[13px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {sub.name}
                     </span>
                   </div>
 
                   {/* Bottom info */}
                   <div className="p-2 flex flex-col justify-between flex-grow w-full bg-white">
-                    <div className="text-[7.5px] text-slate-400 font-bold leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] text-slate-400 font-bold leading-none">
                       <span className="text-slate-800 font-black">{sub.productCount}</span> Products &nbsp;&nbsp;
                       <span className="text-slate-800 font-black">{sub.brandCount}</span> Brands
                     </div>
-                    <div className="text-[7.5px] font-black text-slate-700 leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-slate-700 leading-none">
                       Brands Available
                     </div>
                     <div className="flex flex-wrap gap-0.5 mt-0.5 overflow-hidden max-h-[36px]">
                       {sub.brands.slice(0, 3).map((b) => (
                         <span
                           key={b.id}
-                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] font-black text-slate-500 truncate max-w-[50px]"
+                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] sm:text-[8px] font-black text-slate-500 truncate max-w-[50px] sm:max-w-[75px]"
                         >
                           {b.name}
                         </span>
@@ -239,25 +239,25 @@ export default function KioskHome({
                       CAT_GRADIENTS[idx % CAT_GRADIENTS.length]
                     } flex flex-col justify-end p-2.5 shrink-0`}
                   >
-                    <span className="text-[11px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                    <span className="text-[11px] sm:text-[13px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                       {cat.name}
                     </span>
                   </div>
 
                   {/* Bottom info */}
                   <div className="p-2 flex flex-col justify-between flex-grow w-full bg-white">
-                    <div className="text-[7.5px] text-slate-400 font-bold leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] text-slate-400 font-bold leading-none">
                       <span className="text-slate-800 font-black">{cat.productCount}</span> Products &nbsp;&nbsp;
                       <span className="text-slate-800 font-black">{cat.brandCount}</span> Brands
                     </div>
-                    <div className="text-[7.5px] font-black text-slate-700 leading-none">
+                    <div className="text-[7.5px] sm:text-[9.5px] font-black text-slate-700 leading-none">
                       Brands Available
                     </div>
                     <div className="flex flex-wrap gap-0.5 mt-0.5 overflow-hidden max-h-[36px]">
                       {cat.brands.slice(0, 3).map((b) => (
                         <span
                           key={b.id}
-                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] font-black text-slate-500 truncate max-w-[50px]"
+                          className="rounded-full bg-slate-50 border border-slate-100 px-1 py-0.5 text-[6.5px] sm:text-[8px] font-black text-slate-500 truncate max-w-[50px] sm:max-w-[75px]"
                         >
                           {b.name}
                         </span>

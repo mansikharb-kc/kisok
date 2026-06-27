@@ -279,16 +279,16 @@ export default function CategoryGrid({
                 className="overflow-hidden rounded-[20px] border border-slate-100/80 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:scale-[0.98] flex flex-col relative h-[210px]"
               >
                 <div className="relative h-[140px] w-full bg-gradient-to-b from-[#e3dac9] to-[#bca685] flex flex-col justify-end p-3 shrink-0">
-                  <span className="text-[12px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">{b.name}</span>
+                  <span className="text-[12px] sm:text-[13px] md:text-sm font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">{b.name}</span>
                 </div>
                 <div className="p-3 flex flex-col justify-between flex-grow w-full">
                   <div className="flex items-center gap-1">
-                    <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] font-extrabold text-[#9333ea]">
+                    <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] sm:text-[9.5px] md:text-[10px] font-extrabold text-[#9333ea]">
                       {b.materialTypeCount} Finishes
                     </span>
                   </div>
                   <div className="flex justify-end w-full">
-                    <span className="text-[9px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
+                    <span className="text-[9px] sm:text-[10.5px] md:text-[11px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
                       View →
                     </span>
                   </div>
@@ -315,20 +315,20 @@ export default function CategoryGrid({
                     className="overflow-hidden rounded-[20px] border border-slate-100/80 bg-white text-left shadow-[0_4px_16px_rgba(0,0,0,0.03)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] active:scale-[0.98] flex flex-col relative h-[210px]"
                   >
                     <div className={`relative h-[140px] w-full bg-gradient-to-b ${cardGradients[idx % cardGradients.length]} flex flex-col justify-end p-3 shrink-0`}>
-                      <span className="text-[12px] font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
+                      <span className="text-[12px] sm:text-[13px] md:text-sm font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">
                         {cat.name}
                       </span>
                     </div>
                     <div className="p-3 flex flex-col justify-between flex-grow w-full">
                       <div className="flex items-center">
-                        <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] font-extrabold text-[#9333ea]">
+                        <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 text-[8px] sm:text-[9.5px] md:text-[10px] font-extrabold text-[#9333ea]">
                           {categories.filter((c) => c.parentId === cat.id).length > 0
                             ? `${categories.filter((c) => c.parentId === cat.id).length} Subcategories`
                             : "Products"}
                         </span>
                       </div>
                       <div className="flex justify-end w-full">
-                        <span className="text-[9px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
+                        <span className="text-[9px] sm:text-[10.5px] md:text-[11px] font-extrabold text-[#9333ea] flex items-center gap-0.5">
                           View →
                         </span>
                       </div>
